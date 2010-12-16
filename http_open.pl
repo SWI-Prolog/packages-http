@@ -726,7 +726,7 @@ parts_request_uri(Parts, RequestURI) :-
 	memberchk(request_uri(RequestURI), Parts), !.
 parts_request_uri(Parts, RequestURI) :-
 	option(path(Path), Parts, /),
-	ignore(parts_search(Path, Search)),
+	ignore(parts_search(Parts, Search)),
 	uri_data(path, Data, Path),
 	uri_data(search, Data, Search),
 	uri_components(RequestURI, Data).
