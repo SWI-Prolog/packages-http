@@ -481,9 +481,9 @@ static int
 start_chunked_encoding(cgi_context *ctx)
 { if ( call_hook(ctx, ATOM_send_header) )
   { if ( ctx->datasize > ctx->data_offset )
-    { int rc = cgi_chunked_write(ctx,
-				 &ctx->data[ctx->data_offset],
-				 ctx->datasize - ctx->data_offset);
+    { ssize_t rc = cgi_chunked_write(ctx,
+				     &ctx->data[ctx->data_offset],
+				     ctx->datasize - ctx->data_offset);
       if ( rc == -1 )
 	return FALSE;
     }
