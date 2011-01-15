@@ -227,19 +227,19 @@ check_type3((T1;T2), In, Out) :- !,
 	;   check_type_no_error(T2, In, Out)
 	).
 check_type3(number, Atom, Number) :- !,
-	catch(atom_number(Atom, Number), _, fail).
+	to_number(Atom, Number).
 check_type3(integer, Atom, Integer) :- !,
-	catch(atom_number(Atom, Integer), _, fail),
+	to_number(Atom, Integer),
 	integer(Integer).
 check_type3(nonneg, Atom, Integer) :- !,
-	catch(atom_number(Atom, Integer), _, fail),
+	to_number(Atom, Integer),
 	integer(Integer),
 	Integer >= 0.
 check_type3(float, Atom, Float) :- !,
-	catch(atom_number(Atom, Number), _, fail),
+	to_number(Atom, Number),
 	Float is float(Number).
 check_type3(between(Low, High), Atom, Value) :- !,
-	atom_number(Atom, Number),
+	to_number(Atom, Number),
 	(   (float(Low) ; float(High))
 	->  Value is float(Number)
 	;   Value = Number
@@ -249,6 +249,12 @@ check_type3(boolean, Atom, Bool) :- !,
 	truth(Atom, Bool).
 check_type3(Type, Atom, Atom) :-
 	check_type2(Type, Atom).
+
+to_number(In, Number) :-
+	number(In), !, Number = In.
+to_number(In, Number) :-
+	atom(In),
+	catch(atom_number(In, Number), _, fail).
 
 %%	check_type2(+Type, +ValueIn) is semidet.
 %
