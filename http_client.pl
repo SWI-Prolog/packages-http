@@ -493,6 +493,7 @@ write_post_header(Out, Location, Host, In, Options) :-
 	flush_output(Out).
 
 post_option(connection(_)).
+post_option(method(_)).
 post_option(http_version(_)).
 post_option(cache_control(_)).
 post_option(request_header(_)).
