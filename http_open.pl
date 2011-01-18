@@ -347,13 +347,14 @@ do_open(200, _, Lines, Options, Parts, In0, In) :- !,
 	set_stream(In, file_name(URI)),
 	set_stream(In, record_position(true)).
 					% Handle redirections
-do_open(Code, _, Lines, Options, Parts, In, Stream) :-
+do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_code(Code),
 	location(Lines, RequestURI), !,
 	debug(http(redirect), 'http_open: redirecting to ~w', [RequestURI]),
 	parts_uri(Parts, Base),
 	uri_resolve(RequestURI, Base, Redirected),
 	close(In),
+	redirect_options(Options0, Options),
 	http_open(Redirected, Stream, [visited(Redirected)|Options]).
 					% report anything else as error
 do_open(Code, Comment, _,  _, Parts, _, _) :-
@@ -363,6 +364,27 @@ do_open(Code, Comment, _,  _, Parts, _, _) :-
 	;   Formal = existence_error(url, URI)
 	),
 	throw(error(Formal, context(_, status(Code, Comment)))).
+
+%%	redirect_options(+Options0, -Options) is det.
+%
+%	A redirect from a POST should do a GET on the returned URI. This
+%	means we must remove  the   method(post)  and post(Data) options
+%	from the original option-list.
+
+redirect_options(Options0, Options) :-
+	(   select_option(post(_), Options0, Options1)
+	->  true
+	;   Options1 = Options0
+	),
+	(   select_option(method(Method), Options1, Options),
+	    \+ redirect_method(Method)
+	->  true
+	;   Options = Options1
+	).
+
+redirect_method(get).
+redirect_method(head).
+
 
 %%	map_error_code(+HTTPCode, -PrologError) is semidet.
 %
