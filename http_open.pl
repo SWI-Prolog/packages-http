@@ -458,7 +458,7 @@ return_final_url(Options) :-
 	memberchk(final_url(URL), Options),
 	var(URL), !,
 	memberchk(visited(Parts), Options),
-	parts_uri(URL, Parts).
+	parts_uri(Parts, URL).
 return_final_url(_).
 
 
