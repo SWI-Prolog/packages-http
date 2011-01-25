@@ -137,6 +137,13 @@ resource. See also parse_time/2.
 %	  Size is unified with the   integer value of =|Content-Length|=
 %	  in the reply header.
 %
+%	  * status_code(-Code)
+%	  If this option is  present  and   Code  unifies  with the HTTP
+%	  status code, do *not* translate errors (4xx, 5xx) into an
+%	  exception. Instead, http_open/3 behaves as if 200 (success) is
+%	  returned, providing the application to read the error document
+%	  from the returned stream.
+%
 %	  * timeout(+Timeout)
 %	  If provided, set a timeout on   the stream using set_stream/2.
 %	  With this option if no new data arrives within Timeout seconds
@@ -338,15 +345,7 @@ user_agent(Agent, Options) :-
 %
 %	@error	existence_error(url, URL)
 
-do_open(200, _, Lines, Options, Parts, In0, In) :- !,
-	return_size(Options, Lines),
-	return_fields(Options, Lines),
-	transfer_encoding_filter(Lines, In0, In),
-					% properly re-initialise the stream
-	parts_uri(Parts, URI),
-	set_stream(In, file_name(URI)),
-	set_stream(In, record_position(true)).
-					% Handle redirections
+					% Redirections
 do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_code(Code),
 	location(Lines, RequestURI), !,
@@ -356,6 +355,20 @@ do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	close(In),
 	redirect_options(Options0, Options),
 	http_open(Redirected, Stream, [visited(Redirected)|Options]).
+					% Accepted codes
+do_open(Code, _, Lines, Options, Parts, In0, In) :- !,
+	(   option(status_code(Code), Options)
+	->  true
+	;   Code == 200
+	), !,
+	return_size(Options, Lines),
+	return_fields(Options, Lines),
+	transfer_encoding_filter(Lines, In0, In),
+					% properly re-initialise the stream
+	parts_uri(Parts, URI),
+	set_stream(In, file_name(URI)),
+	set_stream(In, record_position(true)).
+					% Handle redirections
 					% report anything else as error
 do_open(Code, Comment, _,  _, Parts, _, _) :-
 	parts_uri(Parts, URI),
