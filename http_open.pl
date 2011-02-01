@@ -195,7 +195,7 @@ http_open(URL, Stream, Options) :-
 
 http_open_parts(Parts, Stream, Options0) :-
 	memberchk(proxy(Host, ProxyPort), Options0), !,
-	parts_request_uri(Parts, RequestURI),
+	parts_uri(Parts, RequestURI),
 	Options = [visited(Parts)|Options0],
 	open_socket(Host:ProxyPort, In, Out, Options),
 	parts_scheme(Parts, Scheme),
