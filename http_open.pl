@@ -44,8 +44,6 @@
 :- use_module(library(base64)).
 :- use_module(library(debug)).
 
-user_agent('SWI-Prolog <http://www.swi-prolog.org>').
-
 /** <module> Simple HTTP client
 
 This library provides a light-weight HTTP client library to get the data
@@ -96,6 +94,16 @@ resource. See also parse_time/2.
 	http:http_protocol_hook/7,	  % +Protocol, +Parts, +In, +Out,
 					  % -NewIn, -NewOut, +Options
 	http:open_options/2.		  % +Parts, -Options
+
+:- meta_predicate
+	http_open(+,-,:).
+
+%%	user_agent(-Agent) is det.
+%
+%	Default value for =|User-Agent|=,  can   be  overruled using the
+%	option user_agent(Agent) of http_open/3.
+
+user_agent('SWI-Prolog <http://www.swi-prolog.org>').
 
 %%	http_open(+URL, -Stream, +Options) is det.
 %
@@ -181,7 +189,8 @@ resource. See also parse_time/2.
 %
 %	@error existence_error(url, Id)
 
-http_open(URL, Stream, Options) :-
+http_open(URL, Stream, QOptions) :-
+	meta_options(is_meta, QOptions, Options),
 	(   atom(URL)
 	->  parse_url_ex(URL, Parts)
 	;   Parts = URL
@@ -192,6 +201,9 @@ http_open(URL, Stream, Options) :-
 	;   Options2 = Options1
 	),
 	http_open_parts(Parts, Stream, Options2).
+
+is_meta(pem_password_hook).		% SSL plugin callbacks
+is_meta(cert_verify_hook).
 
 http_open_parts(Parts, Stream, Options0) :-
 	memberchk(proxy(Host, ProxyPort), Options0), !,
