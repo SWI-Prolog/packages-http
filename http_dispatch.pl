@@ -827,7 +827,8 @@ add_paths_tree([path(Path, Action, Options)|T], Tree0, Tree) :-
 
 plain_path(Path, Action, Options) :-
 	handler(Spec, Action, false, Options),
-	http_absolute_location(Spec, Path, []).
+	catch(http_absolute_location(Spec, Path, []), E,
+	      (print_message(error, E), fail)).
 
 
 %%	add_path_tree(+Path, +Action, +Options, +Tree0, -Tree) is det.
