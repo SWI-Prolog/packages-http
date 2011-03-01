@@ -93,7 +93,9 @@ resource. See also parse_time/2.
 	http:current_transfer_encoding/1, % ?Encoding
 	http:http_protocol_hook/7,	  % +Protocol, +Parts, +In, +Out,
 					  % -NewIn, -NewOut, +Options
-	http:open_options/2.		  % +Parts, -Options
+	http:open_options/2,		  % +Parts, -Options
+	http:write_cookies/3,		  % +Out, +Parts, +Options
+	http:update_cookies/3.		  % +CookieLine, +Parts, +Options
 
 :- meta_predicate
 	http_open(+,-,:).
@@ -273,6 +275,7 @@ guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
 	       Connection: close\r\n',
 	       [MNAME, RequestURI, Version, Host, Agent]),
 	x_headers(Options, Out),
+	write_cookies(Out, Parts, Options),
         (   option(post(PostData), Options)
         ->  http_header:http_post_data(PostData, Out, [])
         ;   format(Out, '\r\n', [])
@@ -280,6 +283,7 @@ guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
 	flush_output(Out),
 					% read the reply header
 	read_header(In, Code, Comment, Lines),
+	update_cookies(Lines, Parts, Options),
 	do_open(Code, Comment, Lines, Options, Parts, In, Stream).
 
 
@@ -798,6 +802,25 @@ parts_uri(Parts, URI) :-
 
 
 		 /*******************************
+		 *	      COOKIES		*
+		 *******************************/
+
+write_cookies(Out, Parts, Options) :-
+	http:write_cookies(Out, Parts, Options), !.
+write_cookies(_, _, _).
+
+update_cookies(_, _, _) :-
+	predicate_property(http:update_cookies(_,_,_), number_of_clauses(0)), !.
+update_cookies(Lines, Parts, Options) :-
+	(   member(Line, Lines),
+	    phrase(atom_field("set_cookie", CookieData), Line),
+	    http:update_cookies(CookieData, Parts, Options),
+	    fail
+	;   true
+	).
+
+
+		 /*******************************
 		 *     HOOK DOCUMENTATION	*
 		 *******************************/
 
@@ -817,4 +840,16 @@ parts_uri(Parts, URI) :-
 %	    	Options = [proxy('proxy.local', 3128)].
 %	    ==
 
+%%	http:write_cookies(+Out, +Parts, +Options) is semidet.
+%
+%	Emit a =|Cookie:|= header for the  current connection. Out is an
+%	open stream to the HTTP server, Parts is the broken-down request
+%	(see uri_components/2) and Options is the list of options passed
+%	to http_open.  The predicate is called as if using ignore/1.
 
+%%	update_cookies(+CookieData, +Parts, +Options) is semidet.
+%
+%	Update the cookie database.  CookieData  is   the  value  of the
+%	=|Set-Cookie|= field, Parts is  the   broken-down  request  (see
+%	uri_components/2) and Options is the list   of options passed to
+%	http_open.
