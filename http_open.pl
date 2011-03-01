@@ -366,11 +366,17 @@ do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_code(Code),
 	location(Lines, RequestURI), !,
 	debug(http(redirect), 'http_open: redirecting to ~w', [RequestURI]),
+	close(In),
 	parts_uri(Parts, Base),
 	uri_resolve(RequestURI, Base, Redirected),
-	close(In),
+	parse_url_ex(Redirected, RedirectedParts),
+	(   redirect_loop(RedirectedParts, Options0)
+	->  throw(error(permission_error(redirect, http, Redirected),
+			context(_, 'Redirection loop')))
+	;   true
+	),
 	redirect_options(Options0, Options),
-	http_open(Redirected, Stream, [visited(Redirected)|Options]).
+	http_open(RedirectedParts, Stream, Options).
 					% Accepted codes
 do_open(Code, _, Lines, Options, Parts, In0, In) :- !,
 	(   option(status_code(Code), Options)
@@ -393,6 +399,27 @@ do_open(Code, Comment, _,  _, Parts, _, _) :-
 	;   Formal = existence_error(url, URI)
 	),
 	throw(error(Formal, context(_, status(Code, Comment)))).
+
+%%	redirect_loop(Parts, Options) is semidet.
+%
+%	True if we are in  a  redirection   loop.  Note  that some sites
+%	redirect once to the same place using  cookies or similar, so we
+%	allow for two tries. In fact,   we  should probably test whether
+%	authorization or cookie headers have changed.
+
+redirect_loop(Parts, Options) :-
+	rloop(Options, visited(Parts), 0).
+
+rloop([H|T], V, N) :-
+	(   H == V
+	->  (   N == 1
+	    ->	true
+	    ;	N2 is N + 1,
+		rloop(T, V, N2)
+	    )
+	;   rloop(T, V, N)
+	).
+
 
 %%	redirect_options(+Options0, -Options) is det.
 %
