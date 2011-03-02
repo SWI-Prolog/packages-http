@@ -205,7 +205,7 @@ cookie_remove_client(ClientId) :-
 
 cookie_remove_all_clients :-
 	forall(current_client(ClientId),
-	       http_remove_client(ClientId)).
+	       cookie_remove_client(ClientId)).
 
 %%	current_client(?ClientId) is nondet.
 %
