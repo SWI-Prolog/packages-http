@@ -80,20 +80,22 @@ process is cached to achieve optimal performance.
 %	).
 %	==
 %
+%	@param	Fields is a list of fields from the password-file entry.
+%		The first element is the user.  The hash is skipped.
 %	@tbd	Should we also cache failures to reduce the risc of
 %		DoS attacks?
 
-http_authenticate(basic(File), Request, [user(User)]) :-
+http_authenticate(basic(File), Request, [User|Fields]) :-
 	memberchk(authorization(Text), Request),
 	debug(http_authenticate, 'Authorization: ~w', [Text]),
-	(   cached_authenticated(Text, File, User)
+	(   cached_authenticated(Text, File, User, Fields)
 	->  true
 	;   http_authorization_data(Text, basic(User, Password)),
 	    debug(http_authenticate,
 		  'User: ~w, Password: ~s', [User, Password]),
-	    validate(File, User, Password),
+	    validate(File, User, Password, Fields),
 	    get_time(Now),
-	    assert(authenticated(Text, File, User, Now)),
+	    assert(authenticated(Text, File, User, Now, Fields)),
 	    debug(http_authenticate, 'Authenticated ~w~n', [User])
 	).
 
@@ -133,28 +135,28 @@ ident(User, Password) -->
 	":",
 	string(Password).
 
-%%	cached_authenticated(+Authorization, +File, -User)
+%%	cached_authenticated(+Authorization, +File, -User, -RestFields)
 %
 %	Validate using the cache. If the entry   is not in the cache, we
 %	also remove all outdated entries from the cache.
 
 :- dynamic
-	authenticated/4.		% Authorization, File, User, Time
+	authenticated/5.	% Authorization, File, User, Time, RestFields
 
-cached_authenticated(Authorization, File, User) :-
-	authenticated(Authorization, File, User, Time),
+cached_authenticated(Authorization, File, User, Fields) :-
+	authenticated(Authorization, File, User, Time, Fields),
 	get_time(Now),
 	Now-Time =< 60, !.		% 60-second timeout
-cached_authenticated(_, _, _) :-
+cached_authenticated(_, _, _, _) :-
 	get_time(Now),
-	(   clause(authenticated(_, _, _, Time), true, Ref),
+	(   clause(authenticated(_, _, _, Time, _), true, Ref),
 	    Now-Time > 60,
 	    erase(Ref),
 	    fail
 	).
 
 
-%%	validate(+File, +User, +Passwd)
+%%	validate(+File, +User, +Passwd, -Fields)
 %
 %	True if User and Passwd combination   appears in File. File uses
 %	the same format as .htaccess files  from Apache or Unix password
@@ -163,9 +165,9 @@ cached_authenticated(_, _, _) :-
 %	second contains the Passwd in DES   or MD5 encrypted format. See
 %	crypt/2 for details.
 
-validate(File, User, Password) :-
+validate(File, User, Password, Fields) :-
 	update_passwd(File, Path),
-	passwd(User, Path, Hash),
+	passwd(User, Path, Hash, Fields),
 	crypt(Password, Hash).
 
 %%	update_passwd(+File, -Path) is det.
@@ -174,7 +176,7 @@ validate(File, User, Password) :-
 %	is the absolute path for File.
 
 :- dynamic
-	passwd/3,			% User, File, Encrypted
+	passwd/4,			% User, File, Encrypted, Fields
 	last_modified/2.		% File, Stamp
 
 update_passwd(File, Path) :-
@@ -189,7 +191,7 @@ reload_passwd_file(Path, Stamp) :-
 	last_modified(Path, Stamp), !.	% another thread did the work
 reload_passwd_file(Path, Stamp) :-
 	retractall(last_modified(Path, _)),
-	retractall(passwd(_, Path, _)),
+	retractall(passwd(_, Path, _, _)),
 	open(Path, read, Fd),
 	read_line_to_codes(Fd, Line),
 	read_passwd_file(Line, Fd, Path),
@@ -198,24 +200,37 @@ reload_passwd_file(Path, Stamp) :-
 
 read_passwd_file(end_of_file, _, _) :- !.
 read_passwd_file(Line, Fd, Path) :-
-	(   phrase(password_line(User, Hash), Line, _)
-	->  assert(passwd(User, Path, Hash))
+	(   phrase(password_line(User, Hash, Fields), Line, _)
+	->  assert(passwd(User, Path, Hash, Fields))
 	;   true			% TBD: warning
 	),
 	read_line_to_codes(Fd, Line2),
 	read_passwd_file(Line2, Fd, Path).
 
 
-password_line(User, Hash) -->
+password_line(User, Hash, Fields) -->
 	string(UserCodes),
 	":",
 	string(HashCodes),
-	(   ":"
-	;   eos
-	), !,
+	peek_eof, !,
+	fields(Fields),
 	{ atom_codes(User, UserCodes),
 	  atom_codes(Hash, HashCodes)
 	}.
+
+fields([Field|Fields]) -->
+	field(Field), !,
+	fields(Fields).
+fields([]) --> [].
+
+field(Value) -->
+	":", !,
+	string(Codes),
+	peek_eof, !,
+	{ atom_codes(Value, Codes) }.
+
+peek_eof, ":" --> ":".
+peek_eof --> eos.
 
 
 		 /*******************************
