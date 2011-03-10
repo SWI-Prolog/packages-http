@@ -281,15 +281,21 @@ check_type2(_, _).
 %	Translate some commonly used textual   representations  for true
 %	and false into their canonical representation.
 
-truth(true,  true).
-truth(yes,   true).
-truth(on,    true).
-truth('1',   true).
+truth(true,    true).
+truth('TRUE',  true).
+truth(yes,     true).
+truth('YES',   true).
+truth(on,      true).
+truth('ON',    true).			% IE7
+truth('1',     true).
 
-truth(false, false).
-truth(no,    false).
-truth(off,   false).
-truth('0',   false).
+truth(false,   false).
+truth('FALSE', false).
+truth(no,      false).
+truth('NO',    false).
+truth(off,     false).
+truth('OFF',   false).
+truth('0',     false).
 
 
 		 /*******************************
