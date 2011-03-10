@@ -1613,32 +1613,29 @@ cookie_value(Value) -->
 	{ atom_codes(Value, Chars)
 	}.
 
-chars_to_semicolon_or_blank([]) -->
-	peek(0';), !.			% 0'
-chars_to_semicolon_or_blank([]) -->
-	blank, !.
 chars_to_semicolon_or_blank([H|T]) -->
-	[H], !,
+	[H],
+	{ H \== 32, H \== 0'; }, !,
 	chars_to_semicolon_or_blank(T).
 chars_to_semicolon_or_blank([]) -->
 	[].
 
-peek(C, L, L) :-
-	L = [C|_].
-
 set_cookie(set_cookie(Name, Value, Options)) -->
-	blanks,
+	ws,
 	cookie(Name, Value),
 	cookie_options(Options).
 
 cookie_options([H|T]) -->
-	blanks,
+	ws,
 	";",
-	blanks,
+	ws,
 	cookie_option(H), !,
 	cookie_options(T).
 cookie_options([]) -->
-	blanks.
+	ws.
+
+ws --> " ", !, ws.
+ws --> [].
 
 
 %%	cookie_option(-Option)// is semidet.
@@ -1652,21 +1649,24 @@ cookie_options([]) -->
 %	@bug	Incorrectly accepts options without = for M$ compatibility.
 
 cookie_option(Name=Value) -->
-	rd_field_chars(NameChars), whites,
+	rd_field_chars(NameChars), ws,
 	{ atom_codes(Name, NameChars) },
 	(   "="
-	->  blanks,
+	->  ws,
 	    chars_to_semicolon(ValueChars),
 	    { atom_codes(Value, ValueChars)
 	    }
 	;   { Value = true }
 	).
 
-chars_to_semicolon([]) -->
-	blanks,
-	peek(0';), !.			% 0'
 chars_to_semicolon([H|T]) -->
-	[H], !,
+	[H],
+	{ H \== 32, H \== 0'; }, !,
+	chars_to_semicolon(T).
+chars_to_semicolon([]), ";" -->
+	ws, ";", !.
+chars_to_semicolon([H|T]) -->
+	[H],
 	chars_to_semicolon(T).
 chars_to_semicolon([]) -->
 	[].
