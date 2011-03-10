@@ -53,6 +53,7 @@
 :- use_module(library(debug)).
 :- use_module(library(lists)).
 :- use_module(library(url)).
+:- use_module(library(uri)).
 :- use_module(library(memfile)).
 :- use_module(library(settings)).
 :- use_module(library(error)).
@@ -1493,10 +1494,9 @@ request(Fd, [method(Method),request_uri(ReqURI)|Header]) -->
 	blanks,
 	nonblanks(Query),
 	{ atom_codes(ReqURI, Query),
-	  http_location(Parts, Query),
-	  append(Parts, Header0, Header)
+	  request_uri_parts(ReqURI, Header, Rest)
 	},
-	request_header(Fd, Header0), !.
+	request_header(Fd, Rest), !.
 request(Fd, [unknown(What)|Header]) -->
 	string(What),
 	eos, !,
@@ -1512,6 +1512,49 @@ method(post)    --> "POST", !.
 method(delete)  --> "DELETE", !.
 method(options) --> "OPTIONS", !.
 method(trace)   --> "TRACE", !.
+
+%%	request_uri_parts(+RequestURI, -Parts, ?Tail) is det.
+%
+%	Process the request-uri, producing the following parts:
+%
+%	  * path(-Path)
+%	  Decode path information (always present)
+%	  * search(-QueryParams)
+%	  Present if there is a ?name=value&... part of the request uri.
+%	  QueryParams is a Name=Value list.
+%	  * fragment(-Fragment)
+%	  Present if there is a #Fragment.
+
+request_uri_parts(ReqURI, [path(Path)|Parts], Rest) :-
+	uri_components(ReqURI, Components),
+	uri_data(path, Components, PathText),
+	uri_encoded(path, Path, PathText),
+	phrase(uri_parts(Components), Parts, Rest).
+
+uri_parts(Components) -->
+	uri_search(Components),
+	uri_fragment(Components).
+
+uri_search(Components) -->
+	{ uri_data(search, Components, Search),
+	  nonvar(Search), !,
+	  uri_query_components(Search, Query)
+	},
+	[ search(Query) ].
+uri_search(_) --> [].
+
+uri_fragment(Components) -->
+	{ uri_data(fragment, Components, String),
+	  nonvar(String), !,
+	  uri_encoded(fragment, Fragment, String)
+	},
+	[ fragment(Fragment) ].
+uri_fragment(_) --> [].
+
+%%	request_header(+In:stream, -Header:list) is det.
+%
+%	Read the remainder (after the request-uri)   of  the HTTP header
+%	and return it as a Name(Value) list.
 
 request_header(_, []) -->		% Old-style non-version header
 	blanks,
