@@ -1439,21 +1439,21 @@ term_expansion(rd_field_char(_,_), Clauses) :-
 
 rd_field_char(_, _).
 
-wr_field_chars([C|T]) -->
-	[C2], !,
-	{ to_lower(C2, C) },
+wr_field_chars([C|T]) --> !,
+	{ code_type(C, to_lower(U)) },
+	[U],
 	wr_field_chars2(T).
 wr_field_chars([]) -->
 	[].
 
-wr_field_chars2([0'_|T]) --> !,		% 0'
-	"-",
-	wr_field_chars(T).
-wr_field_chars2([C|T]) --> !,
-	[C],
-	wr_field_chars2(T).
-wr_field_chars2([]) -->
-	[].
+wr_field_chars2([]) --> [].
+wr_field_chars2([C|T]) -->		% 0'
+	(   { C == 0'_ }
+	->  "-",
+	    wr_field_chars(T)
+	;   [C],
+	    wr_field_chars2(T)
+	).
 
 %	now
 %%	rfc_date(+Time)
