@@ -118,16 +118,38 @@ make_socket(Port, Options0, Options) :-
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Port),
 	tcp_listen(Socket, 5),
-	atom_concat('httpd@', Port, Queue),
+	make_addr_atom('httpd@', Port, Queue),
 	Options = [ queue(Queue),
 		    tcp_socket(Socket)
 		  | Options0
 		  ].
 
+%%	make_addr_atom(+Prefix, +Address, -Atom) is det.
+%
+%	Create an atom that identifies  the   server's  queue and thread
+%	resources.
+
+make_addr_atom(Prefix, Address, Atom) :-
+	phrase(address_parts(Address), Parts),
+	atomic_list_concat([Prefix|Parts], Atom).
+
+address_parts(Atomic) -->
+	{ atomic(Atomic) }, !,
+	[Atomic].
+address_parts(Host:Port) --> !,
+	address_parts(Host), [:], address_parts(Port).
+address_parts(ip(A,B,C,D)) --> !,
+	[ A, '.', B, '.', C, '.', D ].
+
+%%	create_server(:Goal, +Address, +Options) is det.
+%
+%	Create the main server thread that runs accept_server/2 to
+%	listen to new requests.
+
 create_server(Goal, Port, Options) :-
 	get_time(StartTime),
 	memberchk(queue(Queue), Options),
-	atom_concat('http@', Port, Alias),
+	make_addr_atom('http@', Port, Alias),
 	thread_create(accept_server(Goal, Options), _,
 		      [ alias(Alias)
 		      ]),
