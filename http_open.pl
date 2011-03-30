@@ -378,7 +378,7 @@ do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_options(Options0, Options),
 	http_open(RedirectedParts, Stream, Options).
 					% Accepted codes
-do_open(Code, _, Lines, Options, Parts, In0, In) :- !,
+do_open(Code, _, Lines, Options, Parts, In0, In) :-
 	(   option(status_code(Code), Options)
 	->  true
 	;   Code == 200
@@ -557,6 +557,7 @@ transfer_encoding(Encoding) -->
 read_header(In, Code, Comment, Lines) :-
 	read_line_to_codes(In, Line),
 	phrase(first_line(Code, Comment), Line),
+	debug(http(open), '~w ~w', [Code, Comment]),
 	read_line_to_codes(In, Line2),
 	rest_header(Line2, In, Lines).
 
