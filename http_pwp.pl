@@ -262,9 +262,11 @@ reply_pwp_page(M:File, Options, Request) :-
 %	See http://www.w3.org/TR/xhtml-media-types/#media-types
 
 default_mime_type(Request, DefType) :-
+	XHTML = application/'xhml+xml',
 	memberchk(accept(Accept), Request),
-	memberchk(media(application/'xhml+xml', _, _, _), Accept), !,
-	DefType = application/'xhml+xml'.
+	memberchk(media(Type, _, _, _), Accept),
+	Type == XHTML, !,
+	DefType = XHTML.
 default_mime_type(_, text/html).
 
 %%	pwp_context(+Request, -Context) is nondet.
