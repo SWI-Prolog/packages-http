@@ -246,9 +246,30 @@ reply_pwp_page(M:File, Options, Request) :-
 				   | Context
 				   ]),
 			   erase(Ref)),
-	option(mime_type(Type), Options, text/html),
+	default_mime_type(Request, DefType),
+	option(mime_type(Type), Options, DefType),
 	format('Content-type: ~w~n~n', [Type]),
-	xml_write(current_output, Transformed, []).
+	(   Type = text/html
+	->  html_write(current_output, Transformed, [])
+	;   xml_write(current_output, Transformed, [])
+	).
+
+%%	default_mime_type(+Request, +DefType) is det.
+%
+%	Extract the preferred content-type from the Request.  This is
+%	part of the PWP reply-format negotiation.
+%
+%	See http://www.w3.org/TR/xhtml-media-types/#media-types
+
+default_mime_type(Request, DefType) :-
+	memberchk(accept(Accept), Request),
+	memberchk(media(application/'xhml+xml', _, _, _), Accept), !,
+	DefType = application/'xhml+xml'.
+default_mime_type(_, text/html).
+
+%%	pwp_context(+Request, -Context) is nondet.
+%
+%	Provide some environment variables similar to CGI scripts.
 
 pwp_context(Request, 'REMOTE_USER' = User) :-
 	memberchk(user(User), Request).
