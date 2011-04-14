@@ -495,10 +495,19 @@ random_4(R1,R2,R3,R4) :-
 :- dynamic
 	urandom_handle/1.
 
+%%	urandom(-Handle) is semidet.
+%
+%	Handle is a stream-handle  for   /dev/urandom.  Originally, this
+%	simply tried to open /dev/urandom, failing   if this device does
+%	not exist. It turns out  that   trying  to open /dev/urandom can
+%	block indefinitely on  some  Windows   installations,  so  we no
+%	longer try this on Windows.
+
 urandom(Handle) :-
 	urandom_handle(Handle), !,
 	Handle \== [].
 urandom(Handle) :-
+	\+ current_prolog_flag(windows, true),
 	catch(open('/dev/urandom', read, In, [type(binary)]), _, fail), !,
 	assert(urandom_handle(In)),
 	Handle = In.
