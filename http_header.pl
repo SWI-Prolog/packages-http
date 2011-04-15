@@ -1412,6 +1412,13 @@ field_name(Name) -->
 	{ atom_codes(Name, Chars) },
 	wr_field_chars(Chars).
 
+rd_field_chars_no_fold([C|T]) -->
+	[C],
+	{ rd_field_char(C, _) }, !,
+	rd_field_chars_no_fold(T).
+rd_field_chars_no_fold([]) -->
+	[].
+
 rd_field_chars([C0|T]) -->
 	[C],
 	{ rd_field_char(C, C0) }, !,
@@ -1605,7 +1612,7 @@ cookie(Name, Value) -->
 
 cookie_name(Name) -->
 	{ var(Name) }, !,
-	rd_field_chars(Chars),
+	rd_field_chars_no_fold(Chars),
 	{ atom_codes(Name, Chars) }.
 
 cookie_value(Value) -->

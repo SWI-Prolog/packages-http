@@ -1,24 +1,30 @@
-/*  This file is part of ClioPatria.
+/*  Part of SWI-Prolog
 
-    Author:
-    HTTP:	http://e-culture.multimedian.nl/
-    GITWEB:	http://gollem.science.uva.nl/git/ClioPatria.git
-    GIT:	git://gollem.science.uva.nl/home/git/ClioPatria.git
-    GIT:	http://gollem.science.uva.nl/home/git/ClioPatria.git
-    Copyright:  2007, E-Culture/MultimediaN
+    Author:        Jan Wielemaker
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org
+    Copyright (C): 2007-2011, VU University Amsterdam
 
-    ClioPatria is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
 
-    ClioPatria is distributed in the hope that it will be useful,
+    This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with ClioPatria.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+    As a special exception, if you link this library with other files,
+    compiled with a Free Software compiler, to produce an executable, this
+    library does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however
+    invalidate any other reasons why the executable file might be covered by
+    the GNU General Public License.
 */
 
 :- module(http_cookie,
@@ -55,7 +61,7 @@ predicates.
 	http:update_cookies/3.		% +CookieData, +Parts, +Options
 
 :- dynamic
-	client_cookie/4.		% Id, Name, Value, Options
+	client_cookie/5.		% Id, CanName, Name, Value, Options
 
 %%	http:write_cookies(+Out, +Parts, +Options) is det.
 %
@@ -119,21 +125,22 @@ http:update_cookies(CookieData, Parts, Options) :-
 		   update_cookie(ClientId, Host, Path, Name, Value, COptions)).
 
 update_cookie(ClientId, Host, Path, Name, Value, Options) :-
-	remove_cookies(ClientId, Host, Path, Name, Options),
+	downcase_atom(Name, CName),
+	remove_cookies(ClientId, Host, Path, CName, Options),
 	debug(http(cookie), 'New for ~w: ~w=~p', [ClientId, Name, Value]),
-	assert(client_cookie(ClientId, Name, Value, [host=Host|Options])).
+	assert(client_cookie(ClientId, CName, Name, Value, [host=Host|Options])).
 
 %%	remove_cookies(+ClientId, +Host, +Path, +Name, +SetOptions) is det.
 %
 %	Remove all cookies that conflict with the new set-cookie
 %	command.
 
-remove_cookies(ClientId, Host, Path, Name, SetOptions) :-
-	(   client_cookie(ClientId, Name, Value, OldOptions),
+remove_cookies(ClientId, Host, Path, CName, SetOptions) :-
+	(   client_cookie(ClientId, CName, Name, Value, OldOptions),
 	    cookie_match_host(Host, SetOptions, OldOptions),
 	    cookie_match_path(Path, SetOptions, OldOptions),
 	    debug(cookie, 'Del for ~w: ~w=~p', [ClientId, Name, Value]),
-	    retract(client_cookie(ClientId, Name, Value, OldOptions)),
+	    retract(client_cookie(ClientId, CName, Name, Value, OldOptions)),
 	    fail
 	;   true
 	).
@@ -155,7 +162,7 @@ cookie_match_path(Path, SetOptions, OldOptions) :-
 %	Find cookies that match the given request.
 
 current_cookie(ClientId, Host, Path, Name, Value) :-
-	client_cookie(ClientId, Name, Value, Options),
+	client_cookie(ClientId, _CName, Name, Value, Options),
 	cookie_match_host(Host, Options),
 	cookie_match_path(Path, Options),
 	cookie_match_expire(Options).
@@ -192,9 +199,9 @@ cookie_remove_client(ClientId) :-
 	var(ClientId), !,
 	throw(error(instantiation_error, _)).
 cookie_remove_client(ClientId) :-
-	(   client_cookie(ClientId, Name, Value, Options),
+	(   client_cookie(ClientId, CName, Name, Value, Options),
 	    \+ memberchk(expire=_, Options),
-	    retract(client_cookie(ClientId, Name, Value, Options)),
+	    retract(client_cookie(ClientId, CName, Name, Value, Options)),
 	    fail
 	;   true
 	).
@@ -212,11 +219,18 @@ cookie_remove_all_clients :-
 %	True if ClientId is the identifier of a client.
 
 current_client(ClientId) :-
-	client_cookie(ClientId, _Name, _Value, _Options).
+	client_cookie(ClientId, _CName, _Name, _Value, _Options).
 
-%%	http_current_cookie(?ClientId, ?Name, ?Value, ?Options)
+%%	http_current_cookie(?ClientId, ?Name, ?Value, ?Options) is nondet.
 %
-%	Query current cookie database
+%	Query current cookie database. If Name   is given, it is matched
+%	case insensitive against the known cookies.   If  it is unbound,
+%	the  cookie  name  is  returned  in    its  oiginal  case  (case
+%	preserving).
 
 cookie_current_cookie(ClientId, Name, Value, Options) :-
-	client_cookie(ClientId, Name, Value, Options).
+	nonvar(Name), !,
+	downcase_atom(Name, CName),
+	client_cookie(ClientId, CName, Name, Value, Options).
+cookie_current_cookie(ClientId, Name, Value, Options) :-
+	client_cookie(ClientId, _CName, Name, Value, Options).
