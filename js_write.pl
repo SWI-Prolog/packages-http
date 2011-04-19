@@ -31,6 +31,7 @@
 :- module(javascript,
 	  [ js_call//1,			% +Function(Arg..)
 	    js_new//2,			% +Id, +Function(+Args)
+	    js_arg//1,			% +Arg
 	    js_args//1			% +Args
 	  ]).
 
@@ -140,6 +141,12 @@ js_args([H|T]) -->
 	    )
 	;   { type_error(javascript_argument, H) }
 	).
+
+%%	js_arg(+Arg)// is det.
+%
+%	Emit a single JSON argument.
+%
+%	@see js_args//1 for details.
 
 js_arg(H) -->
 	{ var(H) }, !,
