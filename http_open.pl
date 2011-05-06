@@ -481,7 +481,7 @@ open_socket(Address, In, Out, Options) :-
 	      )),
 	debug(http(open), '\tok ~p --> ~p', [In, Out]),
 	set_stream(In, record_position(false)),
-	(   memberchk(Options, timeout(Timeout))
+	(   memberchk(timeout(Timeout), Options)
 	->  set_stream(In, timeout(Timeout))
 	;   true
 	).
