@@ -68,6 +68,7 @@ install:	$(LIBPL)
 		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(LIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(LIBDIR)/web/css
+		$(PL) -f none -g true -t "make_library_index('$(DESTDIR)$(LIBDIR)')"
 		$(PL) -f none -g make -t halt
 
 ln-install:	$(LIBPL)

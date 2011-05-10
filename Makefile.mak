@@ -12,6 +12,11 @@ PLHOME=..\..
 !include $(PLHOME)\src\rules.mk
 !include common.mk
 
+MAKEINDEXHTTP=chdir "$(PLBASE)" & del library\http\INDEX.pl & bin\swipl.exe \
+			-f none -F none \
+			-g make_library_index('library/http') \
+			-t halt
+
 LIBDIR=		$(PLBASE)\library\http
 EXDIR=		$(PKGDOC)\examples\http
 
@@ -28,9 +33,6 @@ http_stream.obj:	http_error.c http_chunked.c cgi_stream.c stream_range.c
 
 all:
 
-!IF "$(CFG)" == "rt"
-install::
-!ELSE
 install::
 		if not exist "$(LIBDIR)\$(NULL)" $(MKDIR) "$(LIBDIR)"
 		if not exist "$(LIBDIR)\web\$(NULL)" $(MKDIR) "$(LIBDIR)\web"
@@ -48,7 +50,7 @@ install::
 		copy json.pdb "$(BINDIR)"
 !ENDIF
 		$(MAKEINDEX)
-!ENDIF
+		$(MAKEINDEXHTTP)
 
 html-install:	install-examples
 		copy http.html "$(PKGDOC)"
