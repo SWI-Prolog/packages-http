@@ -655,7 +655,7 @@ search_parameter(Term) -->
 %	Used for multi-valued attributes, such as class-lists.  E.g.,
 %
 %	  ==
-%	  	body(class([c1, c2]), Body)
+%		body(class([c1, c2]), Body)
 %	  ==
 %
 %	  Emits =|<body class="c1 c2"> ...|=
@@ -916,14 +916,14 @@ post_close(_) -->
 %			close-tag or =empty= to indicate the element has
 %			no content model.
 %
-% 	@tbd	Complete table
+%	@tbd	Complete table
 
 :- multifile
 	layout/3.
 
 layout(table,	   2-1,	1-2).
 layout(blockquote, 2-1,	1-2).
-layout(pre, 	   2-1,	1-2).
+layout(pre,	   2-1,	1-2).
 layout(center,	   2-1,	1-2).
 layout(dl,	   2-1,	1-2).
 layout(ul,	   1-1,	1-1).
@@ -1340,6 +1340,14 @@ called_by(Term, M) -->
 	called_by(Args, M).
 called_by(_, _) -->
 	[].
+
+:- multifile
+	prolog:hook/1.
+
+prolog:hook(body(_,_,_)).
+prolog:hook(body(_,_,_,_)).
+prolog:hook(head(_,_,_)).
+prolog:hook(head(_,_,_,_)).
 
 
 		 /*******************************

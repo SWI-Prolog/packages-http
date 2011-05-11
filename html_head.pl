@@ -186,6 +186,9 @@ require_commands([R|T0], TR, [R|T]) :- !,
 %	    2. See whether we can use any `aggregate' resources
 %	    3. Put required resources before their requiree.
 
+		% called from html_write:html_head_expansion/2
+:- public html_insert_resource//1.
+
 html_insert_resource(Required) -->
 	{ requirements(Required, Paths),
 	  debug(html(script), 'Requirements: ~q~nFinal: ~q', [Required, Paths])

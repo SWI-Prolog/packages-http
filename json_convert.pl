@@ -477,14 +477,6 @@ json_list_to_prolog([JSONValue|T0], [PrologValue|T], Module) :-
 	json_list_to_prolog(T0, T, Module).
 
 
-%%	json_object_to_prolog(+JSONObject, ?Term, +Module) is semidet.
-%
-%	Translate a JSON json(Pairs) term into a Prolog application term.
-
-json_object_to_prolog(json(Pairs), Term, Module) :-
-	pairs_to_term(Pairs, Term, Module).
-
-
 %%	pairs_to_term(+Pairs, ?Term, +Module) is semidet.
 %
 %	Convert a Name=Value set into a Prolog application term based on
@@ -540,6 +532,8 @@ match_field(list(Type), JSON, Prolog, M, json_list_to_prolog(JSON, Prolog, M)) :
 	functor(Term, Type, _), !.
 match_field(Type, Var, Var, _, Goal) :-
 	type_goal(Type, Var, Goal).
+
+:- public json_bool_to_prolog/2.
 
 json_bool_to_prolog(@(True), True).
 

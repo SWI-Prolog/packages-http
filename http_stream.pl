@@ -42,6 +42,7 @@
 	  ]).
 
 :- use_foreign_library(foreign(http_stream)).
+:- public http_stream_debug/1.		% set debug level
 
 /** <module> HTTP Streams
 
