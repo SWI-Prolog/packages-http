@@ -1099,7 +1099,13 @@ reply_html_page(Style, Head, Body) :-
 %	rule takes HTML content as  argument.   It  has  two effects. It
 %	emits  the  appropriate  meta_predicate/1    and  instructs  the
 %	built-in editor (PceEmacs) to provide   proper colouring for the
-%	arguments.
+%	arguments.  The  arguments  in  Head  are    the   same  as  for
+%	meta_predicate or can be constant =html=.  For example:
+%
+%	  ==
+%	  :- html_meta
+%		page(html,html,?,?).
+%	  ==
 
 html_meta(Spec) :-
 	throw(error(context_error(nodirective, html_meta(Spec)), _)).
@@ -1110,7 +1116,7 @@ html_meta_decls(Var, _, _) :-
 html_meta_decls((A,B), (MA,MB), [MH|T]) :- !,
 	html_meta_decl(A, MA, MH),
 	html_meta_decls(B, MB, T).
-html_meta_decls(A, MA, MH) :-
+html_meta_decls(A, MA, [MH]) :-
 	html_meta_decl(A, MA, MH).
 
 html_meta_decl(Head, MetaHead,
