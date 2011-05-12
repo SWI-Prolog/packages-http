@@ -70,7 +70,6 @@ for details.
 	http_spawn(0, +).
 
 :- dynamic
-	port_option/2,			% Port, Option
 	current_server/5,		% Port, Goal, Thread, Queue, StartTime
 	queue_worker/2,			% Queue, ThreadID
 	queue_options/2.		% Queue, Options
@@ -87,8 +86,8 @@ for details.
 %	Create a server at Port that calls Goal for each parsed request.
 %	Options provide a list of options. Defined options are
 %
-%	| port(?Port)	     | - 	| Port to listen to		      |
-%	| workers(N)	     | 5 	| Define the number of worker threads |
+%	| port(?Port)	     | -	| Port to listen to		      |
+%	| workers(N)	     | 5	| Define the number of worker threads |
 %	| timeout(S)	     | 60	| Max inactivity for reading request  |
 %	| keep_alive_timeout | 2	| Drop Keep-Alive connection timeout  |
 %	| local(KBytes)	     | <CommandLine> |				      |
@@ -99,7 +98,6 @@ http_server(Goal, Options) :-
 	strip_module(Goal, Module, G),
 	select_option(port(Port), Options, Options1), !,
 	make_socket(Port, Options1, Options2),
-	set_port_options(Port, Options2),
 	create_workers(Options2),
 	create_server(Module:G, Port, Options2).
 http_server(_Goal, _Options) :-
@@ -154,24 +152,6 @@ create_server(Goal, Port, Options) :-
 		      [ alias(Alias)
 		      ]),
 	assert(current_server(Port, Goal, Alias, Queue, StartTime)).
-
-
-%%	set_port_options(+Port, +Options) is det.
-%
-%	Register Options for the HTTP server at Port.
-
-set_port_options(Port, Options) :-
-	retractall(port_option(Port, _)),
-	assert_port_options(Options, Port).
-
-assert_port_options([], _).
-assert_port_options([Name=Value|T], Port) :- !,
-	Opt =.. [Name,Value],
-	assert(port_option(Port, Opt)),
-	assert_port_options(T, Port).
-assert_port_options([Opt|T], Port) :- !,
-	assert(port_option(Port, Opt)),
-	assert_port_options(T, Port).
 
 
 %%	http_current_server(:Goal, ?Port) is nondet.
