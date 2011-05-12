@@ -1147,6 +1147,9 @@ html_meta_colours(Head, Goal, built_in-Colours) :-
 
 meta_colours(html, HTML, Colours) :- !,
 	html_colours(HTML, Colours).
+meta_colours(I, _, Colours) :-
+	integer(I), I>=0, !,
+	Colours = meta(I).
 meta_colours(_, _, classify).
 
 html_meta_called(Head, Goal, Called) :-
@@ -1158,6 +1161,11 @@ meta_called([], [], Called, Called).
 meta_called([html|MT], [A|AT], Called, Tail) :- !,
 	phrase(called_by(A), Called, Tail1),
 	meta_called(MT, AT, Tail1, Tail).
+meta_called([0|MT], [A|AT], [A|CT0], CT) :- !,
+	meta_called(MT, AT, CT0, CT).
+meta_called([I|MT], [A|AT], [A+I|CT0], CT) :-
+	integer(I), I>0, !,
+	meta_called(MT, AT, CT0, CT).
 meta_called([_|MT], [_|AT], Called, Tail) :- !,
 	meta_called(MT, AT, Called, Tail).
 
