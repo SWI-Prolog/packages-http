@@ -262,6 +262,8 @@ thread_cputime(CPU) :-
 %	Hook called from the CGI   processing stream. See http_stream.pl
 %	for details.
 
+:- public cgi_hook/2.
+
 cgi_hook(What, _CGI) :-
 	debug(http(hook), 'Running hook: ~q', [What]),
 	fail.
