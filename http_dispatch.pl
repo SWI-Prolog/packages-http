@@ -677,7 +677,8 @@ http_safe_file(Name) :-
 
 safe_name(Name, _) :-
 	must_be(atom, Name),
-	\+ unsafe_name(Name), !.
+	prolog_to_os_filename(FileName, Name),
+	\+ unsafe_name(FileName), !.
 safe_name(_, Spec) :-
 	permission_error(read, file, Spec).
 
