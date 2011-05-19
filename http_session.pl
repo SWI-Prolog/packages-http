@@ -474,27 +474,7 @@ route_no_cache(Route) :-
 	;   Route = Host
 	).
 
-
-%%	random_4(-R1,-R2,-R3,-R4) is det.
-%
-%	Generate 4 2-byte random  numbers.   Uses  =|/dev/urandom|= when
-%	available to make prediction of the session IDs hard.
-
-random_4(R1,R2,R3,R4) :-
-	urandom(In), !,
-	get_pair(In, R1),
-	get_pair(In, R2),
-	get_pair(In, R3),
-	get_pair(In, R4).
-random_4(R1,R2,R3,R4) :-
-	R1 is random(65536),
-	R2 is random(65536),
-	R3 is random(65536),
-	R4 is random(65536).
-
-:- dynamic
-	urandom_handle/1.
-
+:- if(\+current_prolog_flag(windows, true)).
 %%	urandom(-Handle) is semidet.
 %
 %	Handle is a stream-handle  for   /dev/urandom.  Originally, this
@@ -503,11 +483,13 @@ random_4(R1,R2,R3,R4) :-
 %	block indefinitely on  some  Windows   installations,  so  we no
 %	longer try this on Windows.
 
+:- dynamic
+	urandom_handle/1.
+
 urandom(Handle) :-
 	urandom_handle(Handle), !,
 	Handle \== [].
 urandom(Handle) :-
-	\+ current_prolog_flag(windows, true),
 	catch(open('/dev/urandom', read, In, [type(binary)]), _, fail), !,
 	assert(urandom_handle(In)),
 	Handle = In.
@@ -519,3 +501,23 @@ get_pair(In, Value) :-
 	get_byte(In, B1),
 	get_byte(In, B2),
 	Value is B1<<8+B2.
+:- endif.
+
+%%	random_4(-R1,-R2,-R3,-R4) is det.
+%
+%	Generate 4 2-byte random  numbers.   Uses  =|/dev/urandom|= when
+%	available to make prediction of the session IDs hard.
+
+:- if(current_predicate(urandom/1)).
+random_4(R1,R2,R3,R4) :-
+	urandom(In), !,
+	get_pair(In, R1),
+	get_pair(In, R2),
+	get_pair(In, R3),
+	get_pair(In, R4).
+:- endif.
+random_4(R1,R2,R3,R4) :-
+	R1 is random(65536),
+	R2 is random(65536),
+	R3 is random(65536),
+	R4 is random(65536).
