@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2006, University of Amsterdam
+    Copyright (C): 2006-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -90,12 +91,14 @@ session_setting(timeout(600)).		% timeout in seconds
 session_setting(cookie('swipl_session')).
 session_setting(path(/)).
 session_setting(enabled(true)).
+session_setting(proxy_enabled(false)).
 
 session_option(timeout, integer).
 session_option(cookie, atom).
 session_option(path, atom).
 session_option(route, atom).
 session_option(enabled, boolean).
+session_option(proxy_enabled, boolean).
 
 %%	http_set_session_options(+Options) is det.
 %
@@ -121,6 +124,12 @@ session_option(enabled, boolean).
 %		* enabled(+Boolean)
 %		Enable/disable session management.  Sesion management
 %		is enabled by default after loading this file.
+%
+%		* proxy_enabled(+Boolean)
+%		Enable/disable proxy session management. Proxy session
+%		management associates the _originating_ IP address of
+%		the client to the session rather than the _proxy_ IP
+%		address. Default is false.
 
 http_set_session_options([]).
 http_set_session_options([H|T]) :-
@@ -219,13 +228,16 @@ http:request_expansion(Request0, Request) :-
 	session_setting(enabled(true)),
 	http_session(Request0, Request, _SessionID).
 
-%%	peer(+Request, -Peer)
+%%	peer(+Request, -Peer) is det.
 %
 %	Find peer for current request. If   unknown we leave it unbound.
 %	Alternatively we should treat this as an error.
 
 peer(Request, Peer) :-
-	(   memberchk(peer(Peer), Request)
+	(   session_setting(proxy_enabled(true)),
+	    memberchk(x_forwarded_for(Peer), Request)
+	->  true
+	;   memberchk(peer(Peer), Request)
 	->  true
 	;   true
 	).
@@ -242,7 +254,7 @@ open_session(SessionID, Peer) :-
 	broadcast(http_session(begin(SessionID, Peer))).
 
 
-%%	valid_session_id(+SessionID, +Peer)
+%%	valid_session_id(+SessionID, +Peer) is semidet.
 %
 %	Check if this sessionID is known. If so, check the idle time and
 %	update the last_used for this session.
