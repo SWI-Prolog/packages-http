@@ -439,9 +439,26 @@ check_keep_alife_connection(In, TMO, Peer, In, Out) :-
 done_worker :-
 	thread_self(Self),
 	thread_property(Self, status(Status)),
-	retract(queue_worker(_Queue, Self)),
-	print_message(informational,
-		      httpd_stopped_worker(Self, Status)).
+	retract(queue_worker(Queue, Self)),
+	(   catch(recreate_worker(Status, Queue), _, fail)
+	->  thread_detach(Self),
+	    print_message(informational,
+			  httpd_restarted_worker(Self))
+	;   print_message(informational,
+			  httpd_stopped_worker(Self, Status))
+	).
+
+%%	recreate_worker(+Status, +Queue) is semidet.
+%
+%	Deal with the possibility that  threads are, during development,
+%	killed with abort/0. We  recreate  the   worker  to  avoid  that
+%	eventually we run out of workers.  If   we  are aborted due to a
+%	halt/0 call, thread_create/3 will raise a permission error.
+
+recreate_worker(exception('$aborted'), Queue) :-
+	queue_options(Queue, Options),
+	atom_concat(Queue, '_', AliasBase),
+	create_workers(1, 1, Queue, AliasBase, Options).
 
 
 %	thread_httpd:message_level(+Exception, -Level)
@@ -605,6 +622,8 @@ create_pool(Pool) :-
 
 prolog:message(httpd_stopped_worker(Self, Status)) -->
 	[ 'Stopped worker ~p: ~p'-[Self, Status] ].
+prolog:message(httpd_restarted_worker(Self)) -->
+	[ 'Replaced aborted worker ~p'-[Self] ].
 prolog:message(httpd(created_pool(Pool))) -->
 	[ 'Created thread-pool ~p of size 10'-[Pool], nl,
 	  'Create this pool at startup-time or define the hook ', nl,
