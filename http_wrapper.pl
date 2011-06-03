@@ -154,6 +154,14 @@ cgi_close(CGI, State0, ok, Close) :- !,
 	;   http_done(500, E, 0, State0),	% TBD: amount written?
 	    throw(E)
 	).
+cgi_close(CGI, Id, http_reply(Status), Close) :-
+	cgi_property(CGI, header_codes(Text)),
+	Text \== [], !,
+	http_parse_header(Text, ExtraHdr),
+	cgi_property(CGI, client(Out)),
+	cgi_discard(CGI),
+	close(CGI),
+	send_error(Out, Id, http_reply(Status, ExtraHdr), Close).
 cgi_close(CGI, Id, Error, Close) :-
 	cgi_property(CGI, client(Out)),
 	cgi_discard(CGI),
@@ -403,5 +411,6 @@ debug_request(Code, Status, Id, _, Bytes) :-
 	      [Id, Code, Status, Bytes]).
 
 map_exception(http_reply(Reply), Reply).
+map_exception(http_reply(Reply, _), Reply).
 map_exception(error(existence_error(http_location, Location), _Stack),
 	      error(404, Location)).

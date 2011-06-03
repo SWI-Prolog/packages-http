@@ -310,8 +310,8 @@ cgi_property(term_t cgi, term_t prop)
   } else if ( name == ATOM_header_codes )
   { if ( ctx->data_offset > 0 )
       rc = PL_unify_chars(arg, PL_CODE_LIST, ctx->data_offset, ctx->data);
-    else
-      rc = existence_error(cgi, "header");
+    else					/* incomplete header */
+      rc = PL_unify_chars(arg, PL_CODE_LIST, ctx->datasize, ctx->data);
   } else if ( name == ATOM_state )
   { atom_t state;
 
@@ -773,7 +773,7 @@ install_cgi_stream()
   ATOM_keep_alife        = PL_new_atom("keep_alife");
   ATOM_connection        = PL_new_atom("connection");
   ATOM_content_length    = PL_new_atom("content_length");
-  ATOM_id  	         = PL_new_atom("id");
+  ATOM_id	         = PL_new_atom("id");
 
   PREDICATE_call3   = PL_predicate("call", 3, "system");
 
