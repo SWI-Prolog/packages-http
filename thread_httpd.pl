@@ -455,11 +455,14 @@ done_worker :-
 %	eventually we run out of workers.  If   we  are aborted due to a
 %	halt/0 call, thread_create/3 will raise a permission error.
 
-recreate_worker(exception('$aborted'), Queue) :-
+recreate_worker(exception(Error), Queue) :-
+	recreate_on_error(Error),
 	queue_options(Queue, Options),
 	atom_concat(Queue, '_', AliasBase),
 	create_workers(1, 1, Queue, AliasBase, Options).
 
+recreate_on_error('$aborted').
+recreate_on_error(time_limit_exceeded).
 
 %	thread_httpd:message_level(+Exception, -Level)
 %
