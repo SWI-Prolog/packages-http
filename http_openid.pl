@@ -6,7 +6,7 @@
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
     Copyright (C): 2007-2010, University of Amsterdam,
-    			      VU University Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -186,6 +186,7 @@ openid_logout(OpenID) :-
 openid_logged_in(OpenID) :-
 	openid_hook(logged_in(OpenID)), !.
 openid_logged_in(OpenID) :-
+	http_in_session(_SessionId),		% test in session
 	http_session_data(openid(OpenID)).
 
 
@@ -607,8 +608,8 @@ openid_server(Options, Request) :-
 associate_server(Request, Form, Options) :-
 	memberchk('openid.assoc_type'	      =	AssocType,   Form),
 	memberchk('openid.session_type'	      =	SessionType, Form),
-	memberchk('openid.dh_modulus'	      =	P64, 	     Form),
-	memberchk('openid.dh_gen'	      =	G64, 	     Form),
+	memberchk('openid.dh_modulus'	      =	P64,	     Form),
+	memberchk('openid.dh_gen'	      =	G64,	     Form),
 	memberchk('openid.dh_consumer_public' =	CPX64,       Form),
 	base64_btwoc(P, P64),
 	base64_btwoc(G, G64),
@@ -673,7 +674,7 @@ checkid_setup_server(_Request, Form, _Options) :-
 	memberchk('openid.return_to'	= ReturnTo,  Form),
 	memberchk('openid.trust_root'	= TrustRoot, Form),
 
-	server_association(_, Handle, _Association), 		% check
+	server_association(_, Handle, _Association),		% check
 
 	reply_html_page([ title('OpenID login')
 			],
@@ -1115,7 +1116,7 @@ openid_attribute('openid.session_type',
 			 ])
 		 ]).
 openid_attribute('openid.dh_modulus',	      [length > 1]).
-openid_attribute('openid.dh_gen', 	      [length > 1]).
+openid_attribute('openid.dh_gen',	      [length > 1]).
 openid_attribute('openid.dh_consumer_public', [length > 1]).
 openid_attribute('openid.assoc_handle',	      [length > 1]).
 openid_attribute('openid.return_to',	      [length > 1]).
