@@ -47,6 +47,7 @@
 	    http_session_data/1		% ?Data
 	  ]).
 :- use_module(http_wrapper).
+:- use_module(http_stream).
 :- use_module(library(error)).
 :- use_module(library(debug)).
 :- use_module(library(socket)).
