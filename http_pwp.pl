@@ -253,13 +253,33 @@ reply_pwp_page(M:File, Options, Request) :-
 				   | Context
 				   ]),
 			   erase(Ref)),
+	copy_http_equiv(Transformed),
 	default_mime_type(Request, DefType),
 	option(mime_type(Type), Options, DefType),
-	format('Content-type: ~w~n~n', [Type]),
+	format('Content-type: ~w\r\n\r\n', [Type]),
 	(   Type = text/html
 	->  html_write(current_output, Transformed, [])
 	;   xml_write(current_output, Transformed, [])
 	).
+
+
+%%	copy_http_equiv(+XMLDOM) is det.
+%
+%	Copy =|http-equiv|= elements  from  the   document  to  the  CGI
+%	header.
+
+copy_http_equiv(Contents) :-
+	memberchk(element(html, _, HtmlElement), Contents),
+	memberchk(element(head, _, HeadElement), HtmlElement), !,
+	forall(http_equiv(HeadElement, HttpEquiv, HttpEquivValue),
+	       format('~w: ~w\r\n', [HttpEquiv, HttpEquivValue])).
+copy_http_equiv(_).
+
+http_equiv(Head, Name, Value) :-
+	member(element(meta, MetaAttributes, []), Head),
+	memberchk('http-equiv'=Name, MetaAttributes),
+	memberchk(content=Value, MetaAttributes).
+
 
 %%	default_mime_type(+Request, +DefType) is det.
 %
