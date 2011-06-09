@@ -354,6 +354,7 @@ assert_openid(OpenIDLogin, OpenID, Server) :-
 %	@param Server URL of the OpenID server
 
 openid_server(OpenIDLogin, OpenID, Server) :-
+	http_in_session(_),
 	http_session_data(openid_login(OpenIDLogin, OpenID, Server)), !.
 
 
