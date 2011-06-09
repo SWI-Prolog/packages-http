@@ -96,6 +96,9 @@ predicates:
 %	    * hide_extensions(+List)
 %	    Hide files of the given extensions.  The default is to
 %	    hide .pl files.
+%	    * dtd(?DTD)
+%	    DTD to parse the input file with. If unbound, the generated
+%	    DTD is returned
 %
 %	@see reply_pwp_page/3
 %	@error permission_error(index, http_location, Location) is
@@ -127,7 +130,7 @@ pwp_handler(QOptions, Request) :-
 		access_file(File, read)
 	    ->	true
 	    ;	option(index_hook(Hook), Options),
-	    	call(Hook, Path, Options, Request)
+		call(Hook, Path, Options, Request)
 	    ->	true
 	    ;	memberchk(path(Location), Request),
 		permission_error(index, http_location, Location)
@@ -233,7 +236,11 @@ reply_pwp_page(M:File, Options, Request) :-
 			   ]),
 	memberchk(method(Method), Request),
 	file_directory_name(Path, Dir),
-	load_xml_file(Path, Contents),
+        (   option(dtd(DTD), Options)
+        ->  SGMLOptions = [dtd(DTD)]
+        ;   SGMLOptions = []
+        ),
+        load_structure(Path, Contents, [dialect(xml)|SGMLOptions]),
 	findall(C, pwp_context(Request, C), Context),
 	(   option(pwp_module(true), Options)
 	->  PWP_M = Path
