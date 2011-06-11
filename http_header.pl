@@ -145,7 +145,7 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 %		typical output from a CGI script.
 %
 %		* Status
-%		HTTP status report and defined by http_status_reply/3.
+%		HTTP status report and defined by http_status_reply/4.
 %
 %	@param HdrExtra provides additional reply-header fields, encoded
 %	       as Name(Value). It can also contain a field
@@ -179,7 +179,7 @@ http_reply(Status, Out, HdrExtra, Code) :-
 %%	http_reply_data(+Data, +Out, +HdrExtra, -Code) is semidet.
 %
 %	Fails if Data is not a defined   reply-data format, but a status
-%	term. See http_reply/3 and http_status_reply/3.
+%	term. See http_reply/3 and http_status_reply/4.
 %
 %	@error Various I/O errors.
 
@@ -625,7 +625,7 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %
 %	  * form(+ListOfParameter)
 %	  Send data of the MIME type application/x-www-form-urlencoded as
-% 	  produced by browsers issuing a POST request from an HTML form.
+%	  produced by browsers issuing a POST request from an HTML form.
 %	  ListOfParameter is a list of Name=Value or Name(Value).
 %
 %	  * form_data(+ListOfData)
