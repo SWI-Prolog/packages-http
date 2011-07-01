@@ -546,9 +546,10 @@ transfer_encoding(Encoding) -->
 	field("transfer-encoding"),
 	rest(Encoding).
 
-%%	read_header(+In:stream, -Code:int, -Comment:atom, -Lines:list)
+%%	read_header(+In:stream, -Code:int, -Comment:atom, -Lines:list) is det.
 %
-%	Read the HTTP reply-header.
+%	Read the HTTP reply-header. If the replied header is invalid, it
+%	simulates a 500 error with the comment =|Invalid reply header|=.
 %
 %	@param Code	Numeric HTTP reply-code
 %	@param Comment	Comment of reply-code as atom
@@ -559,7 +560,8 @@ read_header(In, Code, Comment, Lines) :-
 	phrase(first_line(Code, Comment), Line),
 	debug(http(open), '~w ~w', [Code, Comment]),
 	read_line_to_codes(In, Line2),
-	rest_header(Line2, In, Lines).
+	rest_header(Line2, In, Lines), !.
+read_header(_, 500, 'Invalid reply header', []).
 
 rest_header("", _, []) :- !.		% blank line: end of header
 rest_header(L0, In, [L0|L]) :-
@@ -860,12 +862,12 @@ update_cookies(Lines, Parts, Options) :-
 %
 %	    ==
 %	    :- multifile
-%	    	http:open_options/2.
+%		http:open_options/2.
 %
 %	    http:open_options(Parts, Options) :-
-%	    	memberchk(host(Host), Parts),
-%	    	Host \== localhost,
-%	    	Options = [proxy('proxy.local', 3128)].
+%		memberchk(host(Host), Parts),
+%		Host \== localhost,
+%		Options = [proxy('proxy.local', 3128)].
 %	    ==
 
 %%	http:write_cookies(+Out, +Parts, +Options) is semidet.
