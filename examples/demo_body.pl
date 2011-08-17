@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -32,12 +33,27 @@
 :- module(demo_body,
 	  [ reply/1
 	  ]).
-:- use_module(library('http/http_client')).
-:- use_module(library('http/http_mime_plugin')). % Decode multipart data
-:- use_module(library('http/http_image')).	 % make XPCE generate images
+:- use_module(library(http/http_client)).
+:- use_module(library(http/http_mime_plugin)). % Decode multipart data
+:- use_module(library(http/http_image)).	 % make XPCE generate images
 
+:- if(exists_source(library(pce))).
+:- use_module(library(pce)).
+:- endif.
 
 :- style_check(-atom).			% allow long atoms
+:- discontiguous
+	reply/1.
+
+/** <module> Demo implementation of some HTTP handlers
+
+This module implements some HTTP handlers  using rather low-level simple
+primitives.
+
+@see	http://www.swi-prolog.org/howto/http/ provides a much better
+	tutorial introduction to the SWI-Prolog HTTP services.
+*/
+
 
 reply(_) :-
 	flag(request, N, N+1),
@@ -52,18 +68,6 @@ reply(Request) :-
 	format('Connection: close~n', []),
 	format('Content-type: text/html~n~n', []),
 	format('Bye Bye~n').
-
-%	/xpce?class=box
-%
-%	Make XPCE reply with a graphics image. The demo-body pce_reply/1
-%	is called embedded in a  message  to   XPCE  to  force  the XPCE
-%	incremental garbage collector to reclaim   objects created while
-%	serving the request. pce_reply/1 replies   to ?class=box using a
-%	blue box with rounded corners.
-
-reply(Request) :-
-	member(path('/xpce'), Request), !,
-	send(@prolog, call, demo_body:pce_reply(Request)).
 
 %	/env
 %
@@ -176,6 +180,29 @@ reply(Request) :-
 	format('Content-type: text/plain~n~n', []),
 	format('A = ~w~n', [A]).
 
+%	/xpce?class=box
+%
+%	Make XPCE reply with a graphics image. The demo-body pce_reply/1
+%	is called embedded in a  message  to   XPCE  to  force  the XPCE
+%	incremental garbage collector to reclaim   objects created while
+%	serving the request. pce_reply/1 replies   to ?class=box using a
+%	blue box with rounded corners.
+
+:- if(current_predicate(send/3)).
+reply(Request) :-
+	member(path('/xpce'), Request), !,
+	send(@(prolog), call, demo_body:pce_reply(Request)).
+
+pce_reply(Request) :-
+	memberchk(search(Search), Request),
+	memberchk(class=box, Search),
+	new(Box, box(200,200)),
+	send(Box, radius, 20),
+	send(Box, fill_pattern, colour(skyblue)),
+	reply_image(Box, []).
+
+:- endif.
+
 %	... Otherwise
 %
 %	Print the request itself.
@@ -188,25 +215,11 @@ reply(Request) :-
 	format('~n</table>~n'),
 	format('</html>~n', []).
 
-
 print_request([]).
 print_request([H|T]) :-
 	H =.. [Name, Value],
 	format('<tr><td>~w<td>~w~n', [Name, Value]),
 	print_request(T).
-
-
-		 /*******************************
-		 *     PCE BASED REQUESTS	*
-		 *******************************/
-
-pce_reply(Request) :-
-	memberchk(search(Search), Request),
-	memberchk(class=box, Search),
-	new(Box, box(200,200)),
-	send(Box, radius, 20),
-	send(Box, fill_pattern, colour(skyblue)),
-	reply_image(Box, []).
 
 
 
