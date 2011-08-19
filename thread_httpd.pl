@@ -385,14 +385,19 @@ open_client(requeue(In, Out, Goal, ClOpts),
 	memberchk(peer(Peer), ClOpts),
 	option(keep_alive_timeout(KeepAliveTMO), Opts, 2),
 	check_keep_alife_connection(In, KeepAliveTMO, Peer, In, Out).
-open_client(Message, Queue, Goal, In, Out, _Opts,
-	    [ pool(client(Queue, Goal, In, Out))
+open_client(Message, Queue, Goal, In, Out, Opts,
+	    [ pool(client(Queue, Goal, In, Out)),
+	      timeout(Timeout)
 	    | Options
 	    ]) :-
 	catch(open_client(Message, Goal, In, Out, Options),
 	      E, report_error(E)),
-	memberchk(peer(Peer), Options),
-	debug(http(connection), 'Opened connection from ~p', [Peer]).
+	option(timeout(Timeout), Opts, 60),
+	(   debugging(http(connection))
+	->  memberchk(peer(Peer), Options),
+	    debug(http(connection), 'Opened connection from ~p', [Peer])
+	;   true
+	).
 
 
 open_client(Message, Goal, In, Out, Options) :-
