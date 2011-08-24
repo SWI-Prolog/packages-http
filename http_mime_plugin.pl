@@ -47,22 +47,35 @@ implementation of the rfc2045 (mime) specifications.
 	http_client:http_convert_data/4,
 	http_parameters:form_data_content_type/1.
 
+%%	http_client:http_convert_data(+In, +Fields, -Data, +Options) is semidet.
+%
+%	Convert =|multipart/form-data|= messages for http_read_data/3.
+
 http_client:http_convert_data(In, Fields, Data, Options) :-
 	memberchk(content_type(Type), Fields),
 	(   memberchk(mime_version(MimeVersion), Fields)
 	;   sub_atom(Type, 0, _, _, 'multipart/form-data'),
 	    MimeVersion = '1.0'
 	), !,
-	new_memory_file(MemFile),
-	open_memory_file(MemFile, write, Tmp),
-	format(Tmp, 'Mime-Version: ~w\n', [MimeVersion]),
-	format(Tmp, 'Content-Type: ~w\n\n', [Type]),
-	http_read_data(Fields, _, [in(In), to(stream(Tmp))|Options]),
-	close(Tmp),
-	open_memory_file(MemFile, read, MimeIn),
-	mime_parse(stream(MimeIn), Data0),
-	close(MimeIn),
-	free_memory_file(MemFile),
+	setup_call_cleanup(new_memory_file(MemFile),
+			   convert_mime_data(In, Fields, Data,
+					     MemFile, Type, MimeVersion, Options),
+			   free_memory_file(MemFile)).
+
+convert_mime_data(In, Fields, Data, MemFile, Type, MimeVersion, Options) :-
+	setup_call_cleanup(open_memory_file(MemFile, write, Tmp),
+			   ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
+			     format(Tmp, 'Content-Type: ~w\r\n\r\n', [Type]),
+			     http_read_data(Fields, _,
+					    [ in(In),
+					      to(stream(Tmp))
+					    | Options
+					    ])
+			   ),
+			   close(Tmp)),
+	setup_call_cleanup(open_memory_file(MemFile, read, MimeIn),
+			   mime_parse(stream(MimeIn), Data0),
+			   close(MimeIn)),
 	mime_to_form(Data0, Data).
 
 mime_to_form(mime(A,'',Parts), Form) :-
