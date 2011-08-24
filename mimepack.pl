@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -34,8 +35,10 @@
 	  ]).
 :- use_module(mimetype).
 :- use_module(html_write).
+:- use_module(library(lists)).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> Create a MIME message
+
 Simple and partial implementation of MIME   encoding. MIME is covered by
 RFC 2045 which I've read from
 
@@ -45,13 +48,13 @@ MIME decoding is now  arranged  through   library(mime)  from  the  clib
 package, based on the  external  librfc2045   library.  Most  likely the
 functionality of this package will be moved to the same library someday.
 Packing however is a lot simpler then parsing.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+*/
 
 %%	mime_pack(+Inputs, +Out:stream, ?Boundary) is det.
 %
 %	Pack a number of inputs into a MIME package using a specified or
 %	generated boundary. The  generated  boundary   consists  of  the
-%	current  time  in  seconds  since  the    epoch  and  10  random
+%	current time in milliseconds  since  the   epoch  and  10 random
 %	hexadecimal numbers.
 %
 %	@bug	Does not validate that the boundary is unique.
@@ -91,12 +94,14 @@ pack(file(File), Out) :- !,
 	->  OpenOptions = []
 	;   OpenOptions = [type(binary)]
 	),
-	open(File, read, In, OpenOptions),
-	copy_stream_data(In, Out),
-	close(In).
+	setup_call_cleanup(open(File, read, In, OpenOptions),
+			   copy_stream_data(In, Out),
+			   close(In)).
 pack(stream(In, Len), Out) :- !,
+	format(Out, '\r\n', []),
 	copy_stream_data(In, Out, Len).
 pack(stream(In), Out) :- !,
+	format(Out, '\r\n', []),
 	copy_stream_data(In, Out).
 pack(mime(Atts, Data, []), Out) :- !,		% mime_parse compatibility
 	write_mime_attributes(Atts, Out),
@@ -141,6 +146,6 @@ make_boundary(_, Boundary) :-
 	C is random(1<<16),
 	D is random(1<<16),
 	E is random(1<<16),
-	sformat(Boundary, '------~0f~16r~16r~16r~16r~16r',
-		[Now, A, B, C, D, E]).
+	format(atom(Boundary), '------~3f~16r~16r~16r~16r~16r',
+	       [Now, A, B, C, D, E]).
 
