@@ -112,7 +112,7 @@ range_control(void *handle, int op, void *data)
     case SIO_SETENCODING:
       return 0;				/* allow switching encoding */
     case SIO_GETSIZE:
-    { size_t *rval = data;
+    { int64_t *rval = data;
       *rval = ctx->size;
       return 0;
     }
