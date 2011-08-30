@@ -35,7 +35,7 @@
 :- use_module(library(settings)).
 :- use_module(library(broadcast)).
 
-:- setting(http:logfile, atom, 'httpd.log',
+:- setting(http:logfile, callable, 'httpd.log',
 	   'File in which to log HTTP requests').
 
 /** <module> HTTP Logging module
@@ -88,8 +88,9 @@ http_log_stream(Stream) :-
 	log_stream(Stream), !,
 	Stream \== [].
 http_log_stream(Stream) :-
-	setting(http:logfile, File),
-	File \== '', !,
+	setting(http:logfile, Term),
+	Term \== '', !,
+	absolute_file_name(Term, File, [access(append)]),
 	with_mutex(http_log,
 		   (   open(File, append, Stream,
 			    [ close_on_abort(false),
