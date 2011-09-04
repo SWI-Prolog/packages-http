@@ -114,7 +114,8 @@ is_json_type(ContentType) :-
 strip_utf8(ContentType, Plain) :-
 	sub_atom(ContentType, B, _, A, ;),
 	sub_atom(ContentType, _, A, 0, Ext),
-	normalize_space(atom('charset=UTF-8'), Ext), !,
+	normalize_space(atom(Charset), Ext),
+	downcase_atom(Charset, 'charset=utf-8'), !,
 	sub_atom(ContentType, 0, B, _, CT),
 	normalize_space(atom(Plain), CT).
 strip_utf8(ContentType, ContentType).
