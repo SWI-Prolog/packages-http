@@ -15,6 +15,7 @@ PKGDOC=$(PLBASE)/doc/packages
 PCEHOME=../xpce
 LIBDIR=$(PLBASE)/library/http
 EXDIR=$(PKGDOC)/examples/http
+SOLIB=@SOLIB@
 
 CC=@CC@
 COFLAGS=@COFLAGS@
@@ -59,9 +60,9 @@ json.@SO@:	$(JSONOBJ)
 http_stream.o:	http_error.c http_chunked.c cgi_stream.c stream_range.c
 
 install:	$(LIBPL)
-		mkdir -p $(DESTDIR)$(PLBASE)/lib/$(INSTALL_PLARCH)
-		rm -f $(DESTDIR)$(PLBASE)/lib/$(INSTALL_PLARCH)/http_chunked.@SO@
-		$(INSTALL_PROGRAM) $(SOLIBS) $(DESTDIR)$(PLBASE)/lib/$(INSTALL_PLARCH)
+		mkdir -p $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)
+		rm -f $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)/http_chunked.@SO@
+		$(INSTALL_PROGRAM) $(SOLIBS) $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)
 		mkdir -p $(DESTDIR)$(LIBDIR)
 		mkdir -p $(DESTDIR)$(LIBDIR)/web/icons
 		mkdir -p $(DESTDIR)$(LIBDIR)/web/css
