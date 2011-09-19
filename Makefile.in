@@ -16,6 +16,7 @@ PCEHOME=../xpce
 LIBDIR=$(PLBASE)/library/http
 EXDIR=$(PKGDOC)/examples/http
 SOLIB=@SOLIB@
+TXTEXT=@TXTEXT@
 
 CC=@CC@
 COFLAGS=@COFLAGS@
@@ -67,7 +68,7 @@ install:	$(LIBPL)
 		mkdir -p $(DESTDIR)$(LIBDIR)/web/icons
 		mkdir -p $(DESTDIR)$(LIBDIR)/web/css
 		$(INSTALL_DATA) $(LIBPL) $(DESTDIR)$(LIBDIR)
-		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)
+		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)/README$(TXTEXT)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(LIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(LIBDIR)/web/css
 		$(PL) -f none -g true -t "make_library_index('$(DESTDIR)$(LIBDIR)')"
