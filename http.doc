@@ -6,9 +6,9 @@
 \makeindex
 
 \onefile
-\htmloutput{html}				% Output directory
-\htmlmainfile{index}				% Main document file
-\bodycolor{white}				% Page colour
+\htmloutput{.}				% Output directory
+\htmlmainfile{http}			% Main document file
+\bodycolor{white}			% Page colour
 \sloppy
 
 \renewcommand{\runningtitle}{SWI-Prolog HTTP support}
@@ -1097,7 +1097,7 @@ This approach has several advantages:
           machine.  We do not need a machine though and we only need
 	  access to the Apache configuration.
     \item As Apache is doing the front-line service, the Prolog server
-    	  is normally protected from malformed HTTP requests that could
+	  is normally protected from malformed HTTP requests that could
 	  result in denial of service or otherwise compromise the
 	  server.  In addition, Apache can provide encodings such as
 	  compression to the outside world.
@@ -1269,7 +1269,7 @@ Generate a ``302 Moved Temporary'' page with the given target
 	\termitem{see_other}{+URL}
 Generate a ``303 See Other'' page with the given target \arg{URL}.
 
- 	\termitem{not_found}{+URL}
+	\termitem{not_found}{+URL}
 Generate a ``404 Not Found'' page.
 
         \termitem{forbidden}{+URL}
