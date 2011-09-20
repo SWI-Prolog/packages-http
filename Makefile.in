@@ -1,50 +1,18 @@
 ################################################################
 # SWI-Prolog `HTTP' package
 # Author:    Jan Wielemaker. J.Wielemaker@cs.vu.nl
-# Copyright: GPL (see COPYING or www.gnu.org
+# Copyright: LGPL (see COPYING or www.gnu.org
 ################################################################
 
-.SUFFIXES: .txt .tex .dvi .doc .pl
-
-SHELL=@SHELL@
-PLBASE=@PLBASE@
-PLARCH=@PLARCH@
-PL=@PL@
-XPCEBASE=$(PLBASE)/xpce
-PKGDOC=$(PLBASE)/doc/packages
-PCEHOME=../xpce
-LIBDIR=$(PLBASE)/library/http
-EXDIR=$(PKGDOC)/examples/http
-SOLIB=@SOLIB@
-TXTEXT=@TXTEXT@
-
-CC=@CC@
-COFLAGS=@COFLAGS@
-CWFLAGS=@CWFLAGS@
-CMFLAGS=@CMFLAGS@
-CIFLAGS=-I.
-CFLAGS=$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CIFLAGS) @DEFS@
-LIBS=@LIBS@
-LD=@LD@
-LDFLAGS=@LDSOFLAGS@
-
-PUBLICPL=swipl
-DOCTOTEX=$(PCEHOME)/bin/doc2tex
-PLTOTEX=$(PUBLICPL) -q -s pltotex.pl -g pltotex --
-RUNTEX=../../man/runtex
-LATEX=latex
+PACKAGE=http
 DOC=http
-TEX=$(DOC).tex
-DVI=$(DOC).dvi
-PDF=$(DOC).pdf
-HTML=$(DOC).html
-
-INSTALL=@INSTALL@
-INSTALL_PROGRAM=@INSTALL_PROGRAM@
-INSTALL_DATA=@INSTALL_DATA@
-INSTALL_PLARCH=@INSTALL_PLARCH@
-
+include ../Makefile.defs
 include common.mk
+CFLAGS+= -I.
+LIBDIR=$(PLBASE)/library/http
+EXDIR=$(PKGEXDIR)/http
+
+SOLIB=@SOLIB@
 
 STREAMOBJ=	http_stream.o
 JSONOBJ=	json.o
@@ -52,16 +20,20 @@ SOLIBS=		http_stream.@SO@ json.@SO@
 
 all:		$(SOLIBS)
 
-
 http_stream.@SO@:	$(STREAMOBJ)
-		$(LD) $(LDFLAGS) -o $@ $(STREAMOBJ) $(LIBS)
+		$(LD) $(LDSOFLAGS) -o $@ $(STREAMOBJ) @LIBS@
 json.@SO@:	$(JSONOBJ)
-		$(LD) $(LDFLAGS) -o $@ $(JSONOBJ) $(LIBS)
+		$(LD) $(LDSOFLAGS) -o $@ $(JSONOBJ) @LIBS@
 
 http_stream.o:	http_error.c http_chunked.c cgi_stream.c stream_range.c
 
-install:	$(LIBPL)
-		mkdir -p $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)
+install:	$(LIBPL) $(SOLIBS)
+		mkdir -p $(DESTDIR)$(SOLIBDIR)
+		for f in $(SOLIBS); do \
+                  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
+                done
+
+
 		rm -f $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)/http_chunked.@SO@
 		$(INSTALL_PROGRAM) $(SOLIBS) $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)
 		mkdir -p $(DESTDIR)$(LIBDIR)
@@ -71,8 +43,8 @@ install:	$(LIBPL)
 		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)/README$(TXTEXT)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(LIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(LIBDIR)/web/css
-		$(PL) -f none -g true -t "make_library_index('$(DESTDIR)$(LIBDIR)')"
-		$(PL) -f none -g make -t halt
+		$(PL) -C "$(DESTDIR)$(LIBDIR)" -f none -F none -g 'make_library_index(.),halt' -t 'halt(1)'
+		$(MKINDEX)
 
 ln-install:	$(LIBPL)
 		$(MAKE) INSTALL_DATA="../ln-install" INSTALL_PROGRAM="../ln-install" install
@@ -105,29 +77,12 @@ check::
 # Documentation
 ################################################################
 
-doc:		$(PDF) $(HTML)
-pdf:		$(PDF)
-html:		$(HTML)
-
 SUBTEX=		post.tex json.tex httplog.tex httppath.tex htmlhead.tex \
 		httpsession.tex httpdispatch.tex httpdirindex.tex httppwp.tex \
 		httpopen.tex httphost.tex httpopenid.tex jswrite.tex
-
-$(HTML):	$(TEX) $(SUBTEX)
-		latex2html $(DOC)
-		mv html/index.html $@
-		mv html/httpserver.gif .
-		rmdir html
-
-$(PDF):		$(TEX) $(SUBTEX)
-		$(RUNTEX) --pdf $(DOC)
-
-$(TEX):		$(DOCTOTEX)
+$(TEX):		$(SUBTEX)
 
 json.tex:	json.pl json_convert.pl http_json.pl
-
-.txt.tex:
-		$(PUBLICPL) -q -s txttotex.pl -g txttotex,halt -t 'halt(1)' -- $*.txt
 
 httplog.tex:	http_log.pl
 		$(PLTOTEX) --subsection 'library(http/http_log)'
@@ -161,9 +116,6 @@ httppwp.tex:	http_pwp.pl
 
 jswrite.tex:	js_write.pl
 		$(PLTOTEX) --subsection 'library(http/js_write)'
-
-.doc.tex:
-		$(DOCTOTEX) $*.doc > $*.tex
 
 ################################################################
 # Clean
