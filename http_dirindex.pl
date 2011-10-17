@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2009, VU University Amsterdam
+    Copyright (C): 2009-2011, VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -180,6 +180,14 @@ size(Name) -->
 file_type_icon(Ext, Icon) :-
 	http:file_extension_icon(Ext, Icon), !.
 file_type_icon(_, 'generic.png').
+
+%%	http:file_extension_icon(+Extension, -IconName) is nondet.
+%
+%	Multi-file hook predicate that can be used to associate icons to
+%	files listed by http_reply_dirindex/3. The   actual icon file is
+%	located by absolute_file_name(icons(IconName), Path, []).
+%
+%	@see serve_files_in_directory/2 serves the images.
 
 :- multifile
 	http:file_extension_icon/2.
