@@ -33,14 +33,23 @@
 	  [ file_mime_type/2		% +Path, -Type
 	  ]).
 
+/** <module> Determine mime-type for a file
+
+Simple library to guess the mime-type from   the extension of a file. As
+various applications need  to  do  this   type  ofinferencing  it  seems
+worthwhile to place this functionality in an extensible library.
+
+@tbd	Consider content handling (using the Unix file command)
+@tbd	Allow parameters? (e.g. text/html; charset=UTF-8)
+*/
+
 %%	file_mime_type(+FileName, -MimeType) is semidet.
 %
-%	Simple library to guess the mime-type   from  the extension of a
-%	file.  As  various  applications  need  to    do  this  type  of
-%	inferencing it seems worthwhile to   place this functionality in
-%	an extensible library.
+%	True when MimeType is  the  mime-type   to  be  used for sending
+%	FileName. The default rules can be overridden and extended using
+%	the hook mime:mime_extension/2.
 %
-%	Please add clauses to mime:mime_extension/2 to add your own types.
+%	@param MimeType is a compound term of the form Type/SubType.
 
 file_mime_type(File, MimeType) :-
 	file_name_extension(_, Ext, File),
@@ -52,6 +61,11 @@ file_mime_type(File, MimeType) :-
 	;   downcase_atom(Ext, Lower),
 	    mime_extension(Lower, MimeType)
 	).
+
+%%	mime:mime_extension(+Ext, -MimeType)
+%
+%	Hook that is called by file_mime_type/2 before the default table
+%	is examined.
 
 :- multifile
 	mime:mime_extension/2.
