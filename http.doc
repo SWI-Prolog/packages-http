@@ -393,6 +393,7 @@ last time.
 
 \input{httpdispatch.tex}
 \input{httpdirindex.tex}
+\input{httpfiles.tex}
 \input{httpsession.tex}
 
 
