@@ -140,11 +140,12 @@ dir_row(Dir, OE) -->
 file_row(File, OE) -->
 	{ file_base_name(File, Name),
 	  file_mime_type(File, MimeType),
-	  mime_type_icon(MimeType, IconName)
+	  mime_type_icon(MimeType, IconName),
+	  uri_encoded(path, Name, Ref)
 	},
 	html(tr(class(OE),
 		[ \icon_cell(IconName, '[FILE]'),
-		  \name_cell(Name, Name),
+		  \name_cell(Ref, Name),
 		  \modified_cell(File),
 		  td(class(size), \size(File))
 		])).
