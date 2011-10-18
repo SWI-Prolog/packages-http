@@ -5,7 +5,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@uva.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2009, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -70,57 +71,93 @@ file_mime_type(File, MimeType) :-
 :- multifile
 	mime:mime_extension/2.
 
-mime_extension(Ext, Mime) :-
-	mime:mime_extension(Ext, Mime), !.
+mime_extension(Ext, MimeType) :-
+	(   mime:mime_extension(Ext, Mime)
+	->  MimeType = Mime
+	;   ext_mimetype(Ext, Mime)
+	->  MimeType = Mime
+	;   default_mimetype(MimeType)
+	).
+
+%%	default_mimetype(-MimeType) is semidet.
+%
+%	If the mime-type cannot be determined   from the file extension,
+%	this predicate is used as fallback.  It takes the value from the
+%	Prolog flag =default_mimetype=. To change the default, use e.g.,
+%
+%	  ==
+%	  :- set_prolog_flag(default_mimetype, text/plain).
+%	  ==
+%
+%	The initial default mime-type   is  =|application/unknown|=. Use
+%	the value =|-|= to denote there is no default.
+
+:- create_prolog_flag(default_mimetype, application/unknown, []).
+
+default_mimetype(MimeType) :-
+	current_prolog_flag(default_mimetype, MimeType),
+	MimeType = _/_.
+
+
+%%	ext_mimetype(+Extension, -MimeType) is semidet.
+%
+%	Built-in table of file-name extension to mime-type mappings.
+
 					% plain text
-mime_extension(txt,  text/plain).
+ext_mimetype(txt,  text/plain).
 					% markup
-mime_extension(htm,  text/html).
-mime_extension(html, text/html).
-mime_extension(xhtml, application/'xhtml+xml').
-mime_extension(sgml, text/'x-sgml').
-mime_extension(sgm,  text/'x-sgml').
-mime_extension(xml,  text/xml).
-mime_extension(css,  text/css).
-mime_extension(xsl,  text/xml).		% Unclear what this should be.
+ext_mimetype(htm,  text/html).
+ext_mimetype(html, text/html).
+ext_mimetype(xhtml, application/'xhtml+xml').
+ext_mimetype(sgml, text/'x-sgml').
+ext_mimetype(sgm,  text/'x-sgml').
+ext_mimetype(xml,  text/xml).
+ext_mimetype(css,  text/css).
+ext_mimetype(xsl,  text/xml).		% Unclear what this should be.
 					% semantic web stuff
-mime_extension(rdf,  application/'rdf+xml').
-mime_extension(rdfs, application/'rdf+xml').
-mime_extension(owl,  application/'rdf+xml').
+ext_mimetype(rdf,  application/'rdf+xml').
+ext_mimetype(rdfs, application/'rdf+xml').
+ext_mimetype(owl,  application/'rdf+xml').
 					% Prolog source
-mime_extension(pl,   text/plain).
+ext_mimetype(pl,   text/plain).
+					% Other languages
+ext_mimetype(c,    text/csrc).
+ext_mimetype(h,    text/chdr).
+ext_mimetype(py,   text/'x-python').
+ext_mimetype(java, text/'x-java').
 					% Packaged formats
-mime_extension(gz,   application/'x-gzip').
-mime_extension(zip,  application/zip).
-mime_extension(tgz,  application/'x-gtar').
+ext_mimetype(gz,   application/'x-gzip').
+ext_mimetype(zip,  application/zip).
+ext_mimetype(tgz,  application/'x-gtar').
 					% Some document formats
-mime_extension(pdf,  application/pdf).
-mime_extension(doc,  application/msword).
+ext_mimetype(pdf,  application/pdf).
+ext_mimetype(doc,  application/msword).
 					% Java classes
-mime_extension(class, application/'octet-stream').
-mime_extension(jar,  application/'java-archive').
-mime_extension(js,   text/javascript).
+ext_mimetype(class, application/'octet-stream').
+ext_mimetype(jar,  application/'x-java-archive').
+					% JavaScript
+ext_mimetype(js,   text/javascript).
 					% Visual Basic Script :-(
-mime_extension(vbs,  text/vbscript).
+ext_mimetype(vbs,  text/vbscript).
 					% Some image formats
-mime_extension(jpg,  image/jpeg).
-mime_extension(jpeg, image/jpeg).
-mime_extension(gif,  image/gif).
-mime_extension(png,  image/png).
-mime_extension(tif,  image/tiff).
-mime_extension(tiff, image/tiff).
-mime_extension(xpm,  image/'x-xpixmap').
-mime_extension(ico,  image/'x-ico').
-mime_extension(svg,  image/'svg+xml').
+ext_mimetype(jpg,  image/jpeg).
+ext_mimetype(jpeg, image/jpeg).
+ext_mimetype(gif,  image/gif).
+ext_mimetype(png,  image/png).
+ext_mimetype(tif,  image/tiff).
+ext_mimetype(tiff, image/tiff).
+ext_mimetype(xpm,  image/'x-xpixmap').
+ext_mimetype(ico,  image/'x-ico').
+ext_mimetype(svg,  image/'svg+xml').
 					% Google earth
-mime_extension(kml,  application/'vnd.google-earth.kml+xml').
-mime_extension(kmz,  application/'vnd.google-earth.kmz').
+ext_mimetype(kml,  application/'vnd.google-earth.kml+xml').
+ext_mimetype(kmz,  application/'vnd.google-earth.kmz').
 
 					% Flash
-mime_extension(swf,  application/'x-shockwave-flash').
-mime_extension(flv,  video/'x-flv').
+ext_mimetype(swf,  application/'x-shockwave-flash').
+ext_mimetype(flv,  video/'x-flv').
 					% MP3
-mime_extension(mp3,  audio/mpeg).
+ext_mimetype(mp3,  audio/mpeg).
 					% Downloads
-mime_extension(rpm,  application/'x-rpm').
-mime_extension(exe,  application/'x-executable').
+ext_mimetype(rpm,  application/'x-rpm').
+ext_mimetype(exe,  application/'x-executable').
