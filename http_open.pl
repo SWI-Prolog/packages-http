@@ -214,7 +214,7 @@ http_open_parts(Parts, Stream, Options0) :-
 	open_socket(Host:ProxyPort, In, Out, Options),
 	parts_scheme(Parts, Scheme),
 	default_port(Scheme, DefPort),
-	option(port(Port), Parts, DefPort),
+	url_part(port(Port), Parts, DefPort),
 	host_and_port(Host, DefPort, Port, HostPort),
 	send_rec_header(Out, In, Stream, HostPort, RequestURI, Parts, Options),
 	return_final_url(Options).
@@ -222,7 +222,7 @@ http_open_parts(Parts, Stream, Options0) :-
 	memberchk(host(Host), Parts),
 	parts_scheme(Parts, Scheme),
 	default_port(Scheme, DefPort),
-	option(port(Port), Parts, DefPort),
+	url_part(port(Port), Parts, DefPort),
 	parts_request_uri(Parts, RequestURI),
 	Options = [visited(Parts)|Options0],
 	open_socket(Host:Port, SocketIn, SocketOut, Options),
@@ -710,8 +710,8 @@ authorization(URL, Authorization) :-
 add_authorization(_, Options, Options) :-
 	option(authorization(_), Options), !.
 add_authorization(Parts, Options0, Options) :-
-	option(user(User), Parts),
-	option(password(Passwd), Parts),
+	url_part(user(User), Parts),
+	url_part(password(Passwd), Parts),
 	Options = [authorization(basic(User,Passwd))|Options0].
 add_authorization(Parts, Options0, Options) :-
 	stored_authorization(_, _) ->	% quick test to avoid work
@@ -788,25 +788,25 @@ uri_request_uri(Components) -->
 %%	parts_authority(+Parts, -Authority) is semidet.
 
 parts_scheme(Parts, Scheme) :-
-	option(scheme(Scheme), Parts), !.
+	url_part(scheme(Scheme), Parts), !.
 parts_scheme(Parts, Scheme) :-		% compatibility with library(url)
-	option(protocol(Scheme), Parts), !.
+	url_part(protocol(Scheme), Parts), !.
 parts_scheme(_, http).
 
 parts_authority(Parts, Auth) :-
-	option(authority(Auth), Parts), !.
+	url_part(authority(Auth), Parts), !.
 parts_authority(Parts, Auth) :-
-	option(host(Host), Parts, _),
-	option(port(Port), Parts, _),
-	option(user(User), Parts, _),
-	option(password(Password), Parts, _),
+	url_part(host(Host), Parts, _),
+	url_part(port(Port), Parts, _),
+	url_part(user(User), Parts, _),
+	url_part(password(Password), Parts, _),
 	uri_authority_components(Auth,
 				 uri_authority(User, Password, Host, Port)).
 
 parts_request_uri(Parts, RequestURI) :-
 	memberchk(request_uri(RequestURI), Parts), !.
 parts_request_uri(Parts, RequestURI) :-
-	option(path(Path), Parts, /),
+	url_part(path(Path), Parts, /),
 	ignore(parts_search(Parts, Search)),
 	uri_data(path, Data, Path),
 	uri_data(search, Data, Search),
@@ -829,6 +829,20 @@ parts_uri(Parts, URI) :-
 	uri_data(scheme, Data, Scheme),
 	uri_data(authority, Data, Auth),
 	uri_components(URI, Data).
+
+url_part(Part, Parts) :-
+	Part =.. [Name,Value],
+	Gen =.. [Name,RawValue],
+	memberchk(Gen, Parts), !,
+	Value = RawValue.
+
+url_part(Part, Parts, Default) :-
+	Part =.. [Name,Value],
+	Gen =.. [Name,RawValue],
+	(   memberchk(Gen, Parts)
+	->  Value = RawValue
+	;   Value = Default
+	).
 
 
 		 /*******************************
