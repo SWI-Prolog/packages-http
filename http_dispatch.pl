@@ -52,6 +52,14 @@
 :- use_module(library(http/http_header)).
 :- use_module(library(http/thread_httpd)).
 
+:- predicate_options(http_404/2, 1, [index(any)]).
+:- predicate_options(http_reply_file/3, 2,
+		     [ cache(boolean),
+		       mime_type(any),
+		       pass_to(http_safe_file/2, 2)
+		     ]).
+:- predicate_options(http_safe_file/2, 2, [unsafe(boolean)]).
+
 /** <module> Dispatch requests in the HTTP server
 
 This module can be placed between   http_wrapper.pl  and the application

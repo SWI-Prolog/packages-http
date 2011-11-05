@@ -5,8 +5,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2010, University of Amsterdam
-			      Vu University Amsterdam
+    Copyright (C): 2008-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -99,6 +99,23 @@ resource. See also parse_time/2.
 
 :- meta_predicate
 	http_open(+,-,:).
+
+:- predicate_options(http_open/3, 3,
+		     [ authorization(compound),
+		       final_url(-atom),
+%		       header(+atom, -atom),
+		       method(oneof([get,head,post])),
+		       size(-integer),
+		       status_code(-integer),
+		       timeout(number),
+		       post(any),		    % library(http/http_header)
+%		       proxy(atom, integer),
+		       proxy_authorization(compound),
+		       request_header(any),
+		       user_agent(atom),
+		       pem_password_hook(callable), % if SSL is loaded
+		       cert_verify_hook(callable)   % if SSL is loaded
+		     ]).
 
 %%	user_agent(-Agent) is det.
 %

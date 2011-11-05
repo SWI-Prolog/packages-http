@@ -51,6 +51,19 @@
 :- use_module(http_stream).
 
 
+:- predicate_options(http_server/2, 2,
+		     [ port(integer),
+		       workers(positive_integer),
+		       timeout(number),
+		       keep_alive_timeout(number),
+		       pass_to(system:thread_create/3, 3)
+		     ]).
+:- predicate_options(http_spawn/2, 2,
+		     [ pool(atom),
+		       pass_to(system:thread_create/3, 3),
+		       pass_to(thread_pool:thread_create_in_pool/4, 4)
+		     ]).
+
 /** <module> Threaded HTTP server
 
 This library provides a multi-threaded Prolog-based HTTP server based on

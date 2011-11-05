@@ -42,6 +42,8 @@
 :- use_module(library(uri)).
 
 
+:- predicate_options(http_absolute_location/3, 3, [relative_to(atom)]).
+
 /** <module> Abstract specification of HTTP server locations
 
 This module provides an abstract specification  of HTTP server locations

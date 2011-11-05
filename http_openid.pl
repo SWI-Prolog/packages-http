@@ -75,6 +75,10 @@
 :- use_module(library(socket)).
 :- use_module(library(lists)).
 
+:- predicate_options(openid_login_form/4, 2, [action(atom)]).
+:- predicate_options(openid_server/2, 1, [expires_in(any)]).
+:- predicate_options(openid_user/3, 3, [login_url(atom)]).
+:- predicate_options(openid_verify/2, 1, [return_to(atom), trust_root(atom)]).
 
 /** <module> OpenID consumer and server library
 

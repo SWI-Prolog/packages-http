@@ -42,6 +42,11 @@
 :- use_module(library(lists)).
 :- use_module(library(error)).
 
+:- predicate_options(http_parameters/3, 3,
+		     [ form_data(-list),
+		       attribute_declarations(callable)
+		     ]).
+
 /** <module> Extract parameters (GET and POST) from HTTP requests
 
 This module is used to extract the value  of GET or POST parameters from
@@ -88,8 +93,8 @@ an HTTP request. The typical usage is e.g.,
 %	the options are acquired by calling the hook. For example:
 %
 %	    ==
-%	    	...,
-%	    	http_parameters(Request,
+%		...,
+%		http_parameters(Request,
 %				[ sex(Sex)
 %				],
 %				[ attribute_declarations(http_param)
@@ -332,7 +337,7 @@ option_list_colours_2([H0|T0], [H|T]) :-
 option_colours(Var,  classify) :-
 	var(Var), !.
 option_colours(_=_,  built_in-[classify,classify]) :- !.
-option_colours(attribute_declarations(_), 		% DCG = is a hack!
+option_colours(attribute_declarations(_),		% DCG = is a hack!
 	       option(attribute_declarations)-[dcg]) :- !.
 option_colours(Term, option(Name)-[classify]) :-
 	compound(Term),

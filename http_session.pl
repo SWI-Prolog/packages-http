@@ -54,6 +54,8 @@
 :- use_module(library(broadcast)).
 :- use_module(library(lists)).
 
+:- predicate_options(http_open_session/2, 2, [renew(boolean)]).
+
 /** <module> HTTP Session management
 
 This library defines session management based   on HTTP cookies. Session

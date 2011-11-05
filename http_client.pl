@@ -5,7 +5,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2010, University of Amsterdam, VU University Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam,
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -55,6 +56,26 @@
 	post_data_hook/3,		% http_post_data/3 hook
 	open_connection/4,		% do_connect/5 hook
 	close_connection/4.
+
+:- predicate_options(http_get/3, 3,
+		     [ connection(oneof([close,'Keep-alive'])),
+		       http_version(any),
+%		       proxy(atom,integer),
+		       proxy_authorization(any),
+		       timeout(number),
+		       user_agent(atom),
+		       range(any),
+		       request_header(any),
+		       reply_header(-list),
+		       method(oneof(['GET','DELETE'])),
+		       pass_to(http_read_data/3, 3)
+		     ]).
+:- predicate_options(http_delete/3, 3, [pass_to(http_get/3, 3)]).
+:- predicate_options(http_read_data/3, 3,
+		     [ to(any),
+		       content_type(any)
+		     ]).
+
 
 /** <module> HTTP client library
 
@@ -208,7 +229,7 @@ http_get(URL, Data, Options) :-
         http_get(Parts, Data, Options).
 http_get(Parts, Data, Options) :-
 	must_be(list, Options),
-	memberchk(connection(Connection), Options),
+	option(connection(Connection), Options),
 	downcase_atom(Connection, 'keep-alive'), !,
 	between(0, 1, _),
 	catch(http_do_get(Parts, Data, Options), E,
@@ -373,7 +394,7 @@ http_read_data(In, Fields, Data, Options) :-	% Transfer-encoding: chunked
 	call_cleanup(http_read_data(DataStream, RestFields, Data, Options),
 		     close(DataStream)).
 http_read_data(In, Fields, Data, Options) :-
-	memberchk(to(X), Options), !,
+	option(to(X), Options), !,
 	(   X = stream(Stream)
 	->  (   memberchk(content_length(Bytes), Fields)
 	    ->  copy_stream_data(In, Stream, Bytes)
@@ -397,12 +418,12 @@ http_read_data(In, Fields, Data, Options) :-
 	    Data = Data0
 	).
 http_read_data(In, Fields, Data, _) :-
-	memberchk(content_type(ContentType), Fields),
+	option(content_type(ContentType), Fields),
 	form_data_content_type(ContentType), !,
 	http_read_data(In, Fields, Codes, [to(codes)]),
 	uri_query_components(Codes, Data).
-http_read_data(In, Fields, Data, Options) :- 			% call hook
-	(   select(content_type(Type), Options, Options1)
+http_read_data(In, Fields, Data, Options) :-			% call hook
+	(   select_option(content_type(Type), Options, Options1)
 	->  delete(Fields, content_type(_), Fields1),
 	    http_convert_data(In, [content_type(Type)|Fields1], Data, Options1)
 	;   http_convert_data(In, Fields, Data, Options)

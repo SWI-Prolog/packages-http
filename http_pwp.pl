@@ -39,6 +39,22 @@
 :- use_module(library(lists)).
 :- use_module(library(pwp)).
 
+:- predicate_options(pwp_handler/2, 1,
+		     [ cache(boolean),
+		       hide_extensions(list(atom)),
+		       index_hook(callable),
+		       mime_type(any),
+		       path_alias(atom),
+		       unsafe(boolean),
+		       view(boolean)
+		     ]).
+:- predicate_options(reply_pwp_page/3, 2,
+		     [ dtd(any),
+		       mime_type(any),
+		       pwp_module(boolean),
+		       unsafe(boolean)
+		     ]).
+
 /** <module> Serve PWP pages through the HTTP server
 
 This  module  provides  convience  predicates  to  include  PWP  (Prolog

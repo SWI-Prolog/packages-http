@@ -36,6 +36,8 @@
 :- use_module(library(lists)).
 :- use_module(library(option)).
 
+:- predicate_options(http_reply_from_files/3, 2, [indexes(list(atom))]).
+
 /** <module> Serve plain files from a hierarchy
 
 Although the SWI-Prolog web-server is intended   to serve documents that

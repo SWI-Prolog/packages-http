@@ -39,6 +39,11 @@
 :- use_module(library(apply)).
 :- use_module(library(option)).
 
+:- predicate_options(http_reply_dirindex/3, 2,
+		     [ title(any),
+		       pass_to(http_dispatch:http_safe_file/2, 2)
+		     ]).
+
 /** <module> HTTP directory listings
 
 This module provides a simple API to   generate  an index for a physical

@@ -49,6 +49,18 @@
 	http_client:post_data_hook/3,
 	json_type/1.
 
+:- predicate_options(http_read_json/3, 3,
+		     [ content_type(any),
+		       false(ground),
+		       null(ground),
+		       true(ground),
+		       value_string_as(oneof([atom, string]))
+		     ]).
+:- predicate_options(reply_json/2, 2,
+		     [ content_type(any),
+		       pass_to(json:json_write/3, 3)
+		     ]).
+
 
 /** <module> HTTP JSON Plugin module
 

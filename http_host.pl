@@ -43,6 +43,7 @@
 :- setting(http:public_scheme, oneof([http,https]), http,
 	   'Default URL scheme to use').
 
+:- predicate_options(http_current_host/4, 4, [global(boolean)]).
 
 /** <module> Obtain public server location
 

@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2009, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -44,6 +45,32 @@
 :- use_module(library(option)).
 
 :- use_foreign_library(foreign(json)).
+
+:- predicate_options(json_read/3, 3,
+		     [ null(ground),
+		       true(ground),
+		       false(ground),
+		       value_string_as(oneof([atom,string]))
+		     ]).
+:- predicate_options(json_write/3, 3,
+		     [ indent(nonneg),
+		       step(positive_integer),
+		       tab(positive_integer),
+		       width(nonneg),
+		       null(ground),
+		       true(ground),
+		       false(ground)
+		     ]).
+:- predicate_options(is_json_term/2, 2,
+		     [ null(ground),
+		       true(ground),
+		       false(ground)
+		     ]).
+:- predicate_options(atom_json_term/3, 3,
+		     [ as(oneof([atom,string,codes])),
+		       pass_to(json_read/3, 3),
+		       pass_to(json_write/3, 3)
+		     ]).
 
 /** <module> Reading and writing JSON serialization
 
