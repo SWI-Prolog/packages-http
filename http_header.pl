@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2009, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -70,6 +71,14 @@
 	   on_request, 'When to use Transfer-Encoding: Chunked').
 
 
+/** <module> Handling HTTP headers
+
+The library library(http/http_header) provides   primitives  for parsing
+and composing HTTP headers. Its functionality  is normally hidden by the
+other parts of the HTTP server and client libraries.
+*/
+
+
 		 /*******************************
 		 *	    READ REQUEST	*
 		 *******************************/
@@ -121,8 +130,11 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 
 %%	http_reply(+Data, +Out:stream) is det.
 %%	http_reply(+Data, +Out:stream, +HdrExtra) is det.
+%%	http_reply(+Data, +Out:stream, +HdrExtra, -Code) is det.
 %
-%	Data is one of
+%	Compose  a  complete  HTTP  reply  from   the  term  Data  using
+%	additional headers from  HdrExtra  to   the  output  stream Out.
+%	ExtraHeader is a list of Field(Value). Data is one of:
 %
 %		* html(HTML)
 %		HTML tokens as produced by html//1 from html_write.pl
@@ -151,6 +163,7 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 %	       as Name(Value). It can also contain a field
 %	       content_length(-Len) to _retrieve_ the
 %	       value of the Content-length header that is replied.
+%	@param Code is the numeric HTTP status code sent
 %
 %	@tbd	Complete documentation
 
@@ -208,14 +221,16 @@ http_reply_data(cgi_stream(In, Len), Out, HrdExtra, Code) :- !,
 	copy_stream(Out, In, Header, 0, end).
 
 reply_file(Out, File, Header) :-
-	setup_call_cleanup(open(File, read, In, [type(binary)]),
-			   copy_stream(Out, In, Header, 0, end),
-			   close(In)).
+	setup_call_cleanup(
+	    open(File, read, In, [type(binary)]),
+	    copy_stream(Out, In, Header, 0, end),
+	    close(In)).
 
 reply_file_range(Out, File, Header, bytes(From, To)) :- !,
-	setup_call_cleanup(open(File, read, In, [type(binary)]),
-			   copy_stream(Out, In, Header, From, To),
-			   close(In)).
+	setup_call_cleanup(
+	    open(File, read, In, [type(binary)]),
+	    copy_stream(Out, In, Header, From, To),
+	    close(In)).
 
 copy_stream(Out, In, Header, From, To) :-
 	(   From == 0
@@ -238,9 +253,10 @@ copy_stream(Out, In, Header, From, To) :-
 %	as UTF-8 documents.
 
 http_status_reply(Status, Out, HdrExtra, Code) :-
-	setup_call_cleanup(set_stream(Out, encoding(utf8)),
-			   status_reply(Status, Out, HdrExtra, Code),
-			   set_stream(Out, encoding(octet))), !.
+	setup_call_cleanup(
+	    set_stream(Out, encoding(utf8)),
+	    status_reply(Status, Out, HdrExtra, Code),
+	    set_stream(Out, encoding(octet))), !.
 
 
 status_reply(no_content, Out, HrdExtra, Code) :- !,
@@ -612,6 +628,10 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  * file(+Type, +File)
 %	  Send file with content of indicated mime-type.
 %
+%	  * memory_file(+Type, +Handle)
+%	  Similar to file(+Type, +File), but using a memory file
+%	  instead of a real file.  See new_memory_file/1.
+%
 %	  * codes(+Codes)
 %	  As string(text/plain, Codes).
 %
@@ -649,13 +669,15 @@ http_post_data(html(HTML), Out, HdrExtra) :-
 http_post_data(xml(XML), Out, HdrExtra) :-
 	http_post_data(xml(text/xml, XML), Out, HdrExtra).
 http_post_data(xml(Type, XML), Out, HdrExtra) :-
-	setup_call_cleanup(new_memory_file(MemFile),
-			   (   setup_call_cleanup(open_memory_file(MemFile, write, MemOut),
-						  xml_write(MemOut, XML, []),
-						  close(MemOut)),
-			       http_post_data(memory_file(Type, MemFile), Out, HdrExtra)
-			   ),
-			   free_memory_file(MemFile)).
+	setup_call_cleanup(
+	    new_memory_file(MemFile),
+	    (   setup_call_cleanup(
+		    open_memory_file(MemFile, write, MemOut),
+		    xml_write(MemOut, XML, []),
+		    close(MemOut)),
+		http_post_data(memory_file(Type, MemFile), Out, HdrExtra)
+	    ),
+	    free_memory_file(MemFile)).
 http_post_data(file(File), Out, HdrExtra) :- !,
 	(   file_mime_type(File, Type)
 	->  true
@@ -665,15 +687,17 @@ http_post_data(file(File), Out, HdrExtra) :- !,
 http_post_data(file(Type, File), Out, HdrExtra) :- !,
 	phrase(post_header(file(Type, File), HdrExtra), Header),
 	format(Out, '~s', [Header]),
-	open(File, read, In, [type(binary)]),
-	call_cleanup(copy_stream_data(In, Out),
-		     close(In)).
+	setup_call_cleanup(
+	    open(File, read, In, [type(binary)]),
+	    copy_stream_data(In, Out),
+	    close(In)).
 http_post_data(memory_file(Type, Handle), Out, HdrExtra) :- !,
 	phrase(post_header(memory_file(Type, Handle), HdrExtra), Header),
 	format(Out, '~s', [Header]),
-	setup_call_cleanup(open_memory_file(Handle, read, In, [encoding(octet)]),
-			   copy_stream_data(In, Out),
-			   close(In)).
+	setup_call_cleanup(
+	    open_memory_file(Handle, read, In, [encoding(octet)]),
+	    copy_stream_data(In, Out),
+	    close(In)).
 http_post_data(codes(Codes), Out, HdrExtra) :- !,
 	http_post_data(codes(text/plain, Codes), Out, HdrExtra).
 http_post_data(codes(Type, Codes), Out, HdrExtra) :- !,
@@ -689,9 +713,10 @@ http_post_data(cgi_stream(In), Out, HdrExtra) :- !,
 	http_join_headers(HdrExtra, Header, Hdr2),
 	phrase(post_header(cgi_data(Size), Hdr2), HeaderText),
 	format(Out, '~s', [HeaderText]),
-	set_stream(Out, encoding(Encoding)),
-	call_cleanup(copy_stream_data(In, Out),
-		     set_stream(Out, encoding(octet))).
+	setup_call_cleanup(
+	    set_stream(Out, encoding(Encoding)),
+	    copy_stream_data(In, Out),
+	    set_stream(Out, encoding(octet))).
 http_post_data(form(Fields), Out, HdrExtra) :- !,
 	parse_url_search(Codes, Fields),
 	length(Codes, Size),
@@ -702,40 +727,50 @@ http_post_data(form(Fields), Out, HdrExtra) :- !,
 	format(Out, '~s', [HeaderChars]),
 	format(Out, '~s', [Codes]).
 http_post_data(form_data(Data), Out, HdrExtra) :- !,
-	new_memory_file(MemFile),
-	open_memory_file(MemFile, write, MimeOut),
-	mime_pack(Data, MimeOut, Boundary),
-	close(MimeOut),
-	size_memory_file(MemFile, Size),
-	format(string(ContentType), 'multipart/form-data; boundary=~w', [Boundary]),
-	http_join_headers(HdrExtra,
-			  [ mime_version('1.0'),
-			    content_type(ContentType)
-			  ], Header),
-	phrase(post_header(cgi_data(Size), Header), HeaderChars),
-	format(Out, '~s', [HeaderChars]),
-	open_memory_file(MemFile, read, In),
-	copy_stream_data(In, Out),
-	close(In),
-	free_memory_file(MemFile).
+	setup_call_cleanup(
+	    new_memory_file(MemFile),
+	    ( setup_call_cleanup(
+		  open_memory_file(MemFile, write, MimeOut),
+		  mime_pack(Data, MimeOut, Boundary),
+		  close(MimeOut)),
+	      size_memory_file(MemFile, Size),
+	      format(string(ContentType),
+		     'multipart/form-data; boundary=~w', [Boundary]),
+	      http_join_headers(HdrExtra,
+				[ mime_version('1.0'),
+				  content_type(ContentType)
+				], Header),
+	      phrase(post_header(cgi_data(Size), Header), HeaderChars),
+	      format(Out, '~s', [HeaderChars]),
+	      setup_call_cleanup(
+		  open_memory_file(MemFile, read, In),
+		  copy_stream_data(In, Out),
+		  close(In))
+	    ),
+	    free_memory_file(MemFile)).
 http_post_data(List, Out, HdrExtra) :-		% multipart-mixed
 	is_list(List), !,
-	new_memory_file(MemFile),
-	open_memory_file(MemFile, write, MimeOut),
-	mime_pack(List, MimeOut, Boundary),
-	close(MimeOut),
-	size_memory_file(MemFile, Size),
-	format(string(ContentType), 'multipart/mixed; boundary=~w', [Boundary]),
-	http_join_headers(HdrExtra,
-			  [ mime_version('1.0'),
-			    content_type(ContentType)
-			  ], Header),
-	phrase(post_header(cgi_data(Size), Header), HeaderChars),
-	format(Out, '~s', [HeaderChars]),
-	open_memory_file(MemFile, read, In),
-	copy_stream_data(In, Out),
-	close(In),
-	free_memory_file(MemFile).
+	setup_call_cleanup(
+	    new_memory_file(MemFile),
+	    ( setup_call_cleanup(
+		  open_memory_file(MemFile, write, MimeOut),
+		  mime_pack(List, MimeOut, Boundary),
+		  close(MimeOut)),
+	      size_memory_file(MemFile, Size),
+	      format(string(ContentType),
+		     'multipart/mixed; boundary=~w', [Boundary]),
+	      http_join_headers(HdrExtra,
+				[ mime_version('1.0'),
+				  content_type(ContentType)
+				], Header),
+	      phrase(post_header(cgi_data(Size), Header), HeaderChars),
+	      format(Out, '~s', [HeaderChars]),
+	      setup_call_cleanup(
+		  open_memory_file(MemFile, read, In),
+		  copy_stream_data(In, Out),
+		  close(In))
+	    ),
+	    free_memory_file(MemFile)).
 
 %%	post_header(+Data, +HeaderExtra)//
 %
@@ -774,13 +809,29 @@ post_header(codes(Type, Codes), HdrExtra) -->
 
 %%	http_reply_header(+Out:stream, +What, +HdrExtra) is det.
 %
-%	Create a reply header  using  reply_header//2   and  send  it to
+%	Create a reply header  using  reply_header//3   and  send  it to
 %	Stream.
 
 http_reply_header(Out, What, HdrExtra) :-
 	phrase(reply_header(What, HdrExtra, _Code), String), !,
 	format(Out, '~s', [String]).
 
+%%	reply_header(+Data, +HdrExtra, -Code)// is det.
+%
+%	Grammar that realises the HTTP handler for sending Data. Data is
+%	a  real  data  object  as  described   with  http_reply/2  or  a
+%	not-200-ok HTTP status reply. The   following status replies are
+%	defined.
+%
+%	  * moved(+URL, +HTMLTokens)
+%	  * created(+URL, +HTMLTokens)
+%	  * moved_temporary(+URL, +HTMLTokens)
+%	  * see_other(+URL, +HTMLTokens)
+%	  * status(+Status)
+%	  * status(+Status, +HTMLTokens)
+%	  * authorise(+Method, +Realm, +Tokens)
+%
+%	@see http_status_reply/4 formulates the not-200-ok HTTP replies.
 
 reply_header(string(String), HdrExtra, Code) -->
 	reply_header(string(text/plain, String), HdrExtra, Code).
@@ -845,7 +896,7 @@ reply_header(moved(To, Tokens), HdrExtra, Code) -->
 	content_type(text/html, utf8),
 	"\r\n".
 reply_header(created(Location, Tokens), HdrExtra, Code) -->
-	vstatus(moved, Code),
+	vstatus(created, Code),
 	date(now),
 	header_field('Location', Location),
 	header_fields(HdrExtra, CLen),
@@ -898,8 +949,10 @@ vstatus(Status, Code) -->
 
 %%	status_number(?Status, ?Code)// is semidet.
 %
-%	Parse/generate the HTTP status numbers and return them as a code
-%	(atom).
+%	Parse/generate the HTTP status  numbers  and   map  them  to the
+%	proper name.
+%
+%	@see See the source code for supported status names and codes.
 
 status_number(Status, Code) -->
 	{ var(Status) }, !,
@@ -1119,14 +1172,22 @@ read_field_value([H|T]) -->
 %	fields are:
 %
 %	  * content_length
+%	  Converted into an integer
 %	  * cookie
+%	  Converted into a list with Name=Value by cookies//1.
 %	  * set_cookie
+%	  Converted into a term set_cookie(Name, Value, Options).
+%	  Options is a list consisting of Name=Value or a single
+%	  atom (e.g., =secure=)
 %	  * host
+%	  Converted to HostName:Port if applicable.
 %	  * range
+%	  Converted into bytes(From, To), where From is an integer
+%	  and To is either an integer or the atom =end=.
 %	  * accept
-%
-%	@error	domain_error(http_request_field, Field) if this
-%		library is not prepared to handle this field (yet).
+%	  Parsed to a list of media descriptions.  Each media is a term
+%	  media(Type, TypeParams, Quality, AcceptExts). The list is
+%	  sorted according to preference.
 
 http_parse_header_value(Field, Value, Prolog) :-
 	valid_field(Field),
@@ -1590,7 +1651,7 @@ http_version_number(Major-Minor) -->
 		 *	      COOKIES		*
 		 *******************************/
 
-%%	cookies(-List) is semidet.
+%%	cookies(-List)// is semidet.
 %
 %	Translate a cookie description into a list Name=Value.
 
@@ -1708,7 +1769,7 @@ range(bytes(From, To)) -->
 %	    * http_version(Major-Minor)
 %	    * status(StatusCode, Comment)
 %
-%	StatusCode is one of the values provided by status_number//1.
+%	StatusCode is one of the values provided by status_number//2.
 
 reply(Fd, [http_version(HttpVersion), status(Status, Comment)|Header]) -->
 	http_version(HttpVersion),
@@ -1804,6 +1865,12 @@ address -->
 mkfield(host, Host:Port, [host(Host),port(Port)|Tail], Tail) :- !.
 mkfield(Name, Value, [Att|Tail], Tail) :-
 	Att =.. [Name, Value].
+
+%%	http:http_address// is det.
+%
+%	HTML-rule that emits the location of  the HTTP server. This hook
+%	is called from address//0 to customise   the server address. The
+%	server address is emitted on non-200-ok replies.
 
 
 		 /*******************************

@@ -467,15 +467,11 @@ http_put(URL, In, Out, Options) :-
 	http_post(URL, In, Out, [method('PUT')|Options]).
 
 
-%%	http_post(+URL, +In, -Out, +Options)
+%%	http_post(+URL, +Data, -Reply, +Options) is det.
 %
-%	Issue an HTTP POST request, In is modelled after the reply
-%	from the HTTP server module.  In is one of:
-%
-%		* string(String)
-%		* string(MimeType, String)
-%		* html(Tokens)
-%		* file(MimeType, File)
+%	Issue   an   HTTP   POST   request.   Data   is   posted   using
+%	http_post_data/3. The HTTP server reply   is  returned in Reply,
+%	using the same rules as http_get/3.
 
 http_post(URL, In, Out, Options) :-
 	atomic(URL), !,
