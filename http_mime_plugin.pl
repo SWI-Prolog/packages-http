@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -57,25 +58,27 @@ http_client:http_convert_data(In, Fields, Data, Options) :-
 	;   sub_atom(Type, 0, _, _, 'multipart/form-data'),
 	    MimeVersion = '1.0'
 	), !,
-	setup_call_cleanup(new_memory_file(MemFile),
-			   convert_mime_data(In, Fields, Data,
-					     MemFile, Type, MimeVersion, Options),
-			   free_memory_file(MemFile)).
+	setup_call_cleanup(
+	    new_memory_file(MemFile),
+	    convert_mime_data(In, Fields, Data,
+			      MemFile, Type, MimeVersion, Options),
+	    free_memory_file(MemFile)).
 
 convert_mime_data(In, Fields, Data, MemFile, Type, MimeVersion, Options) :-
-	setup_call_cleanup(open_memory_file(MemFile, write, Tmp),
-			   ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
-			     format(Tmp, 'Content-Type: ~w\r\n\r\n', [Type]),
-			     http_read_data(Fields, _,
-					    [ in(In),
-					      to(stream(Tmp))
-					    | Options
-					    ])
-			   ),
-			   close(Tmp)),
-	setup_call_cleanup(open_memory_file(MemFile, read, MimeIn),
-			   mime_parse(stream(MimeIn), Data0),
-			   close(MimeIn)),
+	setup_call_cleanup(
+	    open_memory_file(MemFile, write, Tmp),
+	    ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
+	      format(Tmp, 'Content-Type: ~w\r\n\r\n', [Type]),
+	      http_read_data([input(In)|Fields], _,
+			     [ to(stream(Tmp))
+			     | Options
+			     ])
+	    ),
+	    close(Tmp)),
+	setup_call_cleanup(
+	    open_memory_file(MemFile, read, MimeIn),
+	    mime_parse(stream(MimeIn), Data0),
+	    close(MimeIn)),
 	mime_to_form(Data0, Data).
 
 mime_to_form(mime(A,'',Parts), Form) :-
