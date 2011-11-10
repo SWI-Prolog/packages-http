@@ -182,6 +182,8 @@ http_reply(Data, Out, HdrExtra, Code) :-
 	->  byte_count(Out, C1),
 	    Sent is C1 - C0,
 	    throw(error(http_write_short(Data, Sent), _))
+	;   E = error(timeout_error(write, _), _)
+	->  throw(E)
 	;   map_exception_to_http_status(E, Status, NewHdr),
 	    http_status_reply(Status, Out, NewHdr, Code)
 	).

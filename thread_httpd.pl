@@ -537,6 +537,7 @@ http_process(Goal, In, Out, Options) :-
 	      [Goal, In, Out]),
 	option(timeout(TMO), Options, 60),
 	set_stream(In, timeout(TMO)),
+	set_stream(Out, timeout(TMO)),
 	http_wrapper(Goal, In, Out, Connection,
 		     [ request(Request)
 		     | Options
