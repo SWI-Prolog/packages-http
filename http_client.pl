@@ -367,7 +367,7 @@ proxy_auth_header(basic(User, Password), Out) :- !,
 proxy_auth_header(Auth, _) :-
 	domain_error(authorization, Auth).
 
-%%	http_read_data(+Fields, -Data, +Options) is det.
+%%	http_read_data(+Request, -Data, +Options) is det.
 %
 %	Read data from an HTTP connection.   Options must contain a term
 %	input(In) that provides the input stream   from the HTTP server.

@@ -34,6 +34,7 @@
 :- use_module(http_client).
 :- use_module(library(memfile)).
 :- use_module(library(mime)).
+:- use_module(library(option)).
 
 /** <module> MIME client plugin
 
@@ -51,6 +52,12 @@ implementation of the rfc2045 (mime) specifications.
 %%	http_client:http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
 %	Convert =|multipart/form-data|= messages for http_read_data/3.
+%	Options:
+%
+%	  * form_data(AsForm)
+%	  If the content-type is =|multipart/form-data|=, return the
+%	  form-data either as a list of Name=Value (AsForm = =form=;
+%	  default) or as a part-list as defined by mime_parse/2.
 
 http_client:http_convert_data(In, Fields, Data, Options) :-
 	memberchk(content_type(Type), Fields),
@@ -65,6 +72,7 @@ http_client:http_convert_data(In, Fields, Data, Options) :-
 	    free_memory_file(MemFile)).
 
 convert_mime_data(In, Fields, Data, MemFile, Type, MimeVersion, Options) :-
+	option(form_data(AsForm), Options, form),
 	setup_call_cleanup(
 	    open_memory_file(MemFile, write, Tmp),
 	    ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
@@ -79,12 +87,17 @@ convert_mime_data(In, Fields, Data, MemFile, Type, MimeVersion, Options) :-
 	    open_memory_file(MemFile, read, MimeIn),
 	    mime_parse(stream(MimeIn), Data0),
 	    close(MimeIn)),
-	mime_to_form(Data0, Data).
+	mime_to_form(Data0, AsForm, Data).
 
-mime_to_form(mime(A,'',Parts), Form) :-
-	memberchk(type('multipart/form-data'), A),
-	mime_form_fields(Parts, Form), !.
-mime_to_form(Mime, Mime).
+mime_to_form(mime(A,'',Parts), AsForm, Form) :-
+	memberchk(type('multipart/form-data'), A), !,
+	(   AsForm == mime
+	->  Form = Parts
+	;   mime_form_fields(Parts, Form0)
+	->  Form = Form0
+	;   Form = Parts
+	).
+mime_to_form(Mime, _, Mime).
 
 mime_form_fields([], []).
 mime_form_fields([mime(A, V, [])|T0], [Name=V|T]) :-
