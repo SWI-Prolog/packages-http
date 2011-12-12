@@ -203,8 +203,21 @@ user_agent('SWI-Prolog <http://www.swi-prolog.org>').
 %	@param	URL is either an atom (url) or a list of _parts_.
 %		If this list is provided, it may contain the fields
 %		=scheme=, =user=, =password=, =host=, =port=, =path= and
-%		=search= (where the argument of the latter is a
-%		Name(Value) list).  Only =host= is mandatory.
+%		=search= (where the argument of the latter is a list of
+%		Name(Value) or Name=Value).  Only =host= is mandatory.
+%		The following example below opens the URL
+%		=|http://www.example.com/my/path?q=Hello%20World&lang=en|=.
+%		Note that values must *not* be quoted because the
+%		library inserts the required quites.
+%
+%		==
+%		http_open([ host('www.example.com'),
+%			    path('/my/path'),
+%			    search([ q='Hello world',
+%			             lang=en
+%				   ])
+%			  ])
+%		==
 %
 %	@error existence_error(url, Id)
 

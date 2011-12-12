@@ -95,8 +95,8 @@ httphost.tex:	http_host.pl
 httppath.tex:	http_path.pl
 		$(PLTOTEX) --subsection 'library(http/http_path)'
 
-httppath.tex:	http_path.pl
-		$(PLTOTEX) --subsection 'library(http/http_path)'
+httpopen.tex:	http_open.pl
+		$(PLTOTEX) --subsection 'library(http/http_open)'
 
 httpfiles.tex:	http_files.pl
 		$(PLTOTEX) --subsection 'library(http/http_files)'
