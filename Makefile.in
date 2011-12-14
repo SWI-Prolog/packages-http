@@ -44,7 +44,7 @@ install:	$(LIBPL) $(SOLIBS)
 		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)/README$(TXTEXT)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(LIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(LIBDIR)/web/css
-		$(PL) -C "$(DESTDIR)$(LIBDIR)" -f none -F none -g 'make_library_index(.),halt' -t 'halt(1)'
+		$(MKPKGINDEX)
 		$(MKINDEX)
 
 ln-install:	$(LIBPL)
