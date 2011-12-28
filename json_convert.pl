@@ -55,7 +55,7 @@ The idea behind this module is to  provide a flexible high-level mapping
 between Prolog terms as you would like   to see them in your application
 and the standard representation of a JSON   object as a Prolog term. For
 example,  an  X-Y  point  may  be  represented  in  JSON  as  =|{"x":25,
-"y":50}|=. Represented in Prolog this   becomes json([x=25,y=50]), but
+"y":50}|=. Represented in Prolog  this   becomes  json([x=25,y=50]), but
 this is a pretty non-natural  representation   from  the Prolog point of
 view.
 
@@ -79,7 +79,7 @@ X = json([x=25, y=50])
 
 A json_object/1 declaration can define multiple   objects separated by a
 comma (,), similar to the dynamic/1 directive. Optionally, a declaration
-can  be  qualified  using   a    module.   The   converstion  predicates
+can  be  qualified   using   a    module.   The   conversion  predicates
 prolog_to_json/2 and json_to_prolog/2 first try  a conversion associated
 with the calling  module.  If  not   successful,  they  try  conversions
 associated with the module =user=.
@@ -143,6 +143,13 @@ simplifies debugging this rather complicated process.
 %	?- json_object
 %		point(x:int, y:int, z:int=0).
 %	==
+%
+%	The type arguments are either types as know to library(error) or
+%	functor  names  of  other  JSON   objects.  The  constant  =any=
+%	indicates an untyped argument.  If  this   is  a  JSON  term, it
+%	becomes  subject  to  json_to_prolog/2.  I.e.,  using  the  type
+%	list(any) causes the conversion to be   executed on each element
+%	of the list.
 
 json_object(Declaration) :-
 	throw(error(context_error(nodirective, json_object(Declaration)), _)).
@@ -527,9 +534,14 @@ match_field(any, JSON, Prolog, M, json_to_prolog(JSON,Prolog,M)) :- !.
 match_field(F/A, JSON, Prolog, M, json_to_prolog(JSON,Prolog,M)) :- !,
 	functor(Prolog, F, A).
 match_field(boolean, JSON, Prolog, _, json_bool_to_prolog(JSON, Prolog)) :- !.
-match_field(list(Type), JSON, Prolog, M, json_list_to_prolog(JSON, Prolog, M)) :-
-	current_json_object(Term, M, _Fields),
-	functor(Term, Type, _), !.
+match_field(list(Type), JSON, Prolog, M, json_list_to_prolog(JSON, Prolog, M)) :- !,
+	(   Type == any
+	->  true
+	;   current_json_object(Term, M, _Fields),
+	    functor(Term, Type, _)
+	).
+match_field(list, JSON, Prolog, M, Goal) :- !,
+	match_field(list(any), JSON, Prolog, M, Goal).
 match_field(Type, Var, Var, _, Goal) :-
 	type_goal(Type, Var, Goal).
 
