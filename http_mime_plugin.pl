@@ -36,6 +36,9 @@
 :- use_module(library(mime)).
 :- use_module(library(option)).
 
+:- initialization
+	mime_default_charset(_, 'UTF-8').
+
 /** <module> MIME client plugin
 
 This plugin for library(http_client)   automatically translates messages
@@ -43,6 +46,11 @@ with content-type =|multipart/form-data|= into a list   of  Name = Value
 pairs, greatly simplifying the processing of   forms  with this type. It
 relies  on  library(mime),  which  in   turn    relies   on   a  foreign
 implementation of the rfc2045 (mime) specifications.
+
+This library uses mime_default_charset/2 to   set  the default character
+set of the MIME library to =|UTF-8|=.   Note that this setting is global
+and not thread-safe. This implies  that   this  library cannot be safely
+used together with other code that manipulates the default MIME charset.
 */
 
 :- multifile
