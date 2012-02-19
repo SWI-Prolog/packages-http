@@ -194,7 +194,7 @@ option_default(xhtml_doctype,
 	       'html PUBLIC "-//W3C//DTD XHTML 1.0 \
 	       Transitional//EN" \
 	       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"').
-option_default(html_content_type, 'text/html').
+option_default(html_content_type, 'text/html; charset=UTF-8').
 option_default(xhtml_content_type, 'application/xhtml+xml; charset=UTF-8').
 
 %%	init_options is det.
