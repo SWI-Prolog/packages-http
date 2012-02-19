@@ -246,6 +246,7 @@ page(Head, Body) -->
 
 page(Style, Head, Body) -->
 	doctype,
+	content_type,
 	html_begin(html),
 	pagehead(Style, Head),
 	pagebody(Style, Body),
@@ -266,6 +267,14 @@ doctype -->
 doctype -->
 	[].
 
+content_type -->
+	{ html_current_option(content_type(Type))
+	}, !,
+	html_post(head, meta([ 'http-equiv'('content-type'),
+			       content(Type)
+			     ], [])).
+content_type -->
+	[].
 
 pagehead(_, Head) -->
 	{ functor(Head, head, _)
