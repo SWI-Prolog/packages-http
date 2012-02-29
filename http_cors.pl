@@ -67,6 +67,14 @@ the setting http:cors is set to the empty list ([]).
 */
 
 
+%%	cors_enable is det.
+%
+%	Emit  the  HTTP  header   =|Access-Control-Allow-Origin|=  using
+%	domains from the setting http:cors.  This   this  setting  is []
+%	(default), nothing is written. This  predicate is typically used
+%	for replying to API  HTTP-request  (e.g.,   replies  to  an AJAX
+%	request that typically serve JSON or XML).
+
 cors_enable :-
 	setting(http:cors, List),
 	List \== [], !,
