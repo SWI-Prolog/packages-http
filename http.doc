@@ -397,6 +397,7 @@ last time.
 \input{httpdirindex.tex}
 \input{httpfiles.tex}
 \input{httpsession.tex}
+\input{httpcors.tex}
 
 
 \subsection{HTTP Authentication}

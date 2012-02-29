@@ -1,4 +1,4 @@
----+ [json] Supporting JSON
+---+ [jsonsupport] Supporting JSON
 
 From  http://json.org, "
 JSON (JavaScript Object Notation) is a lightweight data-interchange
@@ -23,7 +23,7 @@ The interface consists of three libraries:
       oriented Prolog terms.  E.g. point(X,Y) vs. object([x=X,y=Y]).
     * library(http/http_json) hooks the conversion libraries into
       the HTTP client and server libraries.
-	
+
     [[json.pl]]
     [[json_convert.pl]]
     [[http_json.pl]]

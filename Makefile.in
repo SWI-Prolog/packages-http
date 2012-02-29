@@ -81,7 +81,7 @@ check::
 TEXEXTRA=	post.tex json.tex httplog.tex httppath.tex htmlhead.tex \
 		httpsession.tex httpdispatch.tex httpdirindex.tex httppwp.tex \
 		httpopen.tex httphost.tex httpopenid.tex jswrite.tex \
-		httpfiles.tex
+		httpfiles.tex httpcors.tex
 $(TEX):		$(TEXEXTRA)
 
 json.tex:	json.pl json_convert.pl http_json.pl
@@ -106,6 +106,9 @@ htmlhead.tex:	html_head.pl
 
 httpsession.tex: http_session.pl
 		$(PLTOTEX) --subsection 'library(http/http_session)'
+
+httpcors.tex: http_cors.pl
+		$(PLTOTEX) --subsection 'library(http/http_cors)'
 
 httpdispatch.tex: http_dispatch.pl
 		$(PLTOTEX) --subsection 'library(http/http_dispatch)'
