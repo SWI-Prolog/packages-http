@@ -32,7 +32,8 @@
 
 :- module(http_parameters,
 	  [ http_parameters/2,		% +Request, -Params
-	    http_parameters/3		% +Request, -Params, +TypeG
+	    http_parameters/3,		% +Request, -Params, +TypeG
+	    http_convert_parameter/4	% +Options, +FieldName, +ValIn, -ValOut
 	  ]).
 :- use_module(http_client).
 :- use_module(http_mime_plugin).
@@ -180,7 +181,7 @@ fill_param(Name, Values, Options, FormData) :-
 fill_param(Name, Value, Options, FormData) :-
 	(   memberchk(Name=Value0, FormData),
 	    Value0 \== ''		% Not sure
-	->  check_type(Options, Name, Value0, Value)
+	->  http_convert_parameter(Options, Name, Value0, Value)
 	;   memberchk(default(Value), Options)
 	->  true
 	;   memberchk(optional(true), Options)
@@ -191,13 +192,13 @@ fill_param(Name, Value, Options, FormData) :-
 
 fill_param_list([], _, [], _).
 fill_param_list([Name=Value0|Form], Name, [Value|VT], Options) :- !,
-	check_type(Options, Name, Value0, Value),
+	http_convert_parameter(Options, Name, Value0, Value),
 	fill_param_list(Form, Name, VT, Options).
 fill_param_list([_|Form], Name, VT, Options) :-
 	fill_param_list(Form, Name, VT, Options).
 
 
-%%	check_type(+Options, +FieldName, +ValueIn, -ValueOut) is det.
+%%	http_convert_parameter(+Options, +FieldName, +ValueIn, -ValueOut) is det.
 %
 %	Conversion of an HTTP form value. First tries the multifile hook
 %	http:convert_parameter/3 and next the built-in checks.
@@ -208,10 +209,10 @@ fill_param_list([_|Form], Name, VT, Options) :-
 %	@param ValueOut		Possibly converted final value
 %	@error type_error(Type, Value)
 
-check_type([], _, Value, Value).
-check_type([H|T], Field, Value0, Value) :-
+http_convert_parameter([], _, Value, Value).
+http_convert_parameter([H|T], Field, Value0, Value) :-
 	(   check_type_no_error(H, Value0, Value1)
-	->  check_type(T, Field, Value1, Value)
+	->  http_convert_parameter(T, Field, Value1, Value)
 	;   format(string(Msg), 'HTTP parameter ~w', [Field]),
 	    throw(error(type_error(H, Value0),
 			context(_, Msg)))
