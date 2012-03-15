@@ -32,15 +32,14 @@
 :- module(http_error,
 	  [
 	  ]).
-:- use_module(library(debug)).
 :- use_module(library(prolog_stack)).
 
-/** <module> Decorate uncaught exceptions with stack-trace
+/** <module> Decorate uncaught HTTP exceptions with stack-trace
 
-This module decorates uncaught exceptions of the user code with a full
-stack-trace. It is based on a hook introduced in SWI-Prolog 5.6.5.
-Please note that although loading this module greatly simplifies
-debugging, it also provides clues for hackers on how to compromise your
+This module decorates uncaught exceptions of the   user code with a full
+stack-trace. It is based  on  a   hook  introduced  in SWI-Prolog 5.6.5.
+Please  note  that  although  loading  this  module  greatly  simplifies
+debugging, it also provides clues for hackers  on how to compromise your
 site. The more information you give them, the easier it is to break into
 your server!
 
@@ -49,34 +48,10 @@ To use this file, simply load it.
 @author	Jan Wielemaker
 */
 
-:- multifile
-	user:prolog_exception_hook/4.
-:- dynamic
-	user:prolog_exception_hook/4.
+:- dynamic prolog_stack:stack_guard/1.
+:- multifile prolog_stack:stack_guard/1.
 
-guard(httpd_wrapper:call_handler/6).	% old version
-guard(httpd_wrapper:wrapper/5).
-guard(httpd_wrapper:handler_with_output_to/5).
+prolog_stack:stack_guard(httpd_wrapper:call_handler/6).	% old version
+prolog_stack:stack_guard(httpd_wrapper:wrapper/5).
+prolog_stack:stack_guard(httpd_wrapper:handler_with_output_to/5).
 
-user:prolog_exception_hook(error(E, context(Ctx0,Msg)),
-			   error(E, context(prolog_stack(Stack),Msg)),
-			   Fr, Guard) :-
-	Guard \== none,
-	prolog_frame_attribute(Guard, predicate_indicator, Goal),
-	debug(http_error, 'Got exception ~p (Ctx0=~p, Catcher=~p)',
-	      [E, Ctx0, Goal]),
-	guard(Goal),
-	get_prolog_backtrace(Fr, 50, Stack0),
-	debug(http_error, 'Stack = ~w', [Stack0]),
-	clean_stack(Stack0, Stack).
-
-clean_stack([], []).
-clean_stack([H|_], [H]) :-
-	guard_frame(H), !.
-clean_stack([H|T0], [H|T]) :-
-	clean_stack(T0, T).
-
-guard_frame(frame(_,clause(ClauseRef, _))) :-
-	nth_clause(M:Head, _, ClauseRef),
-	functor(Head, Name, Arity),
-	guard(M:Name/Arity).
