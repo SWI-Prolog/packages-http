@@ -80,21 +80,3 @@ guard_frame(frame(_,clause(ClauseRef, _))) :-
 	nth_clause(M:Head, _, ClauseRef),
 	functor(Head, Name, Arity),
 	guard(M:Name/Arity).
-
-
-		 /*******************************
-		 *	     MESSAGES		*
-		 *******************************/
-
-:- multifile
-	prolog:message/3.
-
-prolog:message(error(Error, context(Stack, Message))) -->
-	{ is_stack(Stack, Frames) }, !,
-	'$messages':translate_message(error(Error, context(_, Message))),
-	[ nl, 'In:', nl ],
-	prolog_stack:message(Frames).
-
-is_stack(Stack, Frames) :-
-	nonvar(Stack),
-	Stack = prolog_stack(Frames).
