@@ -1495,7 +1495,8 @@ rd_field_chars([]) -->
 
 separators("()<>@,;:\\\"/[]?={} \t").	% \"
 
-term_expansion(rd_field_char(_,_), Clauses) :-
+term_expansion(rd_field_char('expand me',_), Clauses) :-
+
 	Clauses = [ rd_field_char(0'-, 0'_)
 		  | Cls
 		  ],
@@ -1507,7 +1508,7 @@ term_expansion(rd_field_char(_,_), Clauses) :-
 		    code_type(Out, to_lower(In))),
 		Cls).
 
-rd_field_char(_, _).
+rd_field_char('expand me', _).			% avoid recursion
 
 wr_field_chars([C|T]) --> !,
 	{ code_type(C, to_lower(U)) },
