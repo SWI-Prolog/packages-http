@@ -88,6 +88,10 @@ http_wrapper(Goal, In, Out, Close, Options) :-
 	    handler_with_output_to(Goal, Id, Request1, CGI, Error),
 	    cgi_close(CGI, State0, Error, Close)
 	;   Id = 0,
+	    (	debugging(http(request))
+	    ->	print_message(warning, ReqError)
+	    ;	true
+	    ),
 	    send_error(Out, State0, ReqError, Close),
 	    extend_request(Options, [], _)
 	).
