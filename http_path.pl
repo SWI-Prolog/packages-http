@@ -29,7 +29,8 @@
 */
 
 :- module(http_path,
-	  [ http_absolute_location/3,	% +Spec, -Path, +Options
+	  [ http_absolute_uri/2,	% +Spec, -URI
+	    http_absolute_location/3,	% +Spec, -Path, +Options
 	    http_clean_location_cache/0
 	  ]).
 :- use_module(library(lists)).
@@ -40,6 +41,8 @@
 :- use_module(library(settings)).
 :- use_module(library(broadcast)).
 :- use_module(library(uri)).
+:- use_module(library(http/http_host)).
+:- use_module(library(http/http_wrapper)).
 
 
 :- predicate_options(http_absolute_location/3, 3, [relative_to(atom)]).
@@ -103,6 +106,26 @@ http:location(root, Root, [priority(-100)]) :-
 	).
 
 
+%%	http_absolute_uri(+Spec, -URI) is det.
+%
+%	URI is the absolute (i.e., starting   with  =|http://|=) URI for
+%	the abstract specification Spec. Use http_absolute_location/3 to
+%	create references to locations on the same server.
+
+http_absolute_uri(Spec, URI) :-
+	http_current_host(_Request, Host, Port,
+			  [ global(true)
+			  ]),
+	http_absolute_location(Spec, Path, []),
+	uri_authority_data(host, AuthC, Host),
+	uri_authority_data(port, AuthC, Port),
+	uri_authority_components(Authority, AuthC),
+	uri_data(path, Components, Path),
+	uri_data(scheme, Components, http),
+	uri_data(authority, Components, Authority),
+	uri_components(URI, Components).
+
+
 %%	http_absolute_location(+Spec, -Path, +Options) is det.
 %
 %	Path is the HTTP location for the abstract specification Spec.
@@ -111,6 +134,9 @@ http:location(root, Root, [priority(-100)]) :-
 %	    * relative_to(Base)
 %	    Path is made relative to Base.  Default is to generate
 %	    absolute URLs.
+%
+%	@see     http_absolute_uri/2 to create a reference that can be
+%		 used on another server.
 
 :- dynamic
 	location_cache/3.
@@ -162,7 +188,7 @@ expand_location(Spec, _Base, Path, Options) :-
 
 http_location_path(Alias, Path) :-
 	findall(P-L, http_location_path(Alias, L, P), Pairs),
-	keysort(Pairs, Sorted0),
+	sort(Pairs, Sorted0),
 	reverse(Sorted0, Result),
 	(   Result = [_-One]
 	->  Path = One
