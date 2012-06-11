@@ -31,7 +31,8 @@
 :- module(http_host,
 	  [ http_current_host/4		% +Request, -Host, -Port, +Options
 	  ]).
-:- use_module(library('http/thread_httpd')).
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_wrapper)).
 :- use_module(library(socket)).
 :- use_module(library(option)).
 :- use_module(library(settings)).
@@ -58,7 +59,7 @@ http:public_port if provided. Otherwise it is deduced from the request.
 */
 
 
-%%	http_current_host(+Request, -Hostname, -Port, Options) is det.
+%%	http_current_host(?Request, -Hostname, -Port, Options) is det.
 %
 %	Current global host and port of the HTTP server.  This is the
 %	basis to form absolute address, which we need for redirection
@@ -67,12 +68,20 @@ http:public_port if provided. Otherwise it is deduced from the request.
 %	    * global(+Bool)
 %	    If =true= (default =false=), try to replace a local hostname
 %	    by a world-wide accessible name.
+%
+%       @param	Request is the current request.  If it is left unbound,
+%		and the request is needed, it is obtained with
+%		http_current_request/1.
 
-http_current_host(_, Host, Port, _) :-
+http_current_host(_Request, Host, Port, _) :-
 	setting(http:public_host, PublicHost), PublicHost \== '', !,
 	Host = PublicHost,
 	setting(http:public_port, Port).
 http_current_host(Request, Host, Port, Options) :-
+	(   var(Request)
+	->  http_current_request(Request)
+	;   true
+	),
 	(   memberchk(x_forwarded_host(Forwarded), Request)
 	->  Port = 80,
 	    primary_forwarded_host(Forwarded, Host)
@@ -82,10 +91,10 @@ http_current_host(Request, Host, Port, Options) :-
 	    ;	Host = Host0
 	    ),
 	    option(port(Port), Request, 80)
-	->  true
-	;   gethostname(Host),
-	    http_current_server(_Pred, Port)		% TBD: May be more
-	).
+	), !.
+http_current_host(_Request, Host, Port, _Options) :-
+	gethostname(Host),
+	http_current_server(_Pred, Port).
 
 
 %%	primary_forwarded_host(+Spec, -Host) is det.
