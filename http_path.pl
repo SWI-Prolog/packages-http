@@ -111,6 +111,8 @@ http:location(root, Root, [priority(-100)]) :-
 %	URI is the absolute (i.e., starting   with  =|http://|=) URI for
 %	the abstract specification Spec. Use http_absolute_location/3 to
 %	create references to locations on the same server.
+%
+%	@tbd	Distinguish =http= from =https=
 
 http_absolute_uri(Spec, URI) :-
 	http_current_host(_Request, Host, Port,
