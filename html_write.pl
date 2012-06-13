@@ -604,7 +604,7 @@ name(Name) -->
 	expand_attribute_value//1.
 
 attribute_value(List) -->
-	{ is_list(List) },
+	{ is_list(List) }, !,
 	attribute_value_m(List).
 attribute_value(Value) -->
 	attribute_value_s(Value).
