@@ -118,7 +118,10 @@ http_absolute_uri(Spec, URI) :-
 			  ]),
 	http_absolute_location(Spec, Path, []),
 	uri_authority_data(host, AuthC, Host),
-	uri_authority_data(port, AuthC, Port),
+	(   Port == 80			% HTTP scheme
+	->  true
+	;   uri_authority_data(port, AuthC, Port)
+	),
 	uri_authority_components(Authority, AuthC),
 	uri_data(path, Components, Path),
 	uri_data(scheme, Components, http),
