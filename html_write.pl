@@ -71,7 +71,6 @@
 :- use_module(library(pairs)).
 :- use_module(library(sgml)).		% Quote output
 :- use_module(library(uri)).
-:- use_module(library(quintus)).	% for meta_predicate/1
 :- set_prolog_flag(generate_debug_info, false).
 
 :- meta_predicate
@@ -1196,12 +1195,12 @@ meta_called([_|MT], [_|AT], Called, Tail) :- !,
 		 *******************************/
 
 :- multifile
-	emacs_prolog_colours:goal_colours/2,
-	emacs_prolog_colours:style/2,
-	emacs_prolog_colours:identify/2,
+	prolog_colour:goal_colours/2,
+	prolog_colour:style/2,
+	prolog_colour:message//1,
 	prolog:called_by/2.
 
-emacs_prolog_colours:goal_colours(Goal, Colours) :-
+prolog_colour:goal_colours(Goal, Colours) :-
 	html_meta_head(Goal, _Module, Head),
 	html_meta_colours(Head, Goal, Colours).
 
@@ -1300,27 +1299,27 @@ location_id(_, classify).
 :- op(990, xfx, :=).			% allow compiling without XPCE
 :- op(200, fy, @).
 
-emacs_prolog_colours:style(html(_), style(bold := @on,
-					  colour := magenta4)).
-emacs_prolog_colours:style(entity(_), style(colour := magenta4)).
-emacs_prolog_colours:style(html_attribute(_), style(colour := magenta4)).
-emacs_prolog_colours:style(html_xmlns(_), style(colour := magenta4)).
-emacs_prolog_colours:style(sgml_attr_function, style(colour := blue)).
-emacs_prolog_colours:style(http_location_for_id(_), style(bold := @on)).
-emacs_prolog_colours:style(http_no_location_for_id(_), style(colour := red, bold := @on)).
+prolog_colour:style(html(_),			[colour(magenta4), bold(true)]).
+prolog_colour:style(entity(_),			[colour(magenta4)]).
+prolog_colour:style(html_attribute(_),		[colour(magenta4)]).
+prolog_colour:style(html_xmlns(_),		[colour(magenta4)]).
+prolog_colour:style(sgml_attr_function,		[colour(blue)]).
+prolog_colour:style(http_location_for_id(_),	[bold(true)]).
+prolog_colour:style(http_no_location_for_id(_),	[colour(red), bold(true)]).
 
 
-emacs_prolog_colours:identify(html(Element), Summary) :-
-	format(string(Summary), '~w: SGML element', [Element]).
-emacs_prolog_colours:identify(entity(Entity), Summary) :-
-	format(string(Summary), '~w: SGML entity', [Entity]).
-emacs_prolog_colours:identify(html_attribute(Attr), Summary) :-
-	format(string(Summary), '~w: SGML attribute', [Attr]).
-emacs_prolog_colours:identify(sgml_attr_function, 'SGML Attribute function').
-emacs_prolog_colours:identify(http_location_for_id(Location), Summary) :-
-	format(string(Summary), 'ID resolves to ~w', [Location]).
-emacs_prolog_colours:identify(http_no_location_for_id(ID), Summary) :-
-	format(string(Summary), '~w: no such ID', [ID]).
+prolog_colour:message(html(Element)) -->
+	[ '~w: SGML element'-[Element] ].
+prolog_colour:message(entity(Entity)) -->
+	[ '~w: SGML entity'-[Entity] ].
+prolog_colour:message(html_attribute(Attr)) -->
+	[ '~w: SGML attribute'-[Attr] ].
+prolog_colour:message(sgml_attr_function) -->
+	[ 'SGML Attribute function'-[] ].
+prolog_colour:message(http_location_for_id(Location)) -->
+	[ 'ID resolves to ~w'-[Location] ].
+prolog_colour:message(http_no_location_for_id(ID)) -->
+	[ '~w: no such ID'-[ID] ].
 
 
 %	prolog:called_by(+Goal, -Called)
