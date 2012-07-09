@@ -710,12 +710,20 @@ http_post_data(codes(Codes), Out, HdrExtra) :- !,
 	http_post_data(codes(text/plain, Codes), Out, HdrExtra).
 http_post_data(codes(Type, Codes), Out, HdrExtra) :- !,
 	phrase(post_header(codes(Type, Codes), HdrExtra), Header),
-	format(Out, '~s~s', [Header, Codes]).
+	format(Out, '~s', [Header]),
+	setup_call_cleanup(
+	    set_stream(Out, encoding(utf8)),
+	    format(Out, '~s', [Codes]),
+	    set_stream(Out, encoding(octet))).
 http_post_data(atom(Atom), Out, HdrExtra) :- !,
 	http_post_data(atom(text/plain, Atom), Out, HdrExtra).
 http_post_data(atom(Type, Atom), Out, HdrExtra) :- !,
 	phrase(post_header(atom(Type, Atom), HdrExtra), Header),
-	format(Out, '~s~a', [Header, Atom]).
+	format(Out, '~s', [Header]),
+	setup_call_cleanup(
+	    set_stream(Out, encoding(utf8)),
+	    write(Out, Atom),
+	    set_stream(Out, encoding(octet))).
 http_post_data(cgi_stream(In, _Len), Out, HdrExtra) :- !,
 	debug(obsolete, 'Obsolete 2nd argument in cgi_stream(In,Len)', []),
 	http_post_data(cgi_stream(In), Out, HdrExtra).
@@ -811,13 +819,13 @@ post_header(cgi_data(Size), HdrExtra) -->
 	"\r\n".
 post_header(codes(Type, Codes), HdrExtra) -->
 	header_fields(HdrExtra, Len),
-	content_length(ascii_string(Codes), Len),
-	content_type(Type),
+	content_length(codes(Codes, utf8), Len),
+	content_type(Type, utf8),
 	"\r\n".
 post_header(atom(Type, Atom), HdrExtra) -->
 	header_fields(HdrExtra, Len),
-	content_length(atom(Atom), Len),
-	content_type(Type),
+	content_length(atom(Atom, utf8), Len),
+	content_type(Type, utf8),
 	"\r\n".
 
 
@@ -857,8 +865,8 @@ reply_header(string(Type, String), HdrExtra, Code) -->
 	vstatus(ok, Code),
 	date(now),
 	header_fields(HdrExtra, CLen),
-	content_length(ascii_string(String), CLen),
-	content_type(Type),
+	content_length(codes(String, utf8), CLen),
+	content_type(Type, utf8),
 	"\r\n".
 reply_header(html(Tokens), HdrExtra, Code) -->
 	vstatus(ok, Code),
@@ -1095,10 +1103,22 @@ content_length(Reply, Len) -->
 
 length_of(_, Len) :-
 	nonvar(Len), !.
-length_of(ascii_string(String), Len) :- !,
-	length(String, Len).
-length_of(atom(Atom), Len) :- !,
-	atom_length(Atom, Len).
+length_of(codes(String, Encoding), Len) :- !,
+	setup_call_cleanup(
+	    open_null_stream(Out),
+	    ( set_stream(Out, encoding(Encoding)),
+	      format(Out, '~s', [String]),
+	      byte_count(Out, Len)
+	    ),
+	    close(Out)).
+length_of(atom(Atom, Encoding), Len) :- !,
+	setup_call_cleanup(
+	    open_null_stream(Out),
+	    ( set_stream(Out, encoding(Encoding)),
+	      format(Out, '~a', [Atom]),
+	      byte_count(Out, Len)
+	    ),
+	    close(Out)).
 length_of(file(File), Len) :- !,
 	size_file(File, Len).
 length_of(memory_file(Handle), Len) :- !,
