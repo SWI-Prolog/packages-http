@@ -635,15 +635,21 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  instead of a real file.  See new_memory_file/1.
 %
 %	  * codes(+Codes)
-%	  As string(text/plain, Codes).
+%	  As codes(text/plain, Codes).
 %
 %	  * codes(+Type, +Codes)
 %	  Send Codes using the indicated MIME-type.
 %
-%	  * cgi_stream(+Stream, +Len)
-%	  Read the input from Stream which, like CGI data starts with a partial
-%	  HTTP header. The fields of this header are merged with the provided
-%	  HdrExtra fields. The first Len characters of Stream are used.
+%	  * atom(+Atom)
+%	  As atom(text/plain, Atom).
+%
+%	  * atom(+Type, +Atom)
+%	  Send Atom using the indicated MIME-type.
+%
+%	  * cgi_stream(+Stream, +Len) Read the input from Stream which,
+%	  like CGI data starts with a partial HTTP header. The fields of
+%	  this header are merged with the provided HdrExtra fields. The
+%	  first Len characters of Stream are used.
 %
 %	  * form(+ListOfParameter)
 %	  Send data of the MIME type application/x-www-form-urlencoded as
@@ -705,6 +711,11 @@ http_post_data(codes(Codes), Out, HdrExtra) :- !,
 http_post_data(codes(Type, Codes), Out, HdrExtra) :- !,
 	phrase(post_header(codes(Type, Codes), HdrExtra), Header),
 	format(Out, '~s~s', [Header, Codes]).
+http_post_data(atom(Atom), Out, HdrExtra) :- !,
+	http_post_data(atom(text/plain, Atom), Out, HdrExtra).
+http_post_data(atom(Type, Atom), Out, HdrExtra) :- !,
+	phrase(post_header(atom(Type, Atom), HdrExtra), Header),
+	format(Out, '~s~a', [Header, Atom]).
 http_post_data(cgi_stream(In, _Len), Out, HdrExtra) :- !,
 	debug(obsolete, 'Obsolete 2nd argument in cgi_stream(In,Len)', []),
 	http_post_data(cgi_stream(In), Out, HdrExtra).
@@ -801,6 +812,11 @@ post_header(cgi_data(Size), HdrExtra) -->
 post_header(codes(Type, Codes), HdrExtra) -->
 	header_fields(HdrExtra, Len),
 	content_length(ascii_string(Codes), Len),
+	content_type(Type),
+	"\r\n".
+post_header(atom(Type, Atom), HdrExtra) -->
+	header_fields(HdrExtra, Len),
+	content_length(atom(Atom), Len),
 	content_type(Type),
 	"\r\n".
 
@@ -1081,6 +1097,8 @@ length_of(_, Len) :-
 	nonvar(Len), !.
 length_of(ascii_string(String), Len) :- !,
 	length(String, Len).
+length_of(atom(Atom), Len) :- !,
+	atom_length(Atom, Len).
 length_of(file(File), Len) :- !,
 	size_file(File, Len).
 length_of(memory_file(Handle), Len) :- !,
