@@ -94,7 +94,7 @@ http_current_host(Request, Host, Port, Options) :-
 	), !.
 http_current_host(_Request, Host, Port, _Options) :-
 	gethostname(Host),
-	http_current_server(_Pred, Port).
+	http_current_server(_:_Pred, Port).
 
 
 %%	primary_forwarded_host(+Spec, -Host) is det.
