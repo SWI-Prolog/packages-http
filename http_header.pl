@@ -621,7 +621,12 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  =|text/xml|=
 %
 %	  * xml(+Type, +Term)
-%	  Post the result of xml_write/3 using the given Mime-type.
+%	  Post the result of xml_write/3 using the given Mime-type
+%	  and an empty option list to xml_write/3.
+%
+%	  * xml(+Type, +Term, +Options)
+%	  Post the result of xml_write/3 using the given Mime-type
+%	  and option list for xml_write/3.
 %
 %	  * file(+File)
 %	  Send contents of a file. Mime-type is determined by
@@ -675,13 +680,15 @@ http_post_data(html(HTML), Out, HdrExtra) :- !,
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
 http_post_data(xml(XML), Out, HdrExtra) :- !,
-	http_post_data(xml(text/xml, XML), Out, HdrExtra).
+	http_post_data(xml(text/xml, XML, []), Out, HdrExtra).
 http_post_data(xml(Type, XML), Out, HdrExtra) :- !,
+	http_post_data(xml(Type, XML, []), Out, HdrExtra).
+http_post_data(xml(Type, XML, Options), Out, HdrExtra) :- !,
 	setup_call_cleanup(
 	    new_memory_file(MemFile),
 	    (   setup_call_cleanup(
 		    open_memory_file(MemFile, write, MemOut),
-		    xml_write(MemOut, XML, []),
+		    xml_write(MemOut, XML, Options),
 		    close(MemOut)),
 		http_post_data(memory_file(Type, MemFile), Out, HdrExtra)
 	    ),
