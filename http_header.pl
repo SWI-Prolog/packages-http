@@ -670,13 +670,13 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 
 http_post_data(Data, Out, HdrExtra) :-
 	http_client:post_data_hook(Data, Out, HdrExtra), !.
-http_post_data(html(HTML), Out, HdrExtra) :-
+http_post_data(html(HTML), Out, HdrExtra) :- !,
 	phrase(post_header(html(HTML), HdrExtra), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-http_post_data(xml(XML), Out, HdrExtra) :-
+http_post_data(xml(XML), Out, HdrExtra) :- !,
 	http_post_data(xml(text/xml, XML), Out, HdrExtra).
-http_post_data(xml(Type, XML), Out, HdrExtra) :-
+http_post_data(xml(Type, XML), Out, HdrExtra) :- !,
 	setup_call_cleanup(
 	    new_memory_file(MemFile),
 	    (   setup_call_cleanup(
