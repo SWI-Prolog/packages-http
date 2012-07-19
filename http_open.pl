@@ -590,7 +590,12 @@ read_header(In, Code, Comment, Lines) :-
 	phrase(first_line(Code, Comment), Line),
 	debug(http(open), '~w ~w', [Code, Comment]),
 	read_line_to_codes(In, Line2),
-	rest_header(Line2, In, Lines), !.
+	rest_header(Line2, In, Lines), !,
+	(   debugging(http(open))
+	->  forall(member(HL, Lines),
+		   debug(http(open), '~s', [HL]))
+	;   true
+	).
 read_header(_, 500, 'Invalid reply header', []).
 
 rest_header("", _, []) :- !.		% blank line: end of header
