@@ -299,9 +299,9 @@ guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
 	method(Options, MNAME),
 	http_version(Version),
 	format(Out,
-	       '~w ~w HTTP/~w\r\n\
-	       Host: ~w\r\n\
-	       User-Agent: ~w\r\n\
+	       '~w ~w HTTP/~w\r\n\c
+	       Host: ~w\r\n\c
+	       User-Agent: ~w\r\n\c
 	       Connection: close\r\n',
 	       [MNAME, RequestURI, Version, Host, Agent]),
 	x_headers(Options, Out),

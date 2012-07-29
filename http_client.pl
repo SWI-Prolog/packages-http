@@ -327,7 +327,7 @@ http_write_header(Out, Method, Location, Host, Options, RestOptions) :-
 	;   user_agent(Agent),
 	    Options3 = Options2
 	),
-	format(Out, 'User-Agent: ~w\r\n\
+	format(Out, 'User-Agent: ~w\r\n\c
 		     Connection: ~w\r\n', [Agent, Connection]),
 	x_headers(Options3, Out, RestOptions).
 

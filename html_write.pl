@@ -187,11 +187,11 @@ html_current_option(content_type(ContentType)) :-
 
 option_default(html_dialect, html).
 option_default(html_doctype,
-	       'HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" \
+	       'HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" \c
 	       "http://www.w3.org/TR/html4/loose.dtd"').
 option_default(xhtml_doctype,
-	       'html PUBLIC "-//W3C//DTD XHTML 1.0 \
-	       Transitional//EN" \
+	       'html PUBLIC "-//W3C//DTD XHTML 1.0 \c
+	       Transitional//EN" \c
 	       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"').
 option_default(html_content_type, 'text/html; charset=UTF-8').
 option_default(xhtml_content_type, 'application/xhtml+xml; charset=UTF-8').

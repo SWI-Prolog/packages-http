@@ -681,33 +681,39 @@ checkid_setup_server(_Request, Form, _Options) :-
 
 	server_association(_, Handle, _Association),		% check
 
-	reply_html_page([ title('OpenID login')
-			],
-			[ \openid_title,
-			  div(class('openid-message'),
-			      ['Site ', a(href(TrustRoot), TrustRoot), ' requests permission \
-			       to login with OpenID ', a(href(Identity), Identity), '.'
-			      ]),
-			  table(class('openid-form'),
-				[ tr(td(form([ action(grant), method('GET') ],
-					     [ \hidden('openid.grant', yes),
-					       \hidden('openid.identity', Identity),
-					       \hidden('openid.assoc_handle', Handle),
-					       \hidden('openid.return_to', ReturnTo),
-					       \hidden('openid.trust_root', TrustRoot),
-					       div(['Password: ',
-						    input([type(password), name('openid.password')]),
-						    input([type(submit), value('Grant')])
-						   ])
-					     ]))),
-				  tr(td(align(right),
-					form([ action(grant), method('GET') ],
-					     [ \hidden('openid.grant', no),
-					       \hidden('openid.return_to', ReturnTo),
-					       input([type(submit), value('Deny')])
-					     ])))
-				])
-			]).
+	reply_html_page(
+	    [ title('OpenID login')
+	    ],
+	    [ \openid_title,
+	      div(class('openid-message'),
+		  ['Site ', a(href(TrustRoot), TrustRoot),
+		   ' requests permission to login with OpenID ',
+		   a(href(Identity), Identity), '.'
+		  ]),
+	      table(class('openid-form'),
+		    [ tr(td(form([ action(grant), method('GET') ],
+				 [ \hidden('openid.grant', yes),
+				   \hidden('openid.identity', Identity),
+				   \hidden('openid.assoc_handle', Handle),
+				   \hidden('openid.return_to', ReturnTo),
+				   \hidden('openid.trust_root', TrustRoot),
+				   div(['Password: ',
+					input([ type(password),
+						name('openid.password')
+					      ]),
+					input([ type(submit),
+						value('Grant')
+					      ])
+				       ])
+				 ]))),
+		      tr(td(align(right),
+			    form([ action(grant), method('GET') ],
+				 [ \hidden('openid.grant', no),
+				   \hidden('openid.return_to', ReturnTo),
+				   input([type(submit), value('Deny')])
+				 ])))
+		    ])
+	    ]).
 
 hidden(Name, Value) -->
 	html(input([type(hidden), name(Name), value(Value)])).
