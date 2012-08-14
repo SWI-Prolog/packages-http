@@ -123,7 +123,7 @@ reply(Request) :-
 reply(Request) :-
 	member(path('/xml'), Request), !,
 	format('Content-type: text/xml~n~n', []),
-	format('\
+	format('\c
 <message>
   <head>
   <from>Jan Wielemaker</from>
@@ -145,7 +145,7 @@ This is the first demo of the web-server serving an XML message
 reply(Request) :-
 	member(path('/foreign'), Request), !,
 	format('Content-type: text/html~n~n', []),
-	format('\
+	format('\c
 <html>
 <head><title>Foreign characters</title></head>
 <body>
