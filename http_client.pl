@@ -49,7 +49,7 @@
 :- use_module(library(lists)).
 :- use_module(library(error)).
 :- use_module(library(option)).
-:- use_module(dcg_basics).
+:- use_module(library(dcg/basics)).
 
 :- multifile
 	http_convert_data/4,		% http_read_data plugin-hook

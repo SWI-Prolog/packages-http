@@ -35,7 +35,7 @@
 	    http_authorization_data/2	% +AuthorizationText, -Data
 	  ]).
 :- use_module(library(base64)).
-:- use_module(library('http/dcg_basics')).
+:- use_module(library(dcg/basics)).
 :- use_module(library(readutil)).
 :- use_module(library(crypt)).
 :- use_module(library(debug)).
@@ -231,6 +231,8 @@ field(Value) -->
 
 peek_eof, ":" --> ":".
 peek_eof --> eos.
+
+eos([], []).
 
 
 		 /*******************************

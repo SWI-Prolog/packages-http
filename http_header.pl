@@ -58,7 +58,7 @@
 :- use_module(library(memfile)).
 :- use_module(library(settings)).
 :- use_module(library(error)).
-:- use_module(dcg_basics).
+:- use_module(library(dcg/basics)).
 :- use_module(html_write).
 :- use_module(http_exception).
 :- use_module(mimetype).
@@ -1886,6 +1886,8 @@ header(_) -->
 	{ atom_codes(Line, S),
 	  syntax_error(http_request_line(Line))
 	}.
+
+eos([], []).
 
 %%	address//
 %
