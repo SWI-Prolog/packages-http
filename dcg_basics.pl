@@ -44,5 +44,5 @@ prolog:message(moved_library(Old, New)) -->
 	[ 'Library was moved: ~q --> ~q'-[Old, New] ].
 
 :- initialization
-   print_message(warning, moved_library(library(http/dcg_basics),
-					library(dcg/basics))).
+   print_message(informational, moved_library(library(http/dcg_basics),
+					      library(dcg/basics))).
