@@ -265,6 +265,10 @@ status_reply(no_content, Out, HrdExtra, Code) :- !,
 	phrase(reply_header(status(no_content), HrdExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
+status_reply(switching_protocols(_), Out, HrdExtra, Code) :- !,
+	phrase(reply_header(status(switching_protocols), HrdExtra, Code), Header),
+	format(Out, '~s', [Header]),
+	flush_output(Out).
 status_reply(created(Location), Out, HrdExtra, Code) :- !,
 	phrase(page([ title('201 Created')
 		    ],
@@ -996,6 +1000,7 @@ status_number(Status, Code) -->
 	integer(Code).
 
 status_number(continue,		   100).
+status_number(switching_protocols, 101).
 status_number(ok,		   200).
 status_number(created,		   201).
 status_number(accepted,		   202).
@@ -1020,6 +1025,8 @@ status_number(service_unavailable, 503).
 
 status_comment(continue) -->
 	"Continue".
+status_comment(switching_protocols) -->
+	"Switching Protocols".
 status_comment(ok) -->
 	"OK".
 status_comment(created) -->

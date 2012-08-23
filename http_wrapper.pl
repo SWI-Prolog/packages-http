@@ -200,7 +200,9 @@ send_error(Out, State0, Error, Close) :-
 	;   http_done(500,  E, 0, State0),
 	    throw(E)			% is that wise?
 	),
-	(   memberchk(connection(Close), HdrExtra)
+        (   Error = http_reply(switching_protocols(Goal))
+        ->  Close = switch_protocol(Goal)
+	;   memberchk(connection(Close), HdrExtra)
 	->  true
 	;   Close = close
 	).

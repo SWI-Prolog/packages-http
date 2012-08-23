@@ -544,6 +544,9 @@ http_process(Goal, In, Out, Options) :-
 		     ]),
 	next(Connection, Request).
 
+next(switch_protocol(SwitchGoal), Request) :- !,
+        memberchk(pool(client(_Queue, _Goal, In, Out)), Request),
+        call(SwitchGoal, In, Out).
 next(spawned(ThreadId), _) :- !,
 	debug(http(spawn), 'Handler spawned to thread ~w', [ThreadId]).
 next(Connection, Request) :-
