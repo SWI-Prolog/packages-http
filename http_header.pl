@@ -265,7 +265,7 @@ status_reply(no_content, Out, HrdExtra, Code) :- !,
 	phrase(reply_header(status(no_content), HrdExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(switching_protocols(_), Out, HrdExtra, Code) :- !,
+status_reply(switching_protocols(_,_), Out, HrdExtra, Code) :- !,
 	phrase(reply_header(status(switching_protocols), HrdExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
