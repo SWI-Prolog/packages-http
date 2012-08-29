@@ -16,7 +16,8 @@ SOLIB=@SOLIB@
 
 STREAMOBJ=	http_stream.o
 JSONOBJ=	json.o
-SOLIBS=		http_stream.@SO@ json.@SO@
+WEBSOCKETOBJ=	websocket.o
+SOLIBS=		http_stream.@SO@ json.@SO@ websocket.@SO@
 
 all:		$(SOLIBS)
 
@@ -24,6 +25,8 @@ http_stream.@SO@:	$(STREAMOBJ)
 		$(LD) $(LDSOFLAGS) -o $@ $(STREAMOBJ) @LIBS@ $(LIBPLSO)
 json.@SO@:	$(JSONOBJ)
 		$(LD) $(LDSOFLAGS) -o $@ $(JSONOBJ) @LIBS@ $(LIBPLSO)
+websocket.@SO@:	$(WEBSOCKETOBJ)
+		$(LD) $(LDSOFLAGS) -o $@ $(WEBSOCKETOBJ) @LIBS@ $(LIBPLSO)
 
 http_stream.o:	http_error.c http_chunked.c cgi_stream.c stream_range.c
 
