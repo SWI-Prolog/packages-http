@@ -544,7 +544,7 @@ http_process(Goal, In, Out, Options) :-
 		     ]),
 	next(Connection, Request).
 
-next(switch_protocol(SwitchGoal), Request) :- !,
+next(switch_protocol(SwitchGoal, _SwitchOptions), Request) :- !,
         memberchk(pool(client(_Queue, _Goal, In, Out)), Request),
         (   catch(call(SwitchGoal, In, Out), E,
 		  (   print_message(error, E),

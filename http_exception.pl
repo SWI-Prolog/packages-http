@@ -97,7 +97,7 @@ keep_alive(file(_Type, _File)).
 keep_alive(tmp_file(_Type, _File)).
 keep_alive(stream(_In, _Len)).
 keep_alive(cgi_stream(_In, _Len)).
-keep_alive(switching_protocols(_Goal)).
+keep_alive(switching_protocols(_Goal, _)).
 
 
 		 /*******************************
