@@ -11,7 +11,6 @@ include common.mk
 CFLAGS+= -I.
 LIBDIR=$(PLBASE)/library/http
 EXDIR=$(PKGEXDIR)/http
-.SUFFIXES: .txt
 
 SOLIB=@SOLIB@
 
@@ -127,9 +126,6 @@ jswrite.tex:	js_write.pl
 
 mimepack.tex:	mimepack.pl
 		$(PLTOTEX) --subsection 'library(http/mimepack)'
-
-.txt.tex:
-		$(PUBLICPL) -q -s txttotex.pl -g txttotex,halt -t 'halt(1)' -- $*.txt
 
 ################################################################
 # Clean
