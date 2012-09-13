@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007, University of Amsterdam
+    Copyright (C): 2007-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -32,7 +31,8 @@
 
 :- module(authenticate,
 	  [ http_authenticate/3,	% +Check, +Header, -User
-	    http_authorization_data/2	% +AuthorizationText, -Data
+	    http_authorization_data/2,	% +AuthorizationText, -Data
+	    http_current_user/3		% +File, ?User, ?Fields
 	  ]).
 :- use_module(library(base64)).
 :- use_module(library(dcg/basics)).
@@ -169,6 +169,16 @@ validate(File, User, Password, Fields) :-
 	update_passwd(File, Path),
 	passwd(User, Path, Hash, Fields),
 	crypt(Password, Hash).
+
+%%	http_current_user(+File, ?User, ?Fields) is nondet.
+%
+%	True when User is present in the htpasswd file File and Fields
+%	provides the additional fields.
+
+http_current_user(File, User, Fields) :-
+	update_passwd(File, Path),
+	passwd(User, Path, Hash, Fields0),
+	Fields = [hash(Hash)|Fields0].
 
 %%	update_passwd(+File, -Path) is det.
 %
