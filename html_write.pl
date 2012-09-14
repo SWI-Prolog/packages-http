@@ -638,7 +638,7 @@ search_parameters([H|T]) -->
 	search_parameter(H),
 	(   {T == []}
 	->  []
-	;   [&],
+	;   ['&amp;'],
 	    search_parameters(T)
 	).
 
