@@ -1,9 +1,9 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2011, University of Amsterdam
+    Copyright (C): 2008-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -92,6 +92,24 @@ login(Request) :-
 @tbd	Make this module replace the http:prefix option.
 @tbd	Remove hard-wired support for prefix().
 */
+
+%%	http:location(+Alias, -Expansion, -Options) is nondet.
+%
+%	Multifile hook used to specify new  HTTP locations. Alias is the
+%	name  of  the  abstract  path.  Expansion    is  either  a  term
+%	Alias2(Relative), telling http_absolute_location/3  to translate
+%	Alias by first translating Alias2 and then applying the relative
+%	path Relative or, Expansion is an   absolute location, i.e., one
+%	that starts with a =|/|=. Options   currently  only supports the
+%	priority  of  the  path.  If  http:location/3  returns  multiple
+%	solutions the one with the  highest   priority  is selected. The
+%	default priority is 0.
+%
+%	This library provides  a  default   for  the  abstract  location
+%	=root=. This defaults to the setting   http:prefix  or, when not
+%	available to the  path  =|/|=.  It   is  adviced  to  define all
+%	locations (ultimately) relative to  =root=.   For  example,  use
+%	root('home.html') rather than =|'/home.html'|=.
 
 :- multifile
 	http:location/3.		% Alias, Expansion, Options
@@ -302,7 +320,8 @@ path_list(A) -->
 	prolog:message/3.
 
 prolog:message(http(ambiguous_location(Spec, Paths))) -->
-	[ 'http_absolute_location/2: ambiguous specification: ~q: ~p'-[Spec, Paths]
+	[ 'http_absolute_location/2: ambiguous specification: ~q: ~p'-
+	  [Spec, Paths]
 	].
 
 
