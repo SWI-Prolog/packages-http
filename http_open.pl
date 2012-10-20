@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
@@ -57,6 +55,10 @@ two additional modules that acts as plugins:
     * library(http/http_header)
     Loading this library causes http_open/3 to support the =POST= method
     in addition to =GET= and =HEAD=.
+
+    * library(http/http_ssl_plugin)
+    Loading this library causes http_open/3 HTTPS connections.  Relevant
+    options for SLL certificate handling are handled to ssl_context/3.
 
 Here is a simple example to fetch a web-page:
 
@@ -220,6 +222,8 @@ user_agent('SWI-Prolog <http://www.swi-prolog.org>').
 %		==
 %
 %	@error existence_error(url, Id)
+%	@see ssl_context/3 for SSL related options if
+%	library(http/http_ssl_plugin) is loaded.
 
 http_open(URL, Stream, QOptions) :-
 	meta_options(is_meta, QOptions, Options),
