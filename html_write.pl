@@ -37,6 +37,7 @@
 					% Basic output routines
 	    page//1,			% :Content
 	    page//2,			% :Head, :Body
+	    page//3,			% +Style, :Head, :Body
 	    html//1,			% :Content
 
 					% Option processing
