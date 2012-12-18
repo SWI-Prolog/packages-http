@@ -201,7 +201,7 @@ system:term_expansion((:- http_handler(Path, Pred, Options)), Clause) :-
 
 http_delete_handler(id(Id)) :- !,
 	clause(handler(_Path, _:Pred, _, Options), true, Ref),
-	functor(Pred, _, DefID),
+	functor(Pred, DefID, _),
 	option(id(Id0), Options, DefID),
 	Id == Id0,
 	erase(Ref),
