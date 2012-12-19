@@ -726,7 +726,7 @@ check_authorization(basic(User, Password)) :-
 	must_be(atom, User),
 	must_be(atom, Password).
 
-%%	authorization(+URL, -Authorization) is semdet.
+%%	authorization(+URL, -Authorization) is semidet.
 %
 %	True if Authorization must be supplied for URL.
 %
