@@ -407,7 +407,7 @@ debug_request(Code, Status, Id, _, Bytes) :-
 	map_exception(Status, Reply), !,
 	debug(http(request), '[~D] ~w ~w; ~D bytes',
 	      [Id, Code, Reply, Bytes]).
-debug_request(Code, Except, Id, _, _) :- !,
+debug_request(Code, Except, Id, _, _) :-
 	Except = error(_,_), !,
 	message_to_string(Except, Message),
 	debug(http(request), '[~D] ~w ERROR: ~w',
