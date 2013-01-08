@@ -90,18 +90,23 @@ other parts of the HTTP server and client libraries.
 %	unified to =end_of_file= if FdIn is at the end of input.
 
 http_read_request(In, Request) :-
-	read_line_to_codes(In, Codes),
-	(   Codes == end_of_file
-	->  debug(http(header), 'end-of-file', []),
-	    Request = end_of_file
-	;   debug(http(header), 'First line: ~s~n', [Codes]),
-	    Request =  [input(In)|Request1],
-	    phrase(request(In, Request1), Codes),
-	    (	Request1 = [unknown(Text)|_]
-	    ->	atom_codes(S, Text),
-		syntax_error(http_request(S))
-	    ;	true
+	catch(read_line_to_codes(In, Codes), E, true),
+	(   var(E)
+	->  (   Codes == end_of_file
+	    ->  debug(http(header), 'end-of-file', []),
+		Request = end_of_file
+	    ;   debug(http(header), 'First line: ~s', [Codes]),
+		Request =  [input(In)|Request1],
+		phrase(request(In, Request1), Codes),
+		(   Request1 = [unknown(Text)|_]
+		->  atom_codes(S, Text),
+		    syntax_error(http_request(S))
+		;   true
+		)
 	    )
+	;   message_to_string(E, Msg),
+	    debug(http(request), 'Exception reading 1st line: ~s', [Msg]),
+	    Request = end_of_file
 	).
 
 
