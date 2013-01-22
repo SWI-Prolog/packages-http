@@ -72,7 +72,7 @@ timeout handling and user authentication.  The typical setup is:
 ==
 server(Port, Options) :-
 	http_server(http_dispatch,
-		    [ port(Port),
+		    [ port(Port)
 		    | Options
 		    ]).
 
