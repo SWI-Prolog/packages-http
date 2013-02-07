@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -61,9 +59,16 @@ file_mime_type(File, MimeType) :-
 	->  MimeType = M0
 	;   downcase_atom(Ext, Lower),
 	    mime_extension(Lower, MimeType)
-	).
+	), !.
+file_mime_type(File, MimeType) :-
+	file_base_name(File, Base),
+	downcase_atom(Base, Lower),
+	name_mimetype(Lower, Mime), !,
+	MimeType = Mime.
+file_mime_type(_, MimeType) :-
+	default_mimetype(MimeType).
 
-%%	mime:mime_extension(+Ext, -MimeType)
+%%	mime:mime_extension(+Ext, -MimeType) is semidet.
 %
 %	Hook that is called by file_mime_type/2 before the default table
 %	is examined.
@@ -76,7 +81,6 @@ mime_extension(Ext, MimeType) :-
 	->  MimeType = Mime
 	;   ext_mimetype(Ext, Mime)
 	->  MimeType = Mime
-	;   default_mimetype(MimeType)
 	).
 
 %%	default_mimetype(-MimeType) is semidet.
@@ -102,6 +106,9 @@ default_mimetype(MimeType) :-
 %%	ext_mimetype(+Extension, -MimeType) is semidet.
 %
 %	Built-in table of file-name extension to mime-type mappings.
+%
+%	@tbd	Update this list, e.g., from
+%		http://www.webmaster-toolkit.com/mime-types.shtml
 
 					% plain text
 ext_mimetype(txt,  text/plain).
@@ -118,13 +125,16 @@ ext_mimetype(xsl,  text/xml).		% Unclear what this should be.
 ext_mimetype(rdf,  application/'rdf+xml').
 ext_mimetype(rdfs, application/'rdf+xml').
 ext_mimetype(owl,  application/'rdf+xml').
+ext_mimetype(ttl,  text/turtle).
 					% Prolog source
 ext_mimetype(pl,   text/plain).
 					% Other languages
-ext_mimetype(c,    text/csrc).
-ext_mimetype(h,    text/chdr).
+ext_mimetype(c,    text/'x-c').
+ext_mimetype(h,    text/'x-c').
+ext_mimetype(cc,   text/'x-c').
 ext_mimetype(py,   text/'x-python').
 ext_mimetype(java, text/'x-java').
+ext_mimetype(sh,   text/plain).
 					% Packaged formats
 ext_mimetype(gz,   application/'x-gzip').
 ext_mimetype(zip,  application/zip).
@@ -161,3 +171,13 @@ ext_mimetype(mp3,  audio/mpeg).
 					% Downloads
 ext_mimetype(rpm,  application/'x-rpm').
 ext_mimetype(exe,  application/'x-executable').
+
+%%	name_mimetype(+DownCaseFileName, -MimeType) is semidet.
+%
+%	Determine the mime-type of files based on the entire filename.
+
+name_mimetype(makefile,	      text/plain).
+name_mimetype(configure,      text/plain).
+name_mimetype('configure.in', text/plain).
+name_mimetype('makefile.in',  text/plain).
+name_mimetype('readme.in',    text/plain).
