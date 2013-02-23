@@ -63,9 +63,12 @@ user:file_search_path(icons, library('http/web/icons')).
 user:file_search_path(css,   library('http/web/css')).
 user:file_search_path(js,    library('http/web/js')).
 
-:- http_handler(icons(.), serve_files_in_directory(icons), [prefix]).
-:- http_handler(css(.),   serve_files_in_directory(css),   [prefix]).
-:- http_handler(js(.),    serve_files_in_directory(js),    [prefix]).
+:- http_handler(icons(.), serve_files_in_directory(icons),
+		[prefix, priority(-100)]).
+:- http_handler(css(.),   serve_files_in_directory(css),
+		[prefix, priority(-100)]).
+:- http_handler(js(.),    serve_files_in_directory(js),
+		[prefix, priority(-100)]).
 
 %%	serve_files_in_directory(+Alias, +Request)
 %
