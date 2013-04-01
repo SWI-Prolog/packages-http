@@ -53,6 +53,7 @@
 
 :- predicate_options(http_server/2, 2,
 		     [ port(integer),
+		       tcp_socket(any),
 		       workers(positive_integer),
 		       timeout(number),
 		       keep_alive_timeout(number),
@@ -100,6 +101,7 @@ for details.
 %	Options provide a list of options. Defined options are
 %
 %	| port(?Port)	     | -	| Port to listen to		      |
+%	| tcp_socket(+Socket)| -	| If provided, use this socket	      |
 %	| workers(N)	     | 5	| Define the number of worker threads |
 %	| timeout(S)	     | 60	| Max inactivity for reading request  |
 %	| keep_alive_timeout | 2	| Drop Keep-Alive connection timeout  |
@@ -124,6 +126,12 @@ http_server(_Goal, _Options) :-
 
 make_socket(Port, Options0, Options) :-
 	make_socket_hook(Port, Options0, Options), !.
+make_socket(Port, Options0, Options) :-
+	option(tcp_socket(_), Options0), !,
+	make_addr_atom('httpd@', Port, Queue),
+	Options = [ queue(Queue)
+		  | Options0
+		  ].
 make_socket(Port, Options0, Options) :-
 	tcp_socket(Socket),
 	tcp_setopt(Socket, reuseaddr),
