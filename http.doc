@@ -952,6 +952,7 @@ image thumbnails.
 \end{code}
 \end{description}
 
+\input{httpunixdaemon.tex}
 
 \subsubsection{From (Unix) inetd}
 
