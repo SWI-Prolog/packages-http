@@ -96,6 +96,12 @@ events:
 %	  option =|--user=User|= to open ports below 1000.  The default
 %	  port is 80.
 %
+%	  $ --ip=IP :
+%	  Only listen to the given IP address.  Typically used as
+%	  =|--ip=localhost|= to restrict access to connections from
+%	  _localhost_ if the server itself is behind an (Apache)
+%	  proxy server running on the same host.
+%
 %	  $ --debug=Topic :
 %	  Enable debugging Topic.  See debug/3.
 %
@@ -218,9 +224,13 @@ start_server(Options) :-
 
 make_socket(Options, Socket) :-
 	option(port(Port), Options),
+	(   option(ip(IP), Options)
+	->  Address = IP:Port
+	;   Address = Port
+	),
 	tcp_socket(Socket),
 	tcp_setopt(Socket, reuseaddr),
-	tcp_bind(Socket, Port),
+	tcp_bind(Socket, Address),
 	tcp_listen(Socket, 5).
 
 %%	setup_syslog(+Options) is det.
