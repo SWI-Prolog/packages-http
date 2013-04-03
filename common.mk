@@ -13,6 +13,7 @@ LIBPL=		html_write.pl http_client.pl http_header.pl \
 		http_openid.pl js_write.pl http_cookie.pl \
 		http_files.pl http_cors.pl http_unix_daemon.pl
 EXAMPLES=	demo_body.pl demo_client.pl demo_threads.pl demo_xpce.pl \
-		calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
-EXAMPLEEXE=	demo_inetd
+		calc.pl demo_files.pl demo_pwp.pl demo_openid.pl \
+		demo_daemon.pl
+EXAMPLEEXE=	demo_inetd debian-init-script
 XPCEPL=		http_image.pl

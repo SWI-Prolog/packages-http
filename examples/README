@@ -20,6 +20,16 @@ body and the three documented server instantiations.
 
 	4001 stream tcp nowait nobody /usr/sbin/tcpd /usr/lib/pl-5.1.4/library/http/demo/demo_inetd
 
+---+ Unix services demo:
+
+	$ demo_daemon.pl :
+	Demo script to run the SWI-Prolog HTTP server as a Unix
+	service.
+
+	$ debian-init-script :
+	/etc/init.d script for Debian based Unix system. Must be
+	configured.
+
 ---+ Session management demo:
 
 	$ calc.pl :

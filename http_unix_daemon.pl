@@ -81,7 +81,10 @@ events:
   - http(post_server_start)
   Run _after_ starting the HTTP server.
 
-@tbd Make it work with SSL
+@tbd	Make it work with SSL
+@see	The file <swi-home>/doc/packages/examples/http/debian-init-script
+	provides a /etc/init.d script for controlling a server as a normal
+	Unix service.
 */
 
 :- debug(daemon).
@@ -139,6 +142,12 @@ events:
 %	  Set the number of workers for the multi-threaded server.
 
 http_daemon :-
+	catch(http_daemon_2, E,
+	      (	  print_message(error, E),
+		  halt(1)
+	      )).
+
+http_daemon_2 :-
 	program_argv(Argv),
 	argv_options(Argv, _RestArgv, Options),
 	(   option(gtrace(true), Options)
@@ -197,7 +206,8 @@ http_daemon(Options) :-
 	option(port(Port), Options, 80),
 	merge_options([port(Port)], Options, Options1),
 	make_socket(Options1, Socket),
-	debug(daemon, 'Created socket ~q, listening to port ~q', [Socket, Port]),
+	debug(daemon(socket),
+	      'Created socket ~q, listening to port ~q', [Socket, Port]),
 	(   option(fork(true), Options1, true)
 	->  fork(Who),
 	    (   Who \== child
