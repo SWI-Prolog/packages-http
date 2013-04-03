@@ -207,12 +207,12 @@ http_daemon(Options) :-
 		setup_output(Options1),
 	        switch_user(Options1),
 		setup_signals,
-		start_server([tcp_socket(Socket)|Options]),
+		start_server([tcp_socket(Socket)|Options1]),
 		wait
 	    )
 	;   write_pid(Options1),
 	    switch_user(Options1),
-	    start_server([tcp_socket(Socket)|Options])
+	    start_server([tcp_socket(Socket)|Options1])
 	).
 
 start_server(Options) :-
