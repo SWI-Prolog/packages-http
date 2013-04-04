@@ -330,7 +330,9 @@ cgi_property(term_t cgi, term_t prop)
 
 out:
   if ( !PL_release_stream(s) )
-    rc = FALSE;
+  { if ( PL_exception(0) )
+      PL_clear_exception();
+  }
 
   return rc;
 }
