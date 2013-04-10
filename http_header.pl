@@ -1723,12 +1723,17 @@ cookies([Name=Value|T]) -->
 	->  cookies(T)
 	;   { T = [] }
 	).
+cookies(List) -->
+	string(Skipped),
+	";", !,
+	{ print_message(warning, http(skipped_cookie(Skipped))) },
+	cookies(List).
 cookies([]) -->
 	blanks.
 
 cookie(Name, Value) -->
 	cookie_name(Name),
-	"=",
+	blanks, "=", blanks,
 	cookie_value(Value).
 
 cookie_name(Name) -->
@@ -1736,6 +1741,8 @@ cookie_name(Name) -->
 	rd_field_chars_no_fold(Chars),
 	{ atom_codes(Name, Chars) }.
 
+cookie_value(Value) -->
+	quoted_string(Value), !.
 cookie_value(Value) -->
 	chars_to_semicolon_or_blank(Chars),
 	{ atom_codes(Value, Chars)
@@ -1944,3 +1951,5 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 
 prolog:message(error(http_write_short(Data, Sent), _)) -->
 	[ '~p: remote hangup after ~D bytes'-[Data, Sent] ].
+prolog:message(http(skipped_cookie(S))) -->
+	[ 'Skipped illegal cookie: ~s'-[S] ].
