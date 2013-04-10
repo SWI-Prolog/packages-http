@@ -13,6 +13,9 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 
+:- multifile
+	http_server_hook/1.			% +Options
+
 /** <module> Run SWI-Prolog HTTP server as a Unix system daemon
 
 This module provides the logic that  is   needed  to integrate a process
@@ -212,7 +215,8 @@ http_daemon(Options) :-
 	->  fork(Who),
 	    (   Who \== child
 	    ->  halt
-	    ;   setup_syslog(Options1),
+	    ;   disable_development_system,
+	        setup_syslog(Options1),
 		write_pid(Options1),
 		setup_output(Options1),
 	        switch_user(Options1),
@@ -225,6 +229,24 @@ http_daemon(Options) :-
 	    start_server([tcp_socket(Socket)|Options1])
 	).
 
+%%	start_server(+Options) is det.
+%
+%	Start the HTTP server.  It performs the following steps:
+%
+%	  1. Call broadcast(http(pre_server_start))
+%	  2. Call http_server(http_dispatch, Options)
+%	  2. Call broadcast(http(post_server_start))
+%
+%	This predicate can be  hooked   using  http_server_hook/1.  This
+%	predicate is executed after
+%
+%	  - Forking
+%	  - Setting I/O (e.g., to talk to the syslog daemon)
+%	  - Dropping root privileges (--user)
+%	  - Setting up signal handling
+
+start_server(Options) :-
+	http_server_hook(Options), !.
 start_server(Options) :-
 	broadcast(http(pre_server_start)),
 	http_server(http_dispatch, Options),
@@ -242,6 +264,13 @@ make_socket(Options, Socket) :-
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Address),
 	tcp_listen(Socket, 5).
+
+%%	disable_development_system
+%
+%	Disable some development stuff.
+
+disable_development_system :-
+	set_prolog_flag(editor, '/bin/false').
 
 %%	setup_syslog(+Options) is det.
 %
@@ -337,5 +366,15 @@ quit(Signal) :-
 wait :-
 	repeat,
 	thread_get_message(Msg),
-	Msg == quit.
+	Msg == quit,
+	halt(0).
 
+		 /*******************************
+		 *	      HOOKS		*
+		 *******************************/
+
+%%	http_server_hook(+Options) is semidet.
+%
+%	Hook that is called to start the  HTTP server. This hook must be
+%	compatible to http_server(Handler,  Options).   The  default  is
+%	provided by start_server/1.
