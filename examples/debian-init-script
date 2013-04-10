@@ -38,7 +38,7 @@ SYSLOG=$HTTPID
 . /lib/lsb/init-functions
 test -f /etc/default/rcS && . /etc/default/rcS
 
-DAEMONARGS="$DAEMONARGS --port=$PORT --user=$USER"
+DAEMONARGS="$DAEMONARGS --port=$PORT --user=$USER --fork"
 if [ ! -z "$SYSLOG" ]; then DAEMONARGS="$DAEMONARGS --syslog=$SYSLOG"; fi
 if [ ! -z "$PIDFILE" ]; then DAEMONARGS="$DAEMONARGS --pidfile=$PIDFILE"; fi
 
