@@ -77,35 +77,51 @@ http_message(request_finished(Id, Code, Status, CPU, Bytes)) :- !,
 		 *******************************/
 
 :- dynamic
-	log_stream/1.
+	log_stream/2.			% Stream, TimeTried
 
 %%	http_log_stream(-Stream) is semidet.
 %
-%	Returns handle to open logfile. Fails if no logfile is open and
-%	none is defined.
+%	True when Stream is a stream to  the opened HTTP log file. Opens
+%	the log file in =append= mode if the   file is not yet open. The
+%	log file is determined  from   the  setting =|http:logfile|=. If
+%	this setting is set  to  the   empty  atom  (''), this predicate
+%	fails.
+%
+%	If  a  file  error  is  encountered,   this  is  reported  using
+%	print_message/2, after which this predicate silently fails.
 
 http_log_stream(Stream) :-
-	log_stream(Stream), !,
+	log_stream(Stream, _Opened), !,
 	Stream \== [].
+http_log_stream([]) :-
+	setting(http:logfile, ''), !,
+	get_time(Now),
+	assert(log_stream([], Now)).
 http_log_stream(Stream) :-
 	setting(http:logfile, Term),
-	Term \== '', !,
-	absolute_file_name(Term, File, [access(append)]),
+	catch(absolute_file_name(Term, File,
+				 [ access(append)
+				 ]), E, open_error(E)),
 	with_mutex(http_log,
-		   (   open(File, append, Stream,
-			    [ close_on_abort(false),
-			      encoding(utf8),
-			      buffer(line)
-			    ]),
+		   (   catch(open(File, append, Stream,
+				  [ close_on_abort(false),
+				    encoding(utf8),
+				    buffer(line)
+				  ]), E, open_error(E)),
 		       get_time(Time),
 		       format(Stream,
 			      'server(started, ~0f).~n',
 			      [ Time ]),
-		       assert(log_stream(Stream)),
+		       assert(log_stream(Stream, Time)),
 		       at_halt(close_log(stopped))
 		   )).
-http_log_stream(_) :-
-	assert(log_stream([])).
+
+open_error(E) :-
+	print_message(error, E),
+	get_time(Now),
+	assert(log_stream([], Now)),
+	fail.
+
 
 %%	http_log_close(+Reason) is det.
 %
@@ -126,12 +142,12 @@ http_log_close(Reason) :-
 	with_mutex(http_log, close_log(Reason)).
 
 close_log(Reason) :-
-	retract(log_stream(Stream)), !,
-	(   Stream == []
-	->  true
-	;   get_time(Time),
+	retract(log_stream(Stream, _Opened)), !,
+	(   is_stream(Stream)
+	->  get_time(Time),
 	    format(Stream, 'server(~q, ~0f).~n', [ Reason, Time ]),
 	    close(Stream)
+	;   true
 	).
 close_log(_).
 
