@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007-2010, University of Amsterdam,
+    Copyright (C): 2007-2013, University of Amsterdam,
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -51,7 +49,6 @@
 	    openid_current_host/3	% +Request, -Host, -Port
 	  ]).
 :- use_module(library(http/http_open)).
-:- use_module(library(http/http_client)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_wrapper)).
@@ -72,7 +69,6 @@
 :- use_module(library(record)).
 :- use_module(library(option)).
 :- use_module(library(sha)).
-:- use_module(library(socket)).
 :- use_module(library(lists)).
 
 :- predicate_options(openid_login_form/4, 2, [action(atom)]).
@@ -518,7 +514,8 @@ openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
 	;   Mode == cancel
 	->  throw(openid(cancel))
 	;   Mode == id_res
-	->  http_parameters(Request,
+	->  debug(openid(authenticate), 'Mode=id_res, validating response', []),
+	    http_parameters(Request,
 			    [ 'openid.identity'(Identity, []),
 			      'openid.assoc_handle'(Handle, []),
 			      'openid.return_to'(ReturnTo, []),
@@ -871,17 +868,26 @@ signature_algorithm('DH-SHA256', sha256).
 %	@tbd	Should we store known associations permanently?  Where?
 
 openid_associate(URL, Handle, Assoc) :-
+	nonvar(Handle), !,
+	debug(openid(associate), 'OpenID: Lookup association with handle ~q', [Handle]),
+	(   association(URL, Handle, Assoc)
+	->  true
+	;   debug(openid(associate), 'OpenID: no association with handle ~q', [Handle])
+	).
+openid_associate(URL, Handle, Assoc) :-
 	association(URL, Handle, Assoc),
 	association_expires_at(Assoc, Expires),
 	get_time(Now),
 	(   Now < Expires
-	->  debug(openid(associate), '~w: Reusing association', [URL])
+	->  debug(openid(associate),
+		  'OpenID: Reusing association with ~q', [URL])
 	;   retractall(association(URL, Handle, _)),
 	    fail
 	).
 openid_associate(URL, Handle, Assoc) :-
-	ground(URL),
+	ground(URL), var(Handle),
 	associate_data(Data, P, _G, X),
+	debug(openid(associate), 'OpenID: Associating with ~q', [URL]),
 	setup_call_cleanup(
 	    http_open(URL, In,
 		      [ post(form(Data)),
