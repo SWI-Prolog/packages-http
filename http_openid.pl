@@ -622,7 +622,7 @@ associate_server(Request, Form, Options) :-
 	dh_x(P, Y),			% Our secret
 	DiffieHellman is powm(CPX, Y, P),
 	btwoc(DiffieHellman, DHBytes),
-	sha_hash(DHBytes, SHA1, [algorithm(sha1)]),
+	sha_hash(DHBytes, SHA1, [encoding(octet), algorithm(sha1)]),
 	CPY is powm(G, Y, P),
 	base64_btwoc(CPY, CPY64),
 	new_assoc_handle(Handle),
@@ -899,7 +899,8 @@ shared_secret(Pairs, P, X, Secret) :-
 	atom_codes(Base64EncMacKey, Base64EncMacKeyCodes),
 	phrase(base64(EncMacKey), Base64EncMacKeyCodes),
 	btwoc(DiffieHellman, DiffieHellmanBytes),
-	sha_hash(DiffieHellmanBytes, DHHash, [algorithm(sha1)]),
+	sha_hash(DiffieHellmanBytes, DHHash,
+		 [encoding(octet), algorithm(sha1)]),
 	xor_codes(DHHash, EncMacKey, Secret).
 
 
@@ -1100,7 +1101,7 @@ bytes_to_int([B|T], Int0, Int) :-
 %		length.
 
 xor_codes([], [], []).
-xor_codes([H1|T1], [H2|T2], [H|T]) :-
+xor_codes([H1|T1], [H2|T2], [H|T]) :- !,
 	H is H1 xor H2, !,
 	xor_codes(T1, T2, T).
 xor_codes(L1, L2, _) :-
