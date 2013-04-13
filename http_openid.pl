@@ -437,7 +437,8 @@ redirect_browser(URL, FormExtra) :-
 openid_resolve(URL, OpenID0, OpenID, Server) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
 	http_open(URL, Stream,
-		  [ final_url(OpenID0)
+		  [ final_url(OpenID0),
+		    cert_verify_hook(ssl_verify)
 		  ]),
 	dtd(html, DTD),
 	call_cleanup(load_structure(Stream, Term,
@@ -459,6 +460,19 @@ openid_resolve(URL, OpenID0, OpenID, Server) :-
 	;   OpenID = OpenID0,
 	    debug(openid(resolve), 'OpenID = ~q', [OpenID])
 	).
+
+
+:- public ssl_verify/5.
+
+%%	ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
+%
+%	Accept all certificates. We do not care  too much. Only the user
+%	cares s/he is not entering her  credentials with a spoofed side.
+%	As we redirect, the browser will take care of this.
+
+ssl_verify(_SSL,
+	   _ProblemCertificate, _AllCertificates, _FirstCertificate,
+	   _Error).
 
 
 link(DOM, Type, Target) :-
@@ -868,7 +882,13 @@ openid_associate(URL, Handle, Assoc) :-
 openid_associate(URL, Handle, Assoc) :-
 	ground(URL),
 	associate_data(Data, P, _G, X),
-	http_post(URL, form(Data), Reply, [to(codes)]),
+	setup_call_cleanup(
+	    http_open(URL, In,
+		      [ post(form(Data)),
+			cert_verify_hook(ssl_verify)
+		      ]),
+	    read_stream_to_codes(In, Reply),
+	    close(In)),
 	debug(openid(associate), 'Reply: ~n~s', [Reply]),
 	key_values_data(Pairs, Reply),
 	shared_secret(Pairs, P, X, MacKey),
