@@ -489,7 +489,7 @@ http_close_session(SessionId, Expire) :-
 	    ;	true
 	    ),
 	    (	Expire == true
-	    ->	expire_session_cookie(SessionId)
+	    ->	expire_session_cookie
 	    ;	true
 	    ),
 	    retractall(current_session(SessionId, _)),
@@ -503,11 +503,9 @@ http_close_session(SessionId, Expire) :-
 %%	expire_session_cookie(+SessionId) is det.
 %
 %	Emit a request to delete a session  cookie. This is only done if
-%	http_close_session/1 is called from a   handler executing inside
-%	the session and the handler is still in `header mode'.
+%	http_close_session/1 is still in `header mode'.
 
-expire_session_cookie(SessionId) :-
-	http_in_session(SessionId),
+expire_session_cookie :-
 	in_header_state,
 	session_setting(cookie(Cookie)),
 	session_setting(path(Path)), !,
@@ -515,7 +513,7 @@ expire_session_cookie(SessionId) :-
 		expires=Tue, 01-Jan-1970 00:00:00 GMT; \c
 		path=~w\r\n',
 	       [Cookie, Path]).
-expire_session_cookie(_).
+expire_session_cookie.
 
 in_header_state :-
 	current_output(CGI),
