@@ -197,17 +197,27 @@ http_session_id(SessionID) :-
 %	@see http_session_id/1
 
 http_in_session(SessionID) :-
-	(   nb_current(http_session_id, ID),
-	    ID \== []
-	->  true
-	;   http_current_request(Request),
-	    memberchk(session(ID), Request),
-	    b_setval(http_session_id, ID)
-	;   b_setval(http_session_id, no_session),
-	    fail
-	),
+	nb_current(http_session_id, ID),
+	ID \== [], !,
 	ID \== no_session,
 	SessionID = ID.
+http_in_session(SessionID) :-
+	http_current_request(Request),
+	http_in_session(Request, SessionID).
+
+http_in_session(Request, SessionID) :-
+	memberchk(session(ID), Request),
+	b_setval(http_session_id, ID), !,
+	SessionID = ID.
+http_in_session(Request, SessionID) :-
+	memberchk(cookie(Cookies), Request),
+	session_setting(cookie(Cookie)),
+	memberchk(Cookie=SessionID0, Cookies),
+	peer(Request, Peer),
+	valid_session_id(SessionID0, Peer), !,
+	b_setval(http_session_id, ID), !,
+	SessionID = ID.
+
 
 %%	http_session(+RequestIn, -RequestOut, -SessionID) is semidet.
 %
