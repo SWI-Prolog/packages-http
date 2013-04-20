@@ -251,6 +251,7 @@ openid_user(Request, _OpenID, Options) :-
 %	handler for =|/openid/login|= using http_handler/3.
 
 openid_login_page(Request) :-
+	http_open_session(_, []),
 	http_parameters(Request,
 			[ 'openid.return_to'(ReturnTo, [])
 			]),
