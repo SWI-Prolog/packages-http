@@ -224,7 +224,7 @@ openid_logged_in(OpenID) :-
 %	@see openid_authenticate/4 produces errors if login is invalid
 %	or cancelled.
 
-:- http_handler(openid(login),  openid_login_page, []).
+:- http_handler(openid(login),  openid_login_page, [priority(-10)]).
 :- http_handler(openid(verify), openid_verify([]), []).
 
 openid_user(_Request, OpenID, _Options) :-
