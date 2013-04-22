@@ -230,7 +230,9 @@ openid_logged_in(OpenID) :-
 openid_user(_Request, OpenID, _Options) :-
 	openid_logged_in(OpenID), !.
 openid_user(Request, User, _Options) :-
-	openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
+	catch(openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
+	      error(existence_error(assoc_handle,_),_),
+	      fail),
 	openid_server(User, OpenID, _), !,
 	openid_login(User).
 openid_user(Request, _OpenID, Options) :-
@@ -870,10 +872,13 @@ signature_algorithm('DH-SHA256', sha256).
 
 openid_associate(URL, Handle, Assoc) :-
 	nonvar(Handle), !,
-	debug(openid(associate), 'OpenID: Lookup association with handle ~q', [Handle]),
+	debug(openid(associate),
+	      'OpenID: Lookup association with handle ~q', [Handle]),
 	(   association(URL, Handle, Assoc)
 	->  true
-	;   debug(openid(associate), 'OpenID: no association with handle ~q', [Handle])
+	;   debug(openid(associate),
+		  'OpenID: no association with handle ~q', [Handle]),
+	    fail
 	).
 openid_associate(URL, Handle, Assoc) :-
 	association(URL, Handle, Assoc),
