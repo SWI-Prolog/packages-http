@@ -230,8 +230,8 @@ openid_logged_in(OpenID) :-
 openid_user(_Request, OpenID, _Options) :-
 	openid_logged_in(OpenID), !.
 openid_user(Request, User, _Options) :-
-	openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo), !,
-	openid_server(User, OpenID, _),
+	openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
+	openid_server(User, OpenID, _), !,
 	openid_login(User).
 openid_user(Request, _OpenID, Options) :-
 	http_location_by_id(openid_login_page, LoginURL),
