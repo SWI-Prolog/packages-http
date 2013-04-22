@@ -230,11 +230,12 @@ openid_logged_in(OpenID) :-
 openid_user(_Request, OpenID, _Options) :-
 	openid_logged_in(OpenID), !.
 openid_user(Request, User, _Options) :-
-	catch(openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
+	catch(openid_authenticate(Request, _OpenIdServer, OpenID, ReturnTo),
 	      error(existence_error(assoc_handle,_),_),
 	      fail),
 	openid_server(User, OpenID, _), !,
-	openid_login(User).
+	openid_login(User),
+	redirect_browser(ReturnTo, []).
 openid_user(Request, _OpenID, Options) :-
 	http_location_by_id(openid_login_page, LoginURL),
 	option(login_url(Login), Options, LoginURL),
