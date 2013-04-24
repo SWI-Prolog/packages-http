@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker, Matt Lilley
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2006-2011, University of Amsterdam
+    Copyright (C): 2006-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -33,6 +31,7 @@
 
 :- module(http_session,
 	  [ http_set_session_options/1,	% +Options
+	    http_set_session/1,		% +Option
 
 	    http_session_id/1,		% -SessionId
 	    http_in_session/1,		% -SessionId
@@ -166,6 +165,46 @@ http_session_option(Option) :-
 	functor(Free, Name, Arity),
 	retractall(session_setting(Free)),
 	assert(session_setting(Option)).
+
+%%	session_setting(+SessionID, ?Setting) is semidet.
+%
+%	Find setting for SessionID. It  is   possible  to  overrule some
+%	session settings using http_session_set(Setting).
+
+session_setting(SessionId, Setting) :-
+	nonvar(Setting),
+	functor(Setting, Name, 1),
+	local_option(Name, Value, Term),
+	session_data(SessionId, '$setting'(Term)), !,
+	arg(1, Setting, Value).
+session_setting(_, Setting) :-
+	session_setting(Setting).
+
+%%	http_set_session(Setting) is det.
+%
+%	Overrule a setting for the current  session. Currently, the only
+%	setting that can be overruled is =timeout=.
+%
+%	@error	permission_error(set, http_session, Setting) if setting
+%		a setting that is not supported on per-session basis.
+
+http_set_session(Setting) :-
+	http_session_id(SessionId),
+	functor(Setting, Name, Arity),
+	(   local_option(Name, _, _)
+	->  true
+	;   permission_error(set, http_session, Setting)
+	),
+	arg(1, Setting, Value),
+	(   session_option(Name, Type)
+	->  must_be(Type, Value)
+	;   domain_error(http_session_option, Setting)
+	),
+	functor(Free, Name, Arity),
+	retractall(session_data(SessionId, '$setting'(Free))),
+	assert(session_data(SessionId, '$setting'(Setting))).
+
+local_option(timeout, X, timeout(X)).
 
 %%	http_session_id(-SessionId) is det.
 %
@@ -336,7 +375,7 @@ open_session(SessionID, Peer) :-
 valid_session_id(SessionID, Peer) :-
 	current_session(SessionID, SessionPeer),
 	get_time(Now),
-	(   session_setting(timeout(Timeout)),
+	(   session_setting(SessionID, timeout(Timeout)),
 	    Timeout > 0
 	->  get_last_used(SessionID, Last),
 	    Idle is Now - Last,
@@ -426,9 +465,9 @@ http_session_data(Data) :-
 
 http_current_session(SessionID, Data) :-
 	get_time(Now),
-	get_last_used(SessionID, Last),
+	get_last_used(SessionID, Last),	% binds SessionID
 	Idle is Now - Last,
-	(   session_setting(timeout(Timeout)),
+	(   session_setting(SessionID, timeout(Timeout)),
 	    Timeout > 0
 	->  Idle =< Timeout
 	;   true
@@ -520,27 +559,41 @@ in_header_state :-
 	cgi_property(CGI, state(header)), !.
 
 
-%	http_gc_sessions/0
+%%	http_gc_sessions/0
 %
-%	Delete dead sessions. When  should  we   be  calling  this? This
-%	assumes that updated sessions are at the end of the clause list,
-%	so we can break  as  soon   as  we  encounter  a no-yet-timedout
-%	session.
+%	Delete dead sessions. Currently runs session GC if a new session
+%	is opened and the last session GC was more than a minute ago.
+
+:- dynamic
+	last_gc/1.
 
 http_gc_sessions :-
-	session_setting(timeout(Timeout)),
-	Timeout > 0, !,
-	get_time(Now),
-	(   last_used(SessionID, Last),
-	    Idle is Now - Last,
-	    (	Idle > Timeout
-	    ->	http_close_session(SessionID),
-		fail
-	    ;	!
-	    )
+	(   with_mutex(http_session_gc, need_sesion_gc)
+	->  do_http_gc_sessions
 	;   true
 	).
-http_gc_sessions.
+
+need_sesion_gc :-
+	get_time(Now),
+	(   last_gc(LastGC),
+	    Now-LastGC < 60
+	->  true
+	;   retractall(last_gc(_)),
+	    asserta(last_gc(Now)),
+	    do_http_gc_sessions
+	).
+
+do_http_gc_sessions :-
+	get_time(Now),
+	(   last_used(SessionID, Last),
+	      session_setting(SessionID, timeout(Timeout)),
+	      Timeout > 0,
+	      Idle is Now - Last,
+	      Idle > Timeout,
+	        http_close_session(SessionID),
+	    fail
+	;   true
+	).
 
 
 		 /*******************************
