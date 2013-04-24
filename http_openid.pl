@@ -1134,7 +1134,7 @@ bytes_to_int([B|T], Int0, Int) :-
 %	@error	length_mismatch(L1, L2) if the two lists do not have equal
 %		length.
 
-xor_codes([], [], []).
+xor_codes([], [], []) :- !.
 xor_codes([H1|T1], [H2|T2], [H|T]) :- !,
 	H is H1 xor H2, !,
 	xor_codes(T1, T2, T).
