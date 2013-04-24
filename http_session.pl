@@ -254,8 +254,8 @@ http_in_session(Request, SessionID) :-
 	memberchk(Cookie=SessionID0, Cookies),
 	peer(Request, Peer),
 	valid_session_id(SessionID0, Peer), !,
-	b_setval(http_session_id, ID), !,
-	SessionID = ID.
+	b_setval(http_session_id, SessionID0),
+	SessionID = SessionID0.
 
 
 %%	http_session(+RequestIn, -RequestOut, -SessionID) is semidet.
