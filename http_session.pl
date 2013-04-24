@@ -559,7 +559,7 @@ in_header_state :-
 	cgi_property(CGI, state(header)), !.
 
 
-%%	http_gc_sessions/0
+%%	http_gc_sessions is det.
 %
 %	Delete dead sessions. Currently runs session GC if a new session
 %	is opened and the last session GC was more than a minute ago.
