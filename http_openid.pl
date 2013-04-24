@@ -281,7 +281,8 @@ openid_login_form(ReturnTo, Options) -->
 			[ \hidden('openid.return_to', ReturnTo),
 			  div([ input([ class('openid-input'),
 					name(openid_url),
-					size(30)
+					size(30),
+					placeholder('Your OpenID URL')
 				      ]),
 				input([ type(submit),
 					value('Verify!')
