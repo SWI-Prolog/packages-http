@@ -71,7 +71,7 @@
 :- use_module(library(sha)).
 :- use_module(library(lists)).
 
-:- predicate_options(openid_login_form/4, 2, [action(atom)]).
+:- predicate_options(openid_login_form/4, 2, [action(atom), show_stay(boolean)]).
 :- predicate_options(openid_server/2, 1, [expires_in(any)]).
 :- predicate_options(openid_user/3, 3, [login_url(atom)]).
 :- predicate_options(openid_verify/2, 1, [return_to(atom), trust_root(atom)]).
@@ -267,7 +267,13 @@ openid_login_page(Request) :-
 %
 %	Create the OpenID  form.  This  exported   as  a  seperate  DCG,
 %	allowing applications to redefine /openid/login   and reuse this
-%	part of the page.
+%	part of the page.  Options processed:
+%
+%	  - action(Action)
+%	  URL of action to call.  Default is =verify= (a relative URL).
+%	  - show_stay(+Boolean)
+%	  If =true=, show a checkbox that allows the user to stay
+%	  logged on.
 
 openid_login_form(ReturnTo, Options) -->
 	{ option(action(Action), Options, verify)
@@ -287,9 +293,18 @@ openid_login_form(ReturnTo, Options) -->
 				input([ type(submit),
 					value('Verify!')
 				      ])
-			      ])
+			      ]),
+			  \stay_logged_on(Options)
 			])
 		 ])).
+
+stay_logged_on(Options) -->
+	{ option(show_stay(true), Options) }, !,
+	html(div(class('openid-stay'),
+		 [ input([ type(checkbox), name(stay), value(yes)]),
+		   'Stay logged on'
+		 ])).
+stay_logged_on(_) --> [].
 
 
 
@@ -314,7 +329,8 @@ openid_login_form(ReturnTo, Options) -->
 openid_verify(Options, Request) :-
 	http_parameters(Request,
 			[ openid_url(URL, [length>1]),
-			  'openid.return_to'(ReturnTo0, [optional(true)])
+			  'openid.return_to'(ReturnTo0, [optional(true)]),
+			  stay(Stay, [optional(true), default(no)])
 			]),
 	(   option(return_to(ReturnTo1), Options)		% Option
 	->  current_url(Request, CurrentLocation),
@@ -330,12 +346,17 @@ openid_verify(Options, Request) :-
 	trusted(OpenID, Server),
 	openid_associate(Server, Handle, _Assoc),
 	assert_openid(OpenIDLogin, OpenID, Server),
+	stay(Stay),
 	redirect_browser(Server, [ 'openid.mode'         = checkid_setup,
 				   'openid.identity'     = OpenID,
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = ReturnTo,
 				   'openid.trust_root'   = TrustRoot
 				 ]).
+
+stay(yes) :- !,
+	http_set_session(timeout(0)).
+stay(_).
 
 
 %%	assert_openid(+OpenIDLogin, +OpenID, +Server) is det.

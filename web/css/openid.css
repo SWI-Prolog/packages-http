@@ -40,3 +40,14 @@ input.openid-input
   padding-left: 20px;
   margin-left: 2cm;
 }
+
+div.openid-stay
+{ margin-left: 2cm;
+  font-size: 80%;
+  color: #666;
+}
+
+div.openid-stay input
+{ position: relative; top:3px;
+  margin-left: 0pt;
+}
