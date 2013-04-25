@@ -32,6 +32,7 @@
 :- module(httpd_wrapper,
 	  [ http_wrapper/5,		% :Goal, +In, +Out, -Conn, +Options
 	    http_current_request/1,	% -Request
+	    http_peer/2,		% +Request, -PeerIP
 	    http_send_header/1,		% +Term
 	    http_relative_path/2,	% +AbsPath, -RelPath
 					% Internal API
@@ -360,6 +361,25 @@ http_current_request(Request) :-
 	current_output(CGI),
 	is_cgi_stream(CGI),
 	cgi_property(CGI, request(Request)).
+
+
+%%	http_peer(+Request, -PeerIP:atom) is semidet.
+%
+%	True when PeerIP is the IP address   of  the connection peer. If
+%	the connection is established via  a   proxy  that  supports the
+%	=X-Forwarded-For= HTTP header, PeerIP is the   IP address of the
+%	original initiater.
+
+http_peer(Request, IP) :-
+        memberchk(x_forwarded_for(IP0), Request), !,
+	atomic_list_concat(Parts, ', ', IP0),
+	last(Parts, IP).
+http_peer(Request, IP) :-
+        memberchk(peer(Peer), Request), !,
+        peer_to_ip(Peer, IP).
+
+peer_to_ip(ip(A,B,C,D), IP) :-
+        atomic_list_concat([A,B,C,D], '.', IP).
 
 
 %%	http_relative_path(+AbsPath, -RelPath) is det.
