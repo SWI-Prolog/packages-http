@@ -51,14 +51,12 @@
 :- use_module(library(http/http_open)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_parameters)).
-:- use_module(library(http/http_wrapper)).
-:- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_session)).
 :- use_module(library(http/http_host)).
 :- use_module(library(http/http_path)).
 :- use_module(library(http/html_head)).
-:- use_module(library(http/http_server_files)).
+:- use_module(library(http/http_server_files), []).
 :- use_module(library(utf8)).
 :- use_module(library(error)).
 :- use_module(library(sgml)).
