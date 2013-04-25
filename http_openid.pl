@@ -163,10 +163,12 @@ http:location(openid, root(openid), [priority(-100)]).
 %	OpenID is already associated, this association is first removed.
 
 openid_login(OpenID) :-
-	openid_hook(login(OpenID)), !.
+	openid_hook(login(OpenID)), !,
+	handle_stay_signed_in(OpenID).
 openid_login(OpenID) :-
 	openid_logout(_),
-	http_session_assert(openid(OpenID)).
+	http_session_assert(openid(OpenID)),
+	handle_stay_signed_in(OpenID).
 
 %%	openid_logout(+OpenID) is det.
 %
@@ -300,7 +302,7 @@ stay_logged_on(Options) -->
 	{ option(show_stay(true), Options) }, !,
 	html(div(class('openid-stay'),
 		 [ input([ type(checkbox), name(stay), value(yes)]),
-		   'Stay logged on'
+		   'Stay signed in'
 		 ])).
 stay_logged_on(_) --> [].
 
@@ -352,10 +354,25 @@ openid_verify(Options, Request) :-
 				   'openid.trust_root'   = TrustRoot
 				 ]).
 
+%%	stay(+Response)
+%
+%	Called if the user  ask  to  stay   signed  in.  This  is called
+%	_before_ control is handed to the   OpenID server. It leaves the
+%	data openid_stay_signed_in(true) in the current session.
+
 stay(yes) :- !,
-	http_set_session(timeout(0)).
+	http_session_assert(openid_stay_signed_in(true)).
 stay(_).
 
+%%	handle_stay_signed_in(+OpenID)
+%
+%	Handle stay_signed_in option after the user has logged on
+
+handle_stay_signed_in(OpenID) :-
+	http_session_retract(openid_stay_signed_in(true)), !,
+	http_set_session(timeout(0)),
+	ignore(openid_hook(stay_signed_in(OpenID))).
+handle_stay_signed_in(_).
 
 %%	assert_openid(+OpenIDLogin, +OpenID, +Server) is det.
 %
