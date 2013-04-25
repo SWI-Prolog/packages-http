@@ -348,7 +348,7 @@ http:request_expansion(Request0, Request) :-
 
 peer(Request, Peer) :-
 	(   session_setting(proxy_enabled(true)),
-	    memberchk(x_forwarded_for(Peer), Request)
+	    http_peer(Request, Peer)
 	->  true
 	;   memberchk(peer(Peer), Request)
 	->  true
