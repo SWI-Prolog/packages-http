@@ -32,12 +32,15 @@
 :- module(http_session,
 	  [ http_set_session_options/1,	% +Options
 	    http_set_session/1,		% +Option
+	    http_session_option/1,	% ?Option
 
 	    http_session_id/1,		% -SessionId
 	    http_in_session/1,		% -SessionId
 	    http_current_session/2,	% ?SessionId, ?Data
 	    http_close_session/1,	% +SessionId
             http_open_session/2,	% -SessionId, +Options
+
+	    http_session_cookie/1,	% -Cookie
 
 	    http_session_asserta/1,	% +Data
 	    http_session_assert/1,	% +Data
@@ -152,10 +155,10 @@ session_option(proxy_enabled, boolean).
 
 http_set_session_options([]).
 http_set_session_options([H|T]) :-
-	http_session_option(H),
+	http_set_session_option(H),
 	http_set_session_options(T).
 
-http_session_option(Option) :-
+http_set_session_option(Option) :-
 	functor(Option, Name, Arity),
 	arg(1, Option, Value),
 	(   session_option(Name, Type)
@@ -165,6 +168,13 @@ http_session_option(Option) :-
 	functor(Free, Name, Arity),
 	retractall(session_setting(Free)),
 	assert(session_setting(Option)).
+
+%%	http_session_option(?Option) is nondet.
+%
+%	True if Option is a current option of the session system.
+
+http_session_option(Option) :-
+	session_setting(Option).
 
 %%	session_setting(+SessionID, ?Setting) is semidet.
 %
@@ -290,7 +300,7 @@ http_session(Request0, Request, SessionID) :-
 
 create_session(Request0, Request, SessionID) :-
 	http_gc_sessions,
-	gen_cookie(SessionID),
+	http_session_cookie(SessionID),
 	session_setting(cookie(Cookie)),
 	session_setting(path(Path)),
 	format('Set-Cookie: ~w=~w; path=~w\r\n', [Cookie, SessionID, Path]),
@@ -600,7 +610,7 @@ do_http_gc_sessions :-
 		 *	       UTIL		*
 		 *******************************/
 
-%%	gen_cookie(-Cookie) is det.
+%%	http_session_cookie(-Cookie) is det.
 %
 %	Generate a random cookie that  can  be   used  by  a  browser to
 %	identify  the  current  session.  The   cookie  has  the  format
@@ -608,13 +618,13 @@ do_http_gc_sessions :-
 %	numbers  and  [.<route>]  is  the    optionally   added  routing
 %	information.
 
-gen_cookie(Cookie) :-
+http_session_cookie(Cookie) :-
 	route(Route), !,
 	random_4(R1,R2,R3,R4),
 	format(atom(Cookie),
 		'~`0t~16r~4|-~`0t~16r~9|-~`0t~16r~14|-~`0t~16r~19|.~w',
 		[R1,R2,R3,R4,Route]).
-gen_cookie(Cookie) :-
+http_session_cookie(Cookie) :-
 	random_4(R1,R2,R3,R4),
 	format(atom(Cookie),
 		'~`0t~16r~4|-~`0t~16r~9|-~`0t~16r~14|-~`0t~16r~19|',
