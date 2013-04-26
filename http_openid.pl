@@ -201,25 +201,31 @@ openid_logged_in(OpenID) :-
 %	allow  an  HTTP  handler  that  requires    a   valid  login  to
 %	use the transparent code below.
 %
-%	==
-%	handler(Request) :-
+%	  ==
+%	  handler(Request) :-
 %		openid_user(Request, OpenID, []),
 %		...
-%	==
+%	  ==
 %
 %	If the user is not yet logged on a sequence of redirects will
 %	follow:
 %
-%		1. Show a page for login (default: page /openid/login),
-%		   predicate reply_openid_login/1)
-%		2. Redirect to OpenID server to validate
-%		3. Redirect to validation
+%	  1. Show a page for login (default: page /openid/login),
+%	     predicate reply_openid_login/1)
+%	  2. By default, the OpenID login page is a form that is
+%	     submitted to the =verify=, which calls openid_verify/2.
+%	  3. openid_verify/2 does the following:
+%	     - Find the OpenID claimed identity and server
+%	     - Associate to the OpenID server
+%	     - redirects to the OpenID server for validation
+%	  4. The OpenID server will redirect here with the authetication
+%	     information.  This is handled by openid_authenticate/4.
 %
 %	Options:
 %
-%		* login_url(Login)
-%		(Local) URL of page to enter OpenID information. Default
-%		is =|/openid/login|=.
+%	  * login_url(Login)
+%	    (Local) URL of page to enter OpenID information. Default
+%	    is the handler for openid_login_page/1
 %
 %	@see openid_authenticate/4 produces errors if login is invalid
 %	or cancelled.
@@ -237,7 +243,7 @@ openid_user(Request, User, _Options) :-
 	openid_login(User),
 	redirect_browser(ReturnTo, []).
 openid_user(Request, _OpenID, Options) :-
-	http_location_by_id(openid_login_page, LoginURL),
+	http_link_to_id(openid_login_page, [], LoginURL),
 	option(login_url(Login), Options, LoginURL),
 	current_url(Request, Here),
 	uri_normalized(Login, Here, AbsLogin),
@@ -270,13 +276,15 @@ openid_login_page(Request) :-
 %	part of the page.  Options processed:
 %
 %	  - action(Action)
-%	  URL of action to call.  Default is =verify= (a relative URL).
+%	  URL of action to call.  Default is the handler calling
+%	  openid_verify/1.
 %	  - show_stay(+Boolean)
 %	  If =true=, show a checkbox that allows the user to stay
 %	  logged on.
 
 openid_login_form(ReturnTo, Options) -->
-	{ option(action(Action), Options, verify)
+	{ http_link_to_id(openid_verify, [], VerifyLocation),
+	  option(action(Action), Options, VerifyLocation)
 	},
 	html(div(class('openid-login'),
 		 [ \openid_title,
