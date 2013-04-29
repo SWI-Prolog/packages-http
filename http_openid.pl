@@ -230,11 +230,21 @@ openid_logged_in(OpenID) :-
 %	@see openid_authenticate/4 produces errors if login is invalid
 %	or cancelled.
 
-:- http_handler(openid(login),  openid_login_page, [priority(-10)]).
-:- http_handler(openid(verify), openid_verify([]), []).
+:- http_handler(openid(login),	openid_login_page, [priority(-10)]).
+:- http_handler(openid(verify),	openid_verify([]), []).
+:- http_handler(openid(xrds),	openid_xrds,	   []).
 
 openid_user(_Request, OpenID, _Options) :-
 	openid_logged_in(OpenID), !.
+openid_user(Request, _OpenID, _Options) :-
+	memberchk(accept(Accept), Request),
+	Accept = [media(application/'xrds+xml',_,_,_)], !,
+	save_openid_location(Request),
+	http_link_to_id(openid_xrds, [], XRDSLocation),
+	http_absolute_uri(XRDSLocation, XRDSServer),
+	debug(openid(yadis), 'Sending XRDS server: ~q', [XRDSServer]),
+	format('X-XRDS-Location: ~w\n', [XRDSServer]),
+	format('Content-type: text/plain\n\n').
 openid_user(Request, User, _Options) :-
 	catch(openid_authenticate(Request, _OpenIdServer, OpenID, ReturnTo),
 	      error(existence_error(assoc_handle,_),_),
@@ -250,6 +260,52 @@ openid_user(Request, _OpenID, Options) :-
 	redirect_browser(AbsLogin,
 			 [ 'openid.return_to' = Here
 			 ]).
+
+%%	openid_xrds(Request)
+%
+%	Reply to a request  for   "Discovering  OpenID Relying Parties".
+%	This may happen as part of  the provider verification procedure.
+%	The  provider  will   do   a    Yadis   discovery   request   on
+%	=openid.return=  or  =openid.realm=.  This  is    picked  up  by
+%	openid_user/3, pointing the provider to   openid(xrds).  Now, we
+%	reply with the locations marked =openid=  and the locations that
+%	have actually been doing OpenID validations.
+
+openid_xrds(Request) :-
+	current_root_url(Request, Root),
+	atom_concat(Host, /, Root),
+	findall(Loc, openid_handler(Loc), Locs0),
+	sort(Locs0, Locs),
+	format('Content-type: text/xml\n\n'),
+	format('<?xml version="1.0" encoding="UTF-8"?>\n'),
+	format('<xrds:XRDS\n'),
+	format('    xmlns:xrds="xri://$xrds"\n'),
+	format('    xmlns="xri://$xrd*($v*2.0)">\n'),
+	format('  <XRD>\n'),
+	format('    <Service>\n'),
+	format('      <Type>http://specs.openid.net/auth/2.0/return_to</Type>\n'),
+	forall(member(Loc, Locs),
+	       format('      <URI>~w~w</URI>\n', [Host, Loc])),
+	format('    </Service>\n'),
+	format('  </XRD>\n'),
+	format('</xrds:XRDS>\n').
+
+:- dynamic
+	tried_openid_location/1.
+
+save_openid_location(Request) :-
+	memberchk(path(Path), Request),
+	(   tried_openid_location(Path)
+	->  true
+	;   assertz(tried_openid_location(Path))
+	).
+
+openid_handler(Loc) :-
+	tried_openid_location(Loc).
+openid_handler(Loc) :-
+	http_current_handler(Spec, _Closure, Options),
+	http_absolute_location(Spec, Loc, []),
+	memberchk(openid, Options).
 
 
 %%	openid_login_page(+Request) is det.
