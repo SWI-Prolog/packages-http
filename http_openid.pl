@@ -57,8 +57,10 @@
 :- use_module(library(http/http_path)).
 :- use_module(library(http/html_head)).
 :- use_module(library(http/http_server_files), []).
+:- use_module(library(http/yadis)).
 :- use_module(library(utf8)).
 :- use_module(library(error)).
+:- use_module(library(xpath)).
 :- use_module(library(sgml)).
 :- use_module(library(uri)).
 :- use_module(library(occurs)).
@@ -413,6 +415,7 @@ openid_verify(Options, Request) :-
 	stay(Stay),
 	redirect_browser(Server, [ 'openid.mode'         = checkid_setup,
 				   'openid.identity'     = OpenID,
+				   'openid.claimed_id'   = OpenID,
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = ReturnTo,
 				   'openid.trust_root'   = TrustRoot
@@ -535,6 +538,13 @@ redirect_browser(URL, FormExtra) :-
 %	@tbd	Implement complete URL canonization as defined by the
 %		OpenID 2.0 proposal.
 
+openid_resolve(URL, Select, Select, Server) :-
+	xrds_dom(URL, DOM),
+	xpath(DOM, //(_:'Service'), Service),
+	xpath(Service, _:'Type'(text), 'http://specs.openid.net/auth/2.0/server'),
+	xpath(Service, _:'URI'(text), Server), !,
+	debug(openid(yadis), 'Yadis: server: ~q', [Server]),
+	Select = 'http://specs.openid.net/auth/2.0/identifier_select'.
 openid_resolve(URL, OpenID0, OpenID, Server) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
 	dtd(html, DTD),
