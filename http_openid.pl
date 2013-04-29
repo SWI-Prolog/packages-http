@@ -732,17 +732,23 @@ associate_server(Request, Form, Options) :-
 	memberchk('openid.dh_modulus'	      =	P64,	     Form),
 	memberchk('openid.dh_gen'	      =	G64,	     Form),
 	memberchk('openid.dh_consumer_public' =	CPX64,       Form),
+	(   memberchk('openid.ns'	      =	NS,          Form)
+	->  true
+	;   NS = 'http://openid.net/signon/1.1'
+	),
 	base64_btwoc(P, P64),
 	base64_btwoc(G, G64),
 	base64_btwoc(CPX, CPX64),
-	dh_x(P, Y),			% Our secret
+	Y is 1+random(P-1),		% Our secret
 	DiffieHellman is powm(CPX, Y, P),
 	btwoc(DiffieHellman, DHBytes),
-	sha_hash(DHBytes, SHA1, [encoding(octet), algorithm(sha1)]),
+	signature_algorithm(SessionType, SHA_Algo),
+	sha_hash(DHBytes, SHA1, [encoding(octet), algorithm(SHA_Algo)]),
 	CPY is powm(G, Y, P),
 	base64_btwoc(CPY, CPY64),
-	new_assoc_handle(Handle),
-	random_bytes(20, MacKey),
+	mackey_bytes(SessionType, MacBytes),
+	new_assoc_handle(MacBytes, Handle),
+	random_bytes(MacBytes, MacKey),
 	xor_codes(MacKey, SHA1, EncKey),
 	phrase(base64(EncKey), Base64EncKey),
 	DefExpriresIn is 24*3600,
@@ -768,9 +774,11 @@ associate_server(Request, Form, Options) :-
 			Text),
 	format('Content-type: text/plain~n~n~s', [Text]).
 
+mackey_bytes('DH-SHA1',   20).
+mackey_bytes('DH-SHA256', 32).
 
-new_assoc_handle(Handle) :-
-	random_bytes(20, Bytes),
+new_assoc_handle(Length, Handle) :-
+	random_bytes(Length, Bytes),
 	phrase(base64(Bytes), HandleCodes),
 	atom_codes(Handle, HandleCodes).
 
@@ -945,9 +953,10 @@ signature(Pairs, Association, Signature) :-
 	association_session_type(Association, SessionType),
 	signature_algorithm(SessionType, SHA),
 	hmac_sha(MacKey, TokenContents, Signature, [algorithm(SHA)]),
-	debug(openid(crypt), 'Signed:~n~s~nSignature: ~w', [TokenContents, Signature]).
+	debug(openid(crypt),
+	      'Signed:~n~s~nSignature: ~w', [TokenContents, Signature]).
 
-signature_algorithm('DH-SHA1', sha1).
+signature_algorithm('DH-SHA1',   sha1).
 signature_algorithm('DH-SHA256', sha256).
 
 
@@ -1028,13 +1037,15 @@ shared_secret(Pairs, _, _, Secret) :-
 shared_secret(Pairs, P, X, Secret) :-
 	memberchk(dh_server_public-Base64Public, Pairs),
 	memberchk(enc_mac_key-Base64EncMacKey, Pairs),
+	memberchk(session_type-SessionType, Pairs),
 	base64_btwoc(ServerPublic, Base64Public),
 	DiffieHellman is powm(ServerPublic, X, P),
 	atom_codes(Base64EncMacKey, Base64EncMacKeyCodes),
 	phrase(base64(EncMacKey), Base64EncMacKeyCodes),
 	btwoc(DiffieHellman, DiffieHellmanBytes),
+	signature_algorithm(SessionType, SHA_Algo),
 	sha_hash(DiffieHellmanBytes, DHHash,
-		 [encoding(octet), algorithm(sha1)]),
+		 [encoding(octet), algorithm(SHA_Algo)]),
 	xor_codes(DHHash, EncMacKey, Secret).
 
 
@@ -1058,18 +1069,32 @@ expires_at(Pairs, Time) :-
 associate_data(Data, P, G, X) :-
 	openid_dh_p(P),
 	openid_dh_g(G),
-	dh_x(P, X),
+	X is 1+random(P-1),			% 1<=X<P-1
 	CP is powm(G, X, P),
 	base64_btwoc(P, P64),
 	base64_btwoc(G, G64),
 	base64_btwoc(CP, CP64),
-	Data = [ 'openid.mode'		     = associate,
-		 'openid.assoc_type'	     = 'HMAC-SHA1',
-		 'openid.session_type'	     = 'DH-SHA1',
+	openid(ns, NS),
+	openid(assoc_type, AssocType),
+	openid(session_type, SessionType),
+	Data = [ 'openid.ns'		     = NS,
+		 'openid.mode'		     = associate,
+		 'openid.assoc_type'	     = AssocType,
+		 'openid.session_type'	     = SessionType,
 		 'openid.dh_modulus'	     = P64,
 		 'openid.dh_gen'	     = G64,
 		 'openid.dh_consumer_public' = CP64
 	       ].
+
+:- if(true).
+openid(ns,	     'http://specs.openid.net/auth/2.0').
+openid(assoc_type,   'HMAC-SHA256').
+openid(session_type, 'DH-SHA256').
+:- else.
+openid(ns,           'http://openid.net/signon/1.1').
+openid(assoc_type,   'HMAC-SHA1').
+openid(session_type, 'DH-SHA1').
+:- endif.
 
 
 		 /*******************************
@@ -1086,25 +1111,6 @@ random_bytes(N, [H|T]) :-
 	N2 is N - 1,
 	random_bytes(N2, T).
 random_bytes(_, []).
-
-
-%%	dh_x(+Max, -X)
-%
-%	Generate a random key X where 1<=X<P-1)
-%
-%	@tbd	If we have /dev/urandom, use that.
-
-dh_x(P, X) :-
-	X0 is random(65536),
-	Max is P - 1,
-	dh_x(Max, X0, X).
-
-dh_x(Max, X0, X) :-
-	X1 is X0<<16+random(65536),
-	(   X1 >= Max
-	->  X = X0
-	;   dh_x(Max, X1, X)
-	).
 
 
 		 /*******************************
