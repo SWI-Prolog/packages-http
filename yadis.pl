@@ -109,12 +109,24 @@ xrds_location(Xid, XRDSLocation) :-
 
 xrds_load(XRDSLocation, XRDS_DOM) :-
 	setup_call_cleanup(
-	    http_open(XRDSLocation, In, []),
+	    http_open(XRDSLocation, In,
+		      [ cert_verify_hook(ssl_verify)
+		      ]),
 	    load_structure(In, XRDS_DOM,
 			   [ dialect(xmlns),
 			     space(remove)
 			   ]),
 	    close(In)).
+
+:- public ssl_verify/5.
+
+%%	ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
+%
+%	Accept all certificates.
+
+ssl_verify(_SSL,
+	   _ProblemCertificate, _AllCertificates, _FirstCertificate,
+	   _Error).
 
 
 %%	html_head_dom(+Stream, -HeadDOM) is semidet.
