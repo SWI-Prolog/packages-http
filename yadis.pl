@@ -84,19 +84,38 @@ add_component(Field, URL0, URL, Default) :-
 
 xrds_location(Xid, XRDSLocation) :-
 	xid_normalize(Xid, URL),
+	(   catch(xrds_location_direct(URL, XRDSLocation),
+		  E, yadis_failed(E))
+	->  true
+	;   catch(xrds_location_html(URL, XRDSLocation),
+		  E, yadis_failed(E))
+	).
+
+yadis_failed(E) :-
+	(   debugging(yadis)
+	->  print_message(warning, E)
+	;   true
+	),
+	fail.
+
+xrds_location_direct(URL, XRDSLocation) :-
 	setup_call_cleanup(
 	    http_open(URL, In,
 		      [ method(head),
 			request_header(accept='application/xrds+xml'),
-			header(x_xrds_location, Reply)
+			header(x_xrds_location, Reply),
+			cert_verify_hook(ssl_verify)
 		      ]),
 	    true,
 	    close(In)),
 	Reply \== '', !,
 	XRDSLocation = Reply.
-xrds_location(Xid, XRDSLocation) :-
+
+xrds_location_html(URL, XRDSLocation) :-
 	setup_call_cleanup(
-	    http_open(Xid, In, []),
+	    http_open(URL, In,
+		      [ cert_verify_hook(ssl_verify)
+		      ]),
 	    html_head_dom(In, DOM),
 	    close(In)),
 	xpath(DOM, meta(@'http-equiv'=Equiv, @content), Content),
