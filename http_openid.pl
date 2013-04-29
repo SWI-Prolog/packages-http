@@ -537,18 +537,19 @@ redirect_browser(URL, FormExtra) :-
 
 openid_resolve(URL, OpenID0, OpenID, Server) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
-	http_open(URL, Stream,
-		  [ final_url(OpenID0),
-		    cert_verify_hook(ssl_verify)
-		  ]),
 	dtd(html, DTD),
-	call_cleanup(load_structure(Stream, Term,
-				    [ dtd(DTD),
-				      dialect(sgml),
-				      shorttag(false),
-				      syntax_errors(quiet)
-				    ]),
-		     close(Stream)),
+	setup_call_cleanup(
+	    http_open(URL, Stream,
+		      [ final_url(OpenID0),
+			cert_verify_hook(ssl_verify)
+		      ]),
+	    load_structure(Stream, Term,
+			   [ dtd(DTD),
+			     dialect(sgml),
+			     shorttag(false),
+			     syntax_errors(quiet)
+			   ]),
+	    close(Stream)),
 	debug(openid(resolve), 'Scanning HTML document ...', [URL]),
 	contains_term(element(head, _, Head), Term),
 	(   link(Head, 'openid.server', Server)
