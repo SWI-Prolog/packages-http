@@ -538,13 +538,16 @@ redirect_browser(URL, FormExtra) :-
 %	@tbd	Implement complete URL canonization as defined by the
 %		OpenID 2.0 proposal.
 
-openid_resolve(URL, Select, Select, Server) :-
+openid_resolve(URL, OpenID, OpenID, Server) :-
 	xrds_dom(URL, DOM),
 	xpath(DOM, //(_:'Service'), Service),
 	xpath(Service, _:'Type'(text), 'http://specs.openid.net/auth/2.0/server'),
 	xpath(Service, _:'URI'(text), Server), !,
 	debug(openid(yadis), 'Yadis: server: ~q', [Server]),
-	Select = 'http://specs.openid.net/auth/2.0/identifier_select'.
+	(   xpath(Service, _:'LocalID'(text), OpenID)
+	->  true
+	;   OpenID = 'http://specs.openid.net/auth/2.0/identifier_select'
+	).
 openid_resolve(URL, OpenID0, OpenID, Server) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
 	dtd(html, DTD),
