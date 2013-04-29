@@ -11,7 +11,8 @@ LIBPL=		html_write.pl http_client.pl http_header.pl \
 		json.pl http_json.pl json_convert.pl http_dirindex.pl \
 		http_server_files.pl http_pwp.pl http_host.pl \
 		http_openid.pl js_write.pl http_cookie.pl \
-		http_files.pl http_cors.pl http_unix_daemon.pl
+		http_files.pl http_cors.pl http_unix_daemon.pl \
+		yadis.pl
 EXAMPLES=	demo_body.pl demo_client.pl demo_threads.pl demo_xpce.pl \
 		calc.pl demo_files.pl demo_pwp.pl demo_openid.pl \
 		demo_daemon.pl
