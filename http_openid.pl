@@ -643,15 +643,14 @@ openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
 			 Form,
 			 SignedPairs),
 	    (	openid_associate(OpenIdServer, Handle, Assoc)
-	    ->  signature(SignedPairs, Assoc, Sig)
-	    ;	existence_error(assoc_handle, Handle)
-	    ),
-
-	    atom_codes(Base64Signature, Base64SigCodes),
-	    phrase(base64(Signature), Base64SigCodes),
-	    (	Sig == Signature
-	    ->	true
-	    ;	throw(openid(signature_mismatch))
+	    ->  signature(SignedPairs, Assoc, Sig),
+		atom_codes(Base64Signature, Base64SigCodes),
+		phrase(base64(Signature), Base64SigCodes),
+		(   Sig == Signature
+		->  true
+		;   throw(openid(signature_mismatch))
+		)
+	    ;	check_authentication(Request, Form)
 	    )
 	).
 
@@ -694,6 +693,34 @@ check_obligatory_fields(Fields) :-
 	).
 
 obligatory_field(identity).
+
+
+%%	check_authentication(+Request, +Form) is semidet.
+%
+%	Implement the stateless verification method.   This seems needed
+%	for stackexchange.com, which provides the   =res_id=  with a new
+%	association handle.
+
+check_authentication(_Request, Form) :-
+	openid_server(_OpenIDLogin, _OpenID, Server),
+	debug(openid(check_authentication),
+	      'Using stateless verification with ~q form~n~q', [Server, Form]),
+	select('openid.mode' = _, Form, Form1),
+	setup_call_cleanup(
+	    http_open(Server, In,
+		      [ post(form([ 'openid.mode' = check_authentication
+				  | Form1
+				  ])),
+			cert_verify_hook(ssl_verify)
+		      ]),
+	    read_stream_to_codes(In, Reply),
+	    close(In)),
+	debug(openid(check_authentication),
+	      'Reply: ~n~s~n', [Reply]),
+	key_values_data(Pairs, Reply),
+	forall(member(invalidate_handle-Handle, Pairs),
+	       retractall(association(_, Handle, _))),
+	memberchk(is_valid-true, Pairs).
 
 
 		 /*******************************
