@@ -40,6 +40,8 @@
 	    openid_verify/2,		% +Options, +Request
 	    openid_authenticate/4,	% +Request, -Server, -User, -ReturnTo
 	    openid_associate/3,		% +OpenIDServer, -Handle, -Association
+	    openid_associate/4,		% +OpenIDServer, -Handle, -Association,
+					% +Options
 	    openid_server/2,		% +Request
 	    openid_grant/1,		% +Request
 	    openid_server/3,		% ?OpenIDLogin, ?OpenID, ?Server
@@ -1042,16 +1044,31 @@ signature_algorithm('DH-SHA256', sha256).
 		    expires_at,		% time-stamp
 		    mac_key).		% code-list
 
-%%	openid_associate(+URL, -Handle, -Assoc) is det.
-%%	openid_associate(?URL, +Handle, -Assoc) is semidet.
+%%	openid_associate(?URL, ?Handle, ?Assoc) is det.
+%
+%	Calls openid_associate/4 as
+%
+%	    ==
+%	    openid_associate(URL, Handle, Assoc, []).
+%	    ==
+
+openid_associate(URL, Handle, Assoc) :-
+	openid_associate(URL, Handle, Assoc, []).
+
+%%	openid_associate(+URL, -Handle, -Assoc, +Options) is det.
+%%	openid_associate(?URL, +Handle, -Assoc, +Options) is semidet.
 %
 %	Associate with an open-id server.  We   first  check for a still
 %	valid old association. If there is  none   or  it is expired, we
-%	esstablish one and remember it.
+%	esstablish one and remember it.  Options:
+%
+%	  * ns(URL)
+%	  One of =http://specs.openid.net/auth/2.0= (default) or
+%	  =http://openid.net/signon/1.1=.
 %
 %	@tbd	Should we store known associations permanently?  Where?
 
-openid_associate(URL, Handle, Assoc) :-
+openid_associate(URL, Handle, Assoc, _Options) :-
 	nonvar(Handle), !,
 	debug(openid(associate),
 	      'OpenID: Lookup association with handle ~q', [Handle]),
@@ -1061,7 +1078,8 @@ openid_associate(URL, Handle, Assoc) :-
 		  'OpenID: no association with handle ~q', [Handle]),
 	    fail
 	).
-openid_associate(URL, Handle, Assoc) :-
+openid_associate(URL, Handle, Assoc, _Options) :-
+	must_be(atom, URL),
 	association(URL, Handle, Assoc),
 	association_expires_at(Assoc, Expires),
 	get_time(Now),
@@ -1071,9 +1089,8 @@ openid_associate(URL, Handle, Assoc) :-
 	;   retractall(association(URL, Handle, _)),
 	    fail
 	).
-openid_associate(URL, Handle, Assoc) :-
-	ground(URL), var(Handle),
-	associate_data(Data, P, _G, X),
+openid_associate(URL, Handle, Assoc, Options) :-
+	associate_data(Data, P, _G, X, Options),
 	debug(openid(associate), 'OpenID: Associating with ~q', [URL]),
 	setup_call_cleanup(
 	    http_open(URL, In,
@@ -1131,12 +1148,12 @@ expires_at(Pairs, Time) :-
 	Time is integer(Now)+Seconds.
 
 
-%%	associate_data(-Data, -X) is det.
+%%	associate_data(-Data, -P, -G, -X, +Options) is det.
 %
 %	Generate the data to initiate an association using Diffie-Hellman
 %	shared secret key negotiation.
 
-associate_data(Data, P, G, X) :-
+associate_data(Data, P, G, X, Options) :-
 	openid_dh_p(P),
 	openid_dh_g(G),
 	X is 1+random(P-1),			% 1<=X<P-1
@@ -1144,9 +1161,13 @@ associate_data(Data, P, G, X) :-
 	base64_btwoc(P, P64),
 	base64_btwoc(G, G64),
 	base64_btwoc(CP, CP64),
-	openid(ns, NS),
-	openid(assoc_type, AssocType),
-	openid(session_type, SessionType),
+	option(ns(NS), Options, 'http://specs.openid.net/auth/2.0'),
+	(   assoc_type(NS, DefAssocType, DefSessionType)
+	->  true
+	;   domain_error('openid.ns', NS)
+	),
+	option(assoc_type(AssocType), Options, DefAssocType),
+	option(assoc_type(SessionType), Options, DefSessionType),
 	Data = [ 'openid.ns'		     = NS,
 		 'openid.mode'		     = associate,
 		 'openid.assoc_type'	     = AssocType,
@@ -1156,15 +1177,12 @@ associate_data(Data, P, G, X) :-
 		 'openid.dh_consumer_public' = CP64
 	       ].
 
-:- if(true).
-openid(ns,	     'http://specs.openid.net/auth/2.0').
-openid(assoc_type,   'HMAC-SHA256').
-openid(session_type, 'DH-SHA256').
-:- else.
-openid(ns,           'http://openid.net/signon/1.1').
-openid(assoc_type,   'HMAC-SHA1').
-openid(session_type, 'DH-SHA1').
-:- endif.
+assoc_type('http://specs.openid.net/auth/2.0',
+	   'HMAC-SHA256',
+	   'DH-SHA256').
+assoc_type('http://openid.net/signon/1.1',
+	   'HMAC-SHA1',
+	   'DH-SHA1').
 
 
 		 /*******************************
