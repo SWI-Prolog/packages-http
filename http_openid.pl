@@ -138,20 +138,20 @@ http:location(openid, root(openid), [priority(-100)]).
 %
 %	Call hook on the OpenID management library.  Defined hooks are:
 %
-%		* login(+OpenID)
-%		Consider OpenID logged in.
+%	  * login(+OpenID)
+%	  Consider OpenID logged in.
 %
-%		* logout(+OpenID)
-%		Logout OpenID
+%	  * logout(+OpenID)
+%	  Logout OpenID
 %
-%		* logged_in(?OpenID)
-%		True if OpenID is logged in
+%	  * logged_in(?OpenID)
+%	  True if OpenID is logged in
 %
-%		* grant(+Request, +Options)
-%		Server: Reply positive on OpenID
+%	  * grant(+Request, +Options)
+%	  Server: Reply positive on OpenID
 %
-%		* trusted(+OpenID, +Server)
-%		True if Server is a trusted OpenID server
+%	  * trusted(+OpenID, +Server)
+%	  True if Server is a trusted OpenID server
 
 :- multifile
 	openid_hook/1.			% +Action
