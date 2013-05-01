@@ -41,6 +41,9 @@
 @see http://en.wikipedia.org/wiki/Yadis
 */
 
+:- multifile
+	xrds_specified_location/2.
+
 %%	xrds_dom(+Id, -XRDS_DOM) is det.
 %
 %	True when XRDS_DOM is  a  parsed   XML  document  for  the given
@@ -84,7 +87,9 @@ add_component(Field, URL0, URL, Default) :-
 
 xrds_location(Xid, XRDSLocation) :-
 	xid_normalize(Xid, URL),
-	(   catch(xrds_location_direct(URL, XRDSLocation),
+	(   xrds_specified_location(URL, XRDSLocation)
+	->  true
+	;   catch(xrds_location_direct(URL, XRDSLocation),
 		  E, yadis_failed(E))
 	->  true
 	;   catch(xrds_location_html(URL, XRDSLocation),
@@ -129,7 +134,8 @@ xrds_location_html(URL, XRDSLocation) :-
 xrds_load(XRDSLocation, XRDS_DOM) :-
 	setup_call_cleanup(
 	    http_open(XRDSLocation, In,
-		      [ cert_verify_hook(ssl_verify)
+		      [ request_header(accept='application/xrds+xml'),
+			cert_verify_hook(ssl_verify)
 		      ]),
 	    load_structure(In, XRDS_DOM,
 			   [ dialect(xmlns),
@@ -174,3 +180,14 @@ on_begin(head, Attrs, Parser) :-
 		     parse(content)
 		   ]),
 	asserta(html_head_dom(element(head, Attrs, DOM))).
+
+%%	xrds_specified_location(+URL, -XRDSLocation) is nondet.
+%
+%	Hook that allows for specifying locations of XRDS documents. For
+%	example, Google does not reply to   Yadis discovery messages. We
+%	can fake it does using:
+%
+%	  ==
+%	  yadis:xrds_specified_location('http://google.com/',
+%					'https://www.google.com/accounts/o8/id').
+%	  ==
