@@ -88,7 +88,7 @@ add_component(Field, URL0, URL, Default) :-
 xrds_location(Xid, XRDSLocation) :-
 	xid_normalize(Xid, URL),
 	(   xrds_specified_location(URL, XRDSLocation)
-	->  true
+	->  XRDSLocation \== (-)
 	;   catch(xrds_location_direct(URL, XRDSLocation),
 		  E, yadis_failed(E))
 	->  true
@@ -191,3 +191,7 @@ on_begin(head, Attrs, Parser) :-
 %	  yadis:xrds_specified_location('http://google.com/',
 %					'https://www.google.com/accounts/o8/id').
 %	  ==
+%
+%	If this hook succeeds with XRDSLocation bound to `-` (minus), we
+%	assume there is no XRDS document associated to URL.  This can be
+%	used to avoid retrieving misleading or broken XRDS documents.
