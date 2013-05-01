@@ -70,6 +70,7 @@
 :- use_module(library(option)).
 :- use_module(library(sha)).
 :- use_module(library(lists)).
+:- use_module(library(settings)).
 
 :- predicate_options(openid_login_form/4, 2, [action(atom), show_stay(boolean)]).
 :- predicate_options(openid_server/2, 1, [expires_in(any)]).
@@ -386,9 +387,19 @@ stay_logged_on(_) --> [].
 %	user's  browser  to  the  OpenID  server,  providing  the  extra
 %	openid.X name-value pairs. Options is,  against the conventions,
 %	placed in front of the Request   to allow for smooth cooperation
-%	with http_dispatch.pl.
+%	with http_dispatch.pl.  Options processes:
 %
-%	The OpenId server will redirect to the openid.return_to URL.
+%	  * return_to(+URL)
+%	  Specifies where the OpenID provider should return to.
+%	  Normally, that is the current location.
+%	  * trust_root(+URL)
+%	  Specifies the =openid.trust_root= attribute.  Defaults to
+%	  the root of the current server (i.e., =|http://host[.port]/|=).
+%	  * realm(+URL)
+%	  Specifies the =openid.realm= attribute.  Default is the
+%	  =trust_root=.
+%
+%	The OpenId server will redirect to the =openid.return_to= URL.
 %
 %	@throws	http_reply(moved_temporary(Redirect))
 
@@ -408,6 +419,7 @@ openid_verify(Options, Request) :-
 	),
 	current_root_url(Request, CurrentRoot),
 	option(trust_root(TrustRoot), Options, CurrentRoot),
+	option(realm(Realm), Options, TrustRoot),
 	openid_resolve(URL, OpenIDLogin, OpenID, Server),
 	trusted(OpenID, Server),
 	openid_associate(Server, Handle, _Assoc),
@@ -418,7 +430,8 @@ openid_verify(Options, Request) :-
 				   'openid.claimed_id'   = OpenID,
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = ReturnTo,
-				   'openid.trust_root'   = TrustRoot
+%				   'openid.trust_root'   = TrustRoot,
+				   'openid.realm'        = Realm
 				 ]).
 
 %%	stay(+Response)
@@ -466,27 +479,43 @@ openid_server(OpenIDLogin, OpenID, Server) :-
 	http_session_data(openid_login(OpenIDLogin, OpenID, Server)), !.
 
 
-%%	current_url(+Request, -Root) is det.
 %%	current_root_url(+Request, -Root) is det.
 %
-%	Return URL of current request or current root.
+%	True when Root is an absolute URL   for  the root of the server.
+%	The host and port  are   discovered  using  http_current_host/3,
+%	while   the   scheme   is   discovered     using   the   setting
+%	=http:public_scheme=.
+%
+%	@see library(http/http_host)
 
 current_root_url(Request, Root) :-
 	openid_current_host(Request, Host, Port),
+	setting(http:public_scheme, Scheme),
+	set_port(Scheme, Port, AuthC),
 	uri_authority_data(host, AuthC, Host),
-	uri_authority_data(port, AuthC, Port),
 	uri_authority_components(Auth, AuthC),
-	uri_data(scheme, Components, http),
+	uri_data(scheme, Components, Scheme),
 	uri_data(authority, Components, Auth),
 	uri_data(path, Components, /),
 	uri_components(Root, Components).
 
+set_port(http, 80, _) :- !.
+set_port(https, 443, _) :- !.
+set_port(_, Port, AuthC) :-
+	uri_authority_data(port, AuthC, Port).
+
+
+%%	current_url(+Request, -URL) is det.
+%
+%	True when URL is an absolute URL for the current request.
+
 current_url(Request, URL) :-
 	openid_current_host(Request, Host, Port),
+	setting(http:public_scheme, Scheme),
 	option(request_uri(RequestURI), Request),
 	(   Port == 80
-	->  format(atom(URL), 'http://~w~w', [Host, RequestURI])
-	;   format(atom(URL), 'http://~w:~w~w', [Host, Port, RequestURI])
+	->  format(atom(URL), '~w://~w~w', [Scheme, Host, RequestURI])
+	;   format(atom(URL), '~w://~w:~w~w', [Scheme, Host, Port, RequestURI])
 	).
 
 

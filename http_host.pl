@@ -59,15 +59,26 @@ http:public_port if provided. Otherwise it is deduced from the request.
 */
 
 
-%%	http_current_host(?Request, -Hostname, -Port, Options) is det.
+%%	http_current_host(?Request, -Hostname, -Port, +Options) is det.
 %
 %	Current global host and port of the HTTP server.  This is the
 %	basis to form absolute address, which we need for redirection
 %	based interaction such as the OpenID protocol.  Options are:
 %
-%	    * global(+Bool)
-%	    If =true= (default =false=), try to replace a local hostname
-%	    by a world-wide accessible name.
+%	  * global(+Bool)
+%	  If =true= (default =false=), try to replace a local hostname
+%	  by a world-wide accessible name.
+%
+%	This predicate performs the following steps to find the host and
+%	port:
+%
+%	  1. Use the settings =http:public_host= and =http:public_port=
+%	  2. Use =X-Forwarded-Host= header, which applies if this server
+%	     runs behind a proxy.
+%	  3. Use the =Host= header, which applies for HTTP 1.1 if we are
+%	     contacted directly.
+%	  4. Use gethostname/1 to find the host and
+%	     http_current_server/2 to find the port.
 %
 %       @param	Request is the current request.  If it is left unbound,
 %		and the request is needed, it is obtained with
