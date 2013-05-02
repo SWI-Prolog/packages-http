@@ -60,6 +60,7 @@
 :- use_module(library(http/html_head)).
 :- use_module(library(http/http_server_files), []).
 :- use_module(library(http/yadis)).
+:- use_module(library(http/ax)).
 :- use_module(library(utf8)).
 :- use_module(library(error)).
 :- use_module(library(xpath)).
@@ -74,10 +75,22 @@
 :- use_module(library(lists)).
 :- use_module(library(settings)).
 
-:- predicate_options(openid_login_form/4, 2, [action(atom), show_stay(boolean)]).
-:- predicate_options(openid_server/2, 1, [expires_in(any)]).
-:- predicate_options(openid_user/3, 3, [login_url(atom)]).
-:- predicate_options(openid_verify/2, 1, [return_to(atom), trust_root(atom)]).
+:- predicate_options(openid_login_form/4, 2,
+		     [ action(atom),
+		       show_stay(boolean)
+		     ]).
+:- predicate_options(openid_server/2, 1,
+		     [ expires_in(any)
+		     ]).
+:- predicate_options(openid_user/3, 3,
+		     [ login_url(atom)
+		     ]).
+:- predicate_options(openid_verify/2, 1,
+		     [ return_to(atom),
+		       trust_root(atom),
+		       realm(atom),
+		       ax(any)
+		     ]).
 
 /** <module> OpenID consumer and server library
 
@@ -154,6 +167,9 @@ http:location(openid, root(openid), [priority(-100)]).
 %
 %	  * trusted(+OpenID, +Server)
 %	  True if Server is a trusted OpenID server
+%
+%	  * ax(Values)
+%	  Called if the server provided AX attributes
 
 :- multifile
 	openid_hook/1.			% +Action
@@ -345,7 +361,8 @@ openid_login_page(Request) :-
 
 openid_login_form(ReturnTo, Options) -->
 	{ http_link_to_id(openid_verify, [], VerifyLocation),
-	  option(action(Action), Options, VerifyLocation)
+	  option(action(Action), Options, VerifyLocation),
+	  http_session_retractall(openid_login(_, _, _))
 	},
 	html(div(class('openid-login'),
 		 [ \openid_title,
@@ -400,6 +417,9 @@ stay_logged_on(_) --> [].
 %	  * realm(+URL)
 %	  Specifies the =openid.realm= attribute.  Default is the
 %	  =trust_root=.
+%	  * ax(+Spec)
+%	  Request the exchange of additional attributes from the
+%	  identity provider.  See http_ax_attributes/2 for details.
 %
 %	The OpenId server will redirect to the =openid.return_to= URL.
 %
@@ -422,7 +442,7 @@ openid_verify(Options, Request) :-
 	current_root_url(Request, CurrentRoot),
 	option(trust_root(TrustRoot), Options, CurrentRoot),
 	option(realm(Realm), Options, TrustRoot),
-	openid_resolve(URL, OpenIDLogin, OpenID, Server, _ServerOptions),
+	openid_resolve(URL, OpenIDLogin, OpenID, Server, ServerOptions),
 	trusted(OpenID, Server),
 	openid_associate(Server, Handle, _Assoc),
 	assert_openid(OpenIDLogin, OpenID, Server),
@@ -432,6 +452,7 @@ openid_verify(Options, Request) :-
 	->  true
 	;   domain_error('openid.ns', NS)
 	),
+	ax_options(ServerOptions, Options, AXAttrs),
 	redirect_browser(Server, [ 'openid.ns'		 = NS,
 				   'openid.mode'         = checkid_setup,
 				   'openid.identity'     = OpenID,
@@ -439,6 +460,7 @@ openid_verify(Options, Request) :-
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = ReturnTo,
 				   RealmAttribute        = Realm
+				 | AXAttrs
 				 ]).
 
 realm_attribute('http://specs.openid.net/auth/2.0', 'openid.realm').
@@ -589,7 +611,7 @@ openid_resolve(URL, OpenID, OpenID, Server, [xrds_types(Types)]) :-
 	findall(Type, xpath(Service, _:'Type'(text), Type), Types),
 	memberchk('http://specs.openid.net/auth/2.0/server', Types),
 	xpath(Service, _:'URI'(text), Server), !,
-	debug(openid(yadis), 'Yadis: server: ~q', [Server]),
+	debug(openid(yadis), 'Yadis: server: ~q, types: ~q', [Server, Types]),
 	(   xpath(Service, _:'LocalID'(text), OpenID)
 	->  true
 	;   openid_identifier_select_url(OpenID)
@@ -713,7 +735,8 @@ openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
 		;   throw(openid(signature_mismatch))
 		)
 	    ;	check_authentication(Request, Form)
-	    )
+	    ),
+	    ax_store(Form)
 	).
 
 %%	signed_pairs(+FieldNames, +Pairs:list(Field-Value),
@@ -783,6 +806,47 @@ check_authentication(_Request, Form) :-
 	forall(member(invalidate_handle-Handle, Pairs),
 	       retractall(association(_, Handle, _))),
 	memberchk(is_valid-true, Pairs).
+
+
+		 /*******************************
+		 *	    AX HANDLING		*
+		 *******************************/
+
+%%	ax_options(+ServerOptions, +Options, +AXAttrs) is det.
+%
+%	True when AXAttrs is a  list   of  additional attribute exchange
+%	options to add to the OpenID redirect request.
+
+ax_options(ServerOptions, Options, AXAttrs) :-
+	option(ax(Spec), Options),
+	option(xrds_types(Types), ServerOptions),
+	memberchk('http://openid.net/srv/ax/1.0', Types), !,
+	http_ax_attributes(Spec, AXAttrs),
+	debug(openid(ax), 'AX attributes: ~q', [AXAttrs]).
+ax_options(_, _, []) :-
+	debug(openid(ax), 'AX: not supported', []).
+
+%%	ax_store(+Form)
+%
+%	Extract reported AX data and  store   this  into the session. If
+%	there is a non-empty list of exchanged values, this calls
+%
+%	    openid_hook(ax(Values))
+%
+%	If this hook fails, Values are added   to the session data using
+%	http_session_assert(ax(Values)).
+
+ax_store(Form) :-
+	debug(openid(ax), 'Form: ~q', [Form]),
+	ax_form_attributes(Form, Values),
+	debug(openid(ax), 'AX: ~q', [Values]),
+	(   Values \== []
+	->  (   openid_hook(ax(Values))
+	    ->  true
+	    ;   http_session_assert(ax(Values))
+	    )
+	;   true
+	).
 
 
 		 /*******************************
@@ -1101,7 +1165,8 @@ openid_associate(URL, Handle, Assoc, _Options) :-
 	association_expires_at(Assoc, Expires),
 	get_time(Now),
 	(   Now < Expires
-	->  debug(openid(associate),
+	->  !,
+	    debug(openid(associate),
 		  'OpenID: Reusing association with ~q', [URL])
 	;   retractall(association(URL, Handle, _)),
 	    fail
