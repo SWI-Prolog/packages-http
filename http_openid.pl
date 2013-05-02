@@ -427,14 +427,23 @@ openid_verify(Options, Request) :-
 	openid_associate(Server, Handle, _Assoc),
 	assert_openid(OpenIDLogin, OpenID, Server),
 	stay(Stay),
-	redirect_browser(Server, [ 'openid.mode'         = checkid_setup,
+	option(ns(NS), Options, 'http://specs.openid.net/auth/2.0'),
+	(   realm_attribute(NS, RealmAttribute)
+	->  true
+	;   domain_error('openid.ns', NS)
+	),
+	redirect_browser(Server, [ 'openid.ns'		 = NS,
+				   'openid.mode'         = checkid_setup,
 				   'openid.identity'     = OpenID,
 				   'openid.claimed_id'   = OpenID,
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = ReturnTo,
-%				   'openid.trust_root'   = TrustRoot,
-				   'openid.realm'        = Realm
+				   RealmAttribute        = Realm
 				 ]).
+
+realm_attribute('http://specs.openid.net/auth/2.0', 'openid.realm').
+realm_attribute('http://openid.net/signon/1.1',     'openid.trust_root').
+
 
 %%	stay(+Response)
 %
