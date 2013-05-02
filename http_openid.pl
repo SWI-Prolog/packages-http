@@ -38,7 +38,7 @@
 
 					% low-level primitives
 	    openid_verify/2,		% +Options, +Request
-	    openid_authenticate/4,	% +Request, -Server, -User, -ReturnTo
+	    openid_authenticate/4,	% +Request, -Server, -Identity, -ReturnTo
 	    openid_associate/3,		% +OpenIDServer, -Handle, -Association
 	    openid_associate/4,		% +OpenIDServer, -Handle, -Association,
 					% +Options
@@ -474,6 +474,10 @@ handle_stay_signed_in(_).
 %	@param OpenID OpenID verified by Server.
 
 assert_openid(OpenIDLogin, OpenID, Server) :-
+	openid_identifier_select_url(OpenIDLogin),
+	openid_identifier_select_url(OpenID), !,
+	http_session_assert(openid_login(Identity, Identity, Server)).
+assert_openid(OpenIDLogin, OpenID, Server) :-
 	http_session_assert(openid_login(OpenIDLogin, OpenID, Server)).
 
 %%	openid_server(?OpenIDLogin, ?OpenID, ?Server) is nondet.
@@ -586,7 +590,7 @@ openid_resolve(URL, OpenID, OpenID, Server) :-
 	debug(openid(yadis), 'Yadis: server: ~q', [Server]),
 	(   xpath(Service, _:'LocalID'(text), OpenID)
 	->  true
-	;   OpenID = 'http://specs.openid.net/auth/2.0/identifier_select'
+	;   openid_identifier_select_url(OpenID)
 	).
 openid_resolve(URL, OpenID0, OpenID, Server) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
@@ -616,6 +620,8 @@ openid_resolve(URL, OpenID0, OpenID, Server) :-
 	    debug(openid(resolve), 'OpenID = ~q', [OpenID])
 	).
 
+openid_identifier_select_url(
+    'http://specs.openid.net/auth/2.0/identifier_select').
 
 :- public ssl_verify/5.
 
