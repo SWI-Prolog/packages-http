@@ -411,18 +411,18 @@ openid_verify(Options, Request) :-
 			  'openid.return_to'(ReturnTo0, [optional(true)]),
 			  stay(Stay, [optional(true), default(no)])
 			]),
-	(   option(return_to(ReturnTo1), Options)		% Option
+	(   option(return_to(ReturnTo1), Options)	% Option
 	->  current_url(Request, CurrentLocation),
 	    global_url(ReturnTo1, CurrentLocation, ReturnTo)
 	;   nonvar(ReturnTo0)
-	->  ReturnTo = ReturnTo0				% Form-data
+	->  ReturnTo = ReturnTo0			% Form-data
 	;   current_url(Request, CurrentLocation),
-	    ReturnTo = CurrentLocation				% Current location
+	    ReturnTo = CurrentLocation			% Current location
 	),
 	current_root_url(Request, CurrentRoot),
 	option(trust_root(TrustRoot), Options, CurrentRoot),
 	option(realm(Realm), Options, TrustRoot),
-	openid_resolve(URL, OpenIDLogin, OpenID, Server),
+	openid_resolve(URL, OpenIDLogin, OpenID, Server, _ServerOptions),
 	trusted(OpenID, Server),
 	openid_associate(Server, Handle, _Assoc),
 	assert_openid(OpenIDLogin, OpenID, Server),
@@ -568,7 +568,7 @@ redirect_browser(URL, FormExtra) :-
 		 *	       RESOLVE		*
 		 *******************************/
 
-%%	openid_resolve(+URL, -OpenIDOrig, -OpenID, -Server)
+%%	openid_resolve(+URL, -OpenIDOrig, -OpenID, -Server, -ServerOptions)
 %
 %	True if OpenID is the claimed  OpenID   that  belongs to URL and
 %	Server is the URL of the  OpenID   server  that  can be asked to
@@ -578,21 +578,23 @@ redirect_browser(URL, FormExtra) :-
 %	@param	OpenIDOrig Canonized OpenID typed by user
 %	@param	OpenID Possibly delegated OpenID
 %	@param  Server OpenID server that must validate OpenID
-%
+%	@param	ServerOptions provides additional XRDS information about
+%		the server.  Currently supports xrds_types(Types).
 %	@tbd	Implement complete URL canonization as defined by the
 %		OpenID 2.0 proposal.
 
-openid_resolve(URL, OpenID, OpenID, Server) :-
+openid_resolve(URL, OpenID, OpenID, Server, [xrds_types(Types)]) :-
 	xrds_dom(URL, DOM),
 	xpath(DOM, //(_:'Service'), Service),
-	xpath(Service, _:'Type'(text), 'http://specs.openid.net/auth/2.0/server'),
+	findall(Type, xpath(Service, _:'Type'(text), Type), Types),
+	memberchk('http://specs.openid.net/auth/2.0/server', Types),
 	xpath(Service, _:'URI'(text), Server), !,
 	debug(openid(yadis), 'Yadis: server: ~q', [Server]),
 	(   xpath(Service, _:'LocalID'(text), OpenID)
 	->  true
 	;   openid_identifier_select_url(OpenID)
 	).
-openid_resolve(URL, OpenID0, OpenID, Server) :-
+openid_resolve(URL, OpenID0, OpenID, Server, []) :-
 	debug(openid(resolve), 'Opening ~w ...', [URL]),
 	dtd(html, DTD),
 	setup_call_cleanup(
