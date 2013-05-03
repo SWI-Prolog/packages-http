@@ -42,9 +42,9 @@
 	    openid_associate/3,		% +OpenIDServer, -Handle, -Association
 	    openid_associate/4,		% +OpenIDServer, -Handle, -Association,
 					% +Options
-	    openid_server/2,		% +Request
-	    openid_grant/1,		% +Request
+	    openid_server/2,		% +Options, +Request
 	    openid_server/3,		% ?OpenIDLogin, ?OpenID, ?Server
+	    openid_grant/1,		% +Request
 
 	    openid_login_form//2,	% +ReturnTo, +Options, //
 
@@ -251,34 +251,18 @@ openid_logged_in(OpenID) :-
 %	@see openid_authenticate/4 produces errors if login is invalid
 %	or cancelled.
 
-:- http_handler(openid(login),	openid_login_page, [priority(-10)]).
-:- http_handler(openid(verify),	openid_verify([]), []).
-:- http_handler(openid(xrds),	openid_xrds,	   []).
+:- http_handler(openid(login),	      openid_login_page,   [priority(-10)]).
+:- http_handler(openid(verify),	      openid_verify([]),   []).
+:- http_handler(openid(authenticate), openid_authenticate, []).
+:- http_handler(openid(xrds),	      openid_xrds,	   []).
 
 openid_user(_Request, OpenID, _Options) :-
 	openid_logged_in(OpenID), !.
-openid_user(Request, _OpenID, _Options) :-
-	memberchk(accept(Accept), Request),
-	Accept = [media(application/'xrds+xml',_,_,_)], !,
-	save_openid_location(Request),
-	http_link_to_id(openid_xrds, [], XRDSLocation),
-	http_absolute_uri(XRDSLocation, XRDSServer),
-	debug(openid(yadis), 'Sending XRDS server: ~q', [XRDSServer]),
-	format('X-XRDS-Location: ~w\n', [XRDSServer]),
-	format('Content-type: text/plain\n\n').
-openid_user(Request, User, _Options) :-
-	catch(openid_authenticate(Request, _OpenIdServer, OpenID, ReturnTo),
-	      error(existence_error(assoc_handle,_),_),
-	      fail),
-	openid_server(User, OpenID, _), !,
-	openid_login(User),
-	redirect_browser(ReturnTo, []).
 openid_user(Request, _OpenID, Options) :-
-	http_link_to_id(openid_login_page, [], LoginURL),
-	option(login_url(Login), Options, LoginURL),
+	http_link_to_id(openid_login_page, [], DefLoginPage),
+	option(login_url(LoginPage), Options, DefLoginPage),
 	current_url(Request, Here),
-	uri_normalized(Login, Here, AbsLogin),
-	redirect_browser(AbsLogin,
+	redirect_browser(LoginPage,
 			 [ 'openid.return_to' = Here
 			 ]).
 
@@ -293,10 +277,8 @@ openid_user(Request, _OpenID, Options) :-
 %	have actually been doing OpenID validations.
 
 openid_xrds(Request) :-
-	current_root_url(Request, Root),
-	atom_concat(Host, /, Root),
-	findall(Loc, openid_handler(Loc), Locs0),
-	sort(Locs0, Locs),
+	http_link_to_id(openid_authenticate, [], Autheticate),
+	public_url(Request, Autheticate, Public),
 	format('Content-type: text/xml\n\n'),
 	format('<?xml version="1.0" encoding="UTF-8"?>\n'),
 	format('<xrds:XRDS\n'),
@@ -305,28 +287,10 @@ openid_xrds(Request) :-
 	format('  <XRD>\n'),
 	format('    <Service>\n'),
 	format('      <Type>http://specs.openid.net/auth/2.0/return_to</Type>\n'),
-	forall(member(Loc, Locs),
-	       format('      <URI>~w~w</URI>\n', [Host, Loc])),
+	format('      <URI>~w</URI>\n', [Public]),
 	format('    </Service>\n'),
 	format('  </XRD>\n'),
 	format('</xrds:XRDS>\n').
-
-:- dynamic
-	tried_openid_location/1.
-
-save_openid_location(Request) :-
-	memberchk(path(Path), Request),
-	(   tried_openid_location(Path)
-	->  true
-	;   assertz(tried_openid_location(Path))
-	).
-
-openid_handler(Loc) :-
-	tried_openid_location(Loc).
-openid_handler(Loc) :-
-	http_current_handler(Spec, _Closure, Options),
-	http_absolute_location(Spec, Loc, []),
-	memberchk(openid, Options).
 
 
 %%	openid_login_page(+Request) is det.
@@ -339,11 +303,11 @@ openid_handler(Loc) :-
 openid_login_page(Request) :-
 	http_open_session(_, []),
 	http_parameters(Request,
-			[ 'openid.return_to'(ReturnTo, [])
+			[ 'openid.return_to'(Target, [])
 			]),
 	reply_html_page([ title('OpenID login')
 			],
-			[ \openid_login_form(ReturnTo, [])
+			[ \openid_login_form(Target, [])
 			]).
 
 %%	openid_login_form(+ReturnTo, +Options)// is det.
@@ -439,13 +403,13 @@ openid_verify(Options, Request) :-
 	;   current_url(Request, CurrentLocation),
 	    ReturnTo = CurrentLocation			% Current location
 	),
-	current_root_url(Request, CurrentRoot),
+	public_url(Request, /, CurrentRoot),
 	option(trust_root(TrustRoot), Options, CurrentRoot),
 	option(realm(Realm), Options, TrustRoot),
 	openid_resolve(URL, OpenIDLogin, OpenID, Server, ServerOptions),
 	trusted(OpenID, Server),
 	openid_associate(Server, Handle, _Assoc),
-	assert_openid(OpenIDLogin, OpenID, Server),
+	assert_openid(OpenIDLogin, OpenID, Server, ReturnTo),
 	stay(Stay),
 	option(ns(NS), Options, 'http://specs.openid.net/auth/2.0'),
 	(   realm_attribute(NS, RealmAttribute)
@@ -453,12 +417,14 @@ openid_verify(Options, Request) :-
 	;   domain_error('openid.ns', NS)
 	),
 	ax_options(ServerOptions, Options, AXAttrs),
+	http_link_to_id(openid_authenticate, [], AuthenticateLoc),
+	public_url(Request, AuthenticateLoc, Authenticate),
 	redirect_browser(Server, [ 'openid.ns'		 = NS,
 				   'openid.mode'         = checkid_setup,
 				   'openid.identity'     = OpenID,
 				   'openid.claimed_id'   = OpenID,
 				   'openid.assoc_handle' = Handle,
-				   'openid.return_to'    = ReturnTo,
+				   'openid.return_to'    = Authenticate,
 				   RealmAttribute        = Realm
 				 | AXAttrs
 				 ]).
@@ -487,7 +453,7 @@ handle_stay_signed_in(OpenID) :-
 	ignore(openid_hook(stay_signed_in(OpenID))).
 handle_stay_signed_in(_).
 
-%%	assert_openid(+OpenIDLogin, +OpenID, +Server) is det.
+%%	assert_openid(+OpenIDLogin, +OpenID, +Server, +Target) is det.
 %
 %	Associate the OpenID  as  typed  by   the  user,  the  OpenID as
 %	validated by the Server with the current HTTP session.
@@ -495,12 +461,12 @@ handle_stay_signed_in(_).
 %	@param OpenIDLogin Canonized OpenID typed by user
 %	@param OpenID OpenID verified by Server.
 
-assert_openid(OpenIDLogin, OpenID, Server) :-
+assert_openid(OpenIDLogin, OpenID, Server, Target) :-
 	openid_identifier_select_url(OpenIDLogin),
 	openid_identifier_select_url(OpenID), !,
-	http_session_assert(openid_login(Identity, Identity, Server)).
-assert_openid(OpenIDLogin, OpenID, Server) :-
-	http_session_assert(openid_login(OpenIDLogin, OpenID, Server)).
+	http_session_assert(openid_login(Identity, Identity, Server, Target)).
+assert_openid(OpenIDLogin, OpenID, Server, Target) :-
+	http_session_assert(openid_login(OpenIDLogin, OpenID, Server, Target)).
 
 %%	openid_server(?OpenIDLogin, ?OpenID, ?Server) is nondet.
 %
@@ -512,20 +478,19 @@ assert_openid(OpenIDLogin, OpenID, Server) :-
 %	@param Server URL of the OpenID server
 
 openid_server(OpenIDLogin, OpenID, Server) :-
+	openid_server(OpenIDLogin, OpenID, Server, _Target).
+
+openid_server(OpenIDLogin, OpenID, Server, Target) :-
 	http_in_session(_),
-	http_session_data(openid_login(OpenIDLogin, OpenID, Server)), !.
+	http_session_data(openid_login(OpenIDLogin, OpenID, Server, Target)), !.
 
 
-%%	current_root_url(+Request, -Root) is det.
+%%	public_url(+Request, +Path, -URL) is det.
 %
-%	True when Root is an absolute URL   for  the root of the server.
-%	The host and port  are   discovered  using  http_current_host/3,
-%	while   the   scheme   is   discovered     using   the   setting
-%	=http:public_scheme=.
-%
-%	@see library(http/http_host)
+%	True when URL is a publically useable  URL that leads to Path on
+%	the current server.
 
-current_root_url(Request, Root) :-
+public_url(Request, Path, URL) :-
 	openid_current_host(Request, Host, Port),
 	setting(http:public_scheme, Scheme),
 	set_port(Scheme, Port, AuthC),
@@ -533,13 +498,16 @@ current_root_url(Request, Root) :-
 	uri_authority_components(Auth, AuthC),
 	uri_data(scheme, Components, Scheme),
 	uri_data(authority, Components, Auth),
-	uri_data(path, Components, /),
-	uri_components(Root, Components).
+	uri_data(path, Components, Path),
+	uri_components(URL, Components).
 
-set_port(http, 80, _) :- !.
-set_port(https, 443, _) :- !.
+set_port(Scheme, Port, _) :-
+	scheme_port(Scheme, Port), !.
 set_port(_, Port, AuthC) :-
 	uri_authority_data(port, AuthC, Port).
+
+scheme_port(http, 80).
+scheme_port(https, 443).
 
 
 %%	current_url(+Request, -URL) is det.
@@ -550,7 +518,7 @@ current_url(Request, URL) :-
 	openid_current_host(Request, Host, Port),
 	setting(http:public_scheme, Scheme),
 	option(request_uri(RequestURI), Request),
-	(   Port == 80
+	(   scheme_port(Scheme, Port)
 	->  format(atom(URL), '~w://~w~w', [Scheme, Host, RequestURI])
 	;   format(atom(URL), '~w://~w:~w~w', [Scheme, Host, Port, RequestURI])
 	).
@@ -669,6 +637,24 @@ link(DOM, Type, Target) :-
 		 /*******************************
 		 *	   AUTHENTICATE		*
 		 *******************************/
+
+%%	openid_authenticate(+Request)
+%
+%	HTTP handler when redirected back from the OpenID provider.
+
+openid_authenticate(Request) :-
+	memberchk(accept(Accept), Request),
+	Accept = [media(application/'xrds+xml',_,_,_)], !,
+	http_link_to_id(openid_xrds, [], XRDSLocation),
+	http_absolute_uri(XRDSLocation, XRDSServer),
+	debug(openid(yadis), 'Sending XRDS server: ~q', [XRDSServer]),
+	format('X-XRDS-Location: ~w\n', [XRDSServer]),
+	format('Content-type: text/plain\n\n').
+openid_authenticate(Request) :-
+	openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
+	openid_server(User, OpenID, _, Target),
+	openid_login(User),
+	redirect_browser(Target, []).
 
 
 %%	openid_authenticate(+Request, -Server:url, -OpenID:url,
