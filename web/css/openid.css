@@ -41,7 +41,7 @@ input.openid-input
   margin-left: 2cm;
 }
 
-div.openid-stay
+div.openid-stay, div.openid-buttons
 { margin-left: 2cm;
   font-size: 80%;
   color: #666;
@@ -50,4 +50,8 @@ div.openid-stay
 div.openid-stay input
 { position: relative; top:3px;
   margin-left: 0pt;
+}
+
+div.openid-buttons img
+{ position: relative; top:6px;
 }

@@ -77,6 +77,7 @@
 
 :- predicate_options(openid_login_form/4, 2,
 		     [ action(atom),
+		       buttons(list),
 		       show_stay(boolean)
 		     ]).
 :- predicate_options(openid_server/2, 1,
@@ -319,6 +320,12 @@ openid_login_page(Request) :-
 %	  - action(Action)
 %	  URL of action to call.  Default is the handler calling
 %	  openid_verify/1.
+%	  - buttons(+Buttons)
+%	  Buttons is a list of =img= structures where the =href=
+%	  points to an OpenID 2.0 endpoint.  These buttons are
+%	  displayed below the OpenID URL field.  Clicking the
+%	  button sets the URL field and submits the form.  Requires
+%	  Javascript support.
 %	  - show_stay(+Boolean)
 %	  If =true=, show a checkbox that allows the user to stay
 %	  logged on.
@@ -326,17 +333,22 @@ openid_login_page(Request) :-
 openid_login_form(ReturnTo, Options) -->
 	{ http_link_to_id(openid_verify, [], VerifyLocation),
 	  option(action(Action), Options, VerifyLocation),
-	  http_session_retractall(openid_login(_, _, _))
+	  http_session_retractall(openid(_)),
+	  http_session_retractall(openid_login(_,_,_,_)),
+	  http_session_retractall(ax(_))
 	},
-	html(div(class('openid-login'),
+	html(div([ class('openid-login')
+		 ],
 		 [ \openid_title,
 		   form([ name(login),
+			  id(login),
 			  action(Action),
 			  method('GET')
 			],
 			[ \hidden('openid.return_to', ReturnTo),
 			  div([ input([ class('openid-input'),
 					name(openid_url),
+					id(openid_url),
 					size(30),
 					placeholder('Your OpenID URL')
 				      ]),
@@ -344,6 +356,7 @@ openid_login_form(ReturnTo, Options) -->
 					value('Verify!')
 				      ])
 			      ]),
+			  \buttons(Options),
 			  \stay_logged_on(Options)
 			])
 		 ])).
@@ -355,6 +368,27 @@ stay_logged_on(Options) -->
 		   'Stay signed in'
 		 ])).
 stay_logged_on(_) --> [].
+
+buttons(Options) -->
+	{ option(buttons(Buttons), Options),
+	  Buttons \== []
+	},
+	html(div(class('openid-buttons'),
+		 [ 'Sign in with '
+		 | \prelogin_buttons(Buttons)
+		 ])).
+buttons(_) --> [].
+
+prelogin_buttons([]) --> [].
+prelogin_buttons([H|T]) --> prelogin_button(H), prelogin_buttons(T).
+
+prelogin_button(img(Attrs)) -->
+	{ select_option(href(HREF), Attrs, RestAttrs) },
+	html(img([ onClick('javascript:{$("#openid_url").val("'+HREF+'");'+
+			   '$("form#login").submit();}'
+			  )
+		 | RestAttrs
+		 ])).
 
 
 
