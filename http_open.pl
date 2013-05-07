@@ -124,7 +124,7 @@ resource. See also parse_time/2.
 %	Default value for =|User-Agent|=,  can   be  overruled using the
 %	option user_agent(Agent) of http_open/3.
 
-user_agent('SWI-Prolog <http://www.swi-prolog.org>').
+user_agent('SWI-Prolog').
 
 %%	http_open(+URL, -Stream, +Options) is det.
 %
