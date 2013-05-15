@@ -369,12 +369,41 @@ print_request([H|T]) :-
 	print_request(T).
 \end{code}
 
-The infrastructure recognises the header
-\texttt{Transfer-encoding:~chunked}, causing it to use chunked encoding
+The infrastructure recognises the header fields described below. Other
+header lines are passed verbatim to the client. Typical examples are
+\texttt{Set-Cookie} and authentication headers (see \secref{auth}).
+
+\begin{description}
+    \item[Content-type:~\arg{Type}]
+This field is passed to the client and used by the infrastructure to
+determine the \jargon{encoding} to use for the stream. If \arg{type}
+matches \const{text/*} or the type matches with \const{UTF-8} (case
+insensitive), the server uses UTF-8 encoding. The user may force UTF-8
+encoding for arbitrary content types by adding \texttt{; charset=UTF-8}
+to the end of the \const{Content-type} header.
+
+    \item[Transfer-encoding:~chunked]
+Causes the server to use \jargon{chunked} encoding
 if the client allows for it. See also \secref{transfer} and the
-\const{chunked} option in http_handler/3. Other header lines are passed
-verbatim to the client.   Typical examples are \texttt{Set-Cookie} and
-authentication headers (see \secref{auth}.
+\const{chunked} option in http_handler/3.
+
+    \item[Connection:~close]
+Causes the connection to be closed after the transfer.  The default is
+to keep it open `Keep-Alive' if possible.
+
+    \item[Location:~\arg{URL}]
+This header may be combined with the \const{Status} header to force a
+\jargon{redirect} response to the given \arg{URL}.  The message body
+must be empty. Handling this header is primarily intended for
+compatibility with the CGI conventions. Prolog code should use
+http_redirect/3.
+
+    \item[Status:~\arg{Status}]
+This header can be combined with \const{Location}, where \arg{Status}
+must be one of 301 (moved), 302 (moved temporary, default) or 303 (see
+other).
+\end{description}
+
 
 
 \subsubsection{Returning special status codes}	\label{sec:httpspecials}

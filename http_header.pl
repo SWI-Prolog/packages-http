@@ -37,6 +37,7 @@
 	    http_reply/3,		% +What, +Stream, +HdrExtra
 	    http_reply/4,		% +What, +Stream, +HdrExtra, -Code
 	    http_reply_header/3,	% +Stream, +What, +HdrExtra
+	    http_status_reply/4,	% +Status, +Out, +HdrExtra, -Code
 
 	    http_timestamp/2,		% +Time, -HTTP string
 
@@ -556,6 +557,9 @@ http_update_transfer(Request, CgiHeader, Transfer, Header) :-
 	http_update_transfer(When, Request, CgiHeader, Transfer, Header).
 
 http_update_transfer(never, _, CgiHeader, none, Header) :- !,
+	delete(CgiHeader, transfer_encoding(_), Header).
+http_update_transfer(_, _, CgiHeader, none, Header) :-
+	memberchk(location(_), CgiHeader), !,
 	delete(CgiHeader, transfer_encoding(_), Header).
 http_update_transfer(_, Request, CgiHeader, Transfer, Header) :-
 	select(transfer_encoding(CgiTransfer), CgiHeader, Rest), !,

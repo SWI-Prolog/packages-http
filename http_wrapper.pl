@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2009, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -45,6 +44,7 @@
 :- use_module(library(lists)).
 :- use_module(library(debug)).
 :- use_module(library(broadcast)).
+:- use_module(library(dcg/basics)).
 
 :- meta_predicate
 	http_wrapper(0, +, +, -, +).
@@ -298,13 +298,41 @@ cgi_hook(header, CGI) :-
 	cgi_set(CGI, transfer_encoding(Transfer)). % must be LAST
 cgi_hook(send_header, CGI) :-
 	cgi_property(CGI, header(Header)),
+	debug(http(cgi), 'Header: ~q', [Header]),
 	cgi_property(CGI, client(Out)),
-	(   cgi_property(CGI, transfer_encoding(chunked))
+	(   redirect(Header, Action, RedirectHeader)
+	->  http_status_reply(Action, Out, RedirectHeader, _),
+	    cgi_discard(CGI)
+	;   cgi_property(CGI, transfer_encoding(chunked))
 	->  http_reply_header(Out, chunked_data, Header)
 	;   cgi_property(CGI, content_length(Len))
 	->  http_reply_header(Out, cgi_data(Len), Header)
 	).
 cgi_hook(close, _).
+
+%%	redirect(+Header, -Action, -RestHeader) is semidet.
+%
+%	Detect the CGI =Location= and =Status= headers for formulating a
+%	HTTP redirect.
+
+redirect(Header, Action, RestHeader) :-
+	memberchk(location(To), Header),
+	delete(Header, location(_), Header1),
+	(   memberchk(status(Line), Header1)
+	->  delete(Header1, status(_), RestHeader),
+	    (	atom_codes(Line, Codes),
+		phrase(integer(Status), Codes, _)
+	    ->  true
+	    ;   Status = 302
+	    )
+	;   RestHeader = Header1,
+	    Status = 302
+	),
+	redirect_action(Status, To, Action).
+
+redirect_action(301, To, moved(To)).
+redirect_action(302, To, moved_temporary(To)).
+redirect_action(303, To, see_other(To)).
 
 
 %%	http_send_header(+Header)
