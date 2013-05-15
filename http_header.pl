@@ -59,6 +59,7 @@
 :- use_module(library(memfile)).
 :- use_module(library(settings)).
 :- use_module(library(error)).
+:- use_module(library(pairs)).
 :- use_module(library(dcg/basics)).
 :- use_module(html_write).
 :- use_module(http_exception).
@@ -1323,8 +1324,7 @@ parse_accept(Codes, Media) :-
 	->  Media = Media0
 	;   phrase(accept(Media0), Codes),
 	    keysort(Media0, Media1),
-	    pairs_values(Media1, MediaR),
-	    reverse(MediaR, Media2),
+	    pairs_values(Media1, Media2),
 	    assertz(accept_cache(Atom, Media2)),
 	    Media = Media2
 	).
@@ -1342,7 +1342,7 @@ accept([H|T]) -->
 	;   {T=[]}
 	).
 
-media_range(s(Quality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) -->
+media_range(s(SortQuality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) -->
 	media_type(Type),
 	blanks,
 	(   ";"
@@ -1353,7 +1353,9 @@ media_range(s(Quality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) -->
 	      AcceptExts = []
 	    }
 	),
-	{ rank_specialised(Type, TypeParams, Spec) }.
+	{ SortQuality is float(-Quality),
+	  rank_specialised(Type, TypeParams, Spec)
+	}.
 
 
 %%	rank_specialised(+Type, +TypeParam, -Key) is det.
@@ -1364,15 +1366,16 @@ media_range(s(Quality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) -->
 %
 %	@tbd	Is there an official specification of this?
 
-rank_specialised(Type/SubType, TypeParams, v(VT, VS, VP)) :-
+rank_specialised(Type/SubType, TypeParams, v(VT, VS, SortVP)) :-
 	var_or_given(Type, VT),
 	var_or_given(SubType, VS),
-	length(TypeParams, VP).
+	length(TypeParams, VP),
+	SortVP is -VP.
 
 var_or_given(V, Val) :-
 	(   var(V)
 	->  Val = 0
-	;   Val = 1
+	;   Val = -1
 	).
 
 media_type(Type/SubType) -->
