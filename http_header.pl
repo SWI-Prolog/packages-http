@@ -1517,8 +1517,8 @@ header_fields([H|T], CLen) -->
 
 %%	field_name(?PrologName)
 %
-%	Convert between prolog_name and HttpName.  Field names are,
-%	aoording to RFC 2616, considered tokens and covered by the
+%	Convert between prolog_name  and  HttpName.   Field  names  are,
+%	according to RFC 2616, considered  tokens   and  covered  by the
 %	following definition:
 %
 %	==
@@ -1590,8 +1590,9 @@ wr_field_chars2([C|T]) -->		% 0'
 	    wr_field_chars2(T)
 	).
 
-%	now
-%%	rfc_date(+Time)
+%%	now//
+%
+%	Current time using rfc_date//1.
 
 now -->
 	{ get_time(Time)
