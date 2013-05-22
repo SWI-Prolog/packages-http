@@ -69,10 +69,10 @@ The accepted arguments are described with js_args//1.
 %	be quoted atom and thus the following is legal:
 %
 %	    ==
-%	    	...
-%	    	html(script(type('text/javascript'),
-%	    	     [ \js_call('x.y.z'(hello, 42)
-%	    	     ]),
+%		...
+%		html(script(type('text/javascript'),
+%		     [ \js_call('x.y.z'(hello, 42)
+%		     ]),
 %	    ==
 
 js_call(Term) -->
@@ -120,13 +120,15 @@ js_new(Id, Term) -->
 %	    as a result from a computation.
 %	    $ json(Term) :
 %	    Emits a term using json_write/3.
-%	    $ @(true), @(false), @(null) :
-%	    Emits these constants without quotes.
+%	    $ @(Atom) :
+%	    Emits these constants without quotes.  Normally used for the
+%	    symbols =true=, =false= and =null=, but can also be use for
+%	    emitting JavaScript symbols (i.e. function- or variable
+%	    names).
 %	    $ Number :
 %	    Emited literally
 %	    $ symbol(Atom) :
-%	    Emitted without quotes.  Can be used for JavaScript symbols
-%	    (e.i., function and variable-names)
+%	    Synonym for @(Atom).  Deprecated.
 %	    $ Atom or String :
 %	    Emitted as quoted JavaScript string.
 
@@ -156,11 +158,8 @@ js_arg(object(H)) -->
 	html([ '{', \js_kv_list(H), '}' ]).
 js_arg({}(Attrs)) --> !,
 	html([ '{', \js_kv_cslist(Attrs), '}' ]).
-js_arg(@(true)) -->  [true].
-js_arg(@(false)) --> [false].
-js_arg(@(null)) -->  [null].
-js_arg(symbol(H)) -->
-	[H].
+js_arg(@(Id)) -->  {must_be(atom, Id)}, [Id]. % @null, @true, @identifier
+js_arg(symbol(Id)) --> {must_be(atom, Id)}, [Id].
 js_arg(json(Term)) -->
 	{ json_to_string(json(Term), String),
 	  debug(json_arg, '~w~n', String)
