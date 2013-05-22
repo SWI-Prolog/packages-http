@@ -1209,7 +1209,7 @@ prolog_colour:goal_colours(Goal, Colours) :-
 					% TBD: Check with do_expand!
 html_colours(Var, classify) :-
 	var(Var), !.
-html_colours(\List, built_in-Colours) :-
+html_colours(\List, built_in-[built_in-Colours]) :-
 	is_list(List), !,
 	list_colours(List, Colours).
 html_colours(\_, built_in-[dcg]) :- !.
