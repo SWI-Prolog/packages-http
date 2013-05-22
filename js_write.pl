@@ -41,7 +41,7 @@
 :- use_module(library(error)).
 :- use_module(library(debug)).
 
-/** <module> Utilities for including javascript
+/** <module> Utilities for including JavaScript
 
 This library is a supplement   to library(http/html_write) for producing
 JavaScript fragments. Its main role is  to   be  able to call JavaScript
@@ -175,7 +175,7 @@ js_arg(H) -->
 	{ atomic(H), !,
 	  js_quoted_string(H, Q)
 	},
-	[ '\'', Q, '\''
+	[ '"', Q, '"'
 	].
 
 js_kv_list([]) --> [].
@@ -190,16 +190,23 @@ js_kv_list([H|T]) -->
 	).
 
 js_kv(Key:Value) --> !,
-	html(['\'',Key,'\':',\js_arg(Value)]).
+	js_key(Key), [:], js_arg(Value).
 js_kv(Key-Value) --> !,
-	html(['\'',Key,'\':',\js_arg(Value)]).
+	js_key(Key), [:], js_arg(Value).
 js_kv(Key=Value) --> !,
-	html(['\'',Key,'\':',\js_arg(Value)]).
+	js_key(Key), [:], js_arg(Value).
 js_kv(Term) -->
 	{ compound(Term),
 	  Term =.. [Key,Value]
 	}, !,
-	html(['\'',Key,'\':',\js_arg(Value)]).
+	js_key(Key), [:], js_arg(Value).
+
+js_key(Key) -->
+	(   { js_identifier(Key) }
+	->  [Key]
+	;   { js_quoted_string(Key, QKey) },
+	    html(['\'', QKey, '\''])
+	).
 
 js_kv_cslist((A,B)) --> !,
 	js_kv(A),
@@ -231,8 +238,8 @@ js_quote_codes([H|T]) -->
 
 js_quote_code(0'') --> !,
 	"\\'".
-js_quote_code(34) --> !,
-	[92,34].
+js_quote_code(0'") --> !,
+	"\\\"".
 js_quote_code(0'\\) --> !,
 	"\\\\".
 js_quote_code(0'\n) --> !,
@@ -243,6 +250,54 @@ js_quote_code(0'\t) --> !,
 	"\\t".
 js_quote_code(C) -->
 	[C].
+
+%%	js_identifier(+Id:atom) is semidet.
+%
+%	True if Id is a  valid   identifier.  In traditional JavaScript,
+%	this means it starts  with  [$_:letter:]   and  is  followed  by
+%	[$_:letter:digit:]
+
+js_identifier(Id) :-
+	sub_atom(Id, 1, 1, _, First),
+	char_type(First, csymf),
+	forall(sub_atom(Id, _, 1, _, Char), char_type(Char, csym)).
+
+%%	js_keyword(?Keyword:atom)
+%
+%	True when Keyword is a JavaScript keyword
+%
+%	@see http://docstore.mik.ua/orelly/webprog/jscript/ch02_08.htm
+
+/*
+js_keyword(break).
+js_keyword(do).
+js_keyword(if).
+js_keyword(switch).
+js_keyword(typeof).
+js_keyword(case).
+js_keyword(else).
+js_keyword(in).
+js_keyword(this).
+js_keyword(var).
+js_keyword(catch).
+js_keyword(false).
+js_keyword(instanceof).
+js_keyword(throw).
+js_keyword(void).
+js_keyword(continue).
+js_keyword(finally).
+js_keyword(new).
+js_keyword(true).
+js_keyword(while).
+js_keyword(default).
+js_keyword(for).
+js_keyword(null).
+js_keyword(try).
+js_keyword(with).
+js_keyword(delete).
+js_keyword(function).
+js_keyword(return).
+*/
 
 %%	json_to_string(+JSONTerm, -String)
 %
