@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2010, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -84,6 +82,11 @@
 	pagebody(+, :, -, +),
 	html_receive(+, 3, -, +),
 	html_post(+, :, -, +).
+
+:- multifile
+	expand//1,			% +HTMLElement
+	expand_attribute_value//1.	% +HTMLAttributeValue
+
 
 /** <module> Write HTML text
 
@@ -342,9 +345,6 @@ html_expand(Term, _Module) -->
 	{ print_message(error, html(expand_failed(Term))) }.
 
 
-:- multifile
-	expand/3.
-
 do_expand(Token, _) -->			% call user hooks
 	expand(Token), !.
 do_expand(Fmt-Args, _) --> !,
@@ -414,7 +414,8 @@ do_expand(Term, M) -->
 check_non_empty([], _, _) :- !.
 check_non_empty(_, Tag, Term) :-
 	layout(Tag, _, empty), !,
-	print_message(warning, format('Using empty element with content: ~p', [Term])).
+	print_message(warning,
+		      format('Using empty element with content: ~p', [Term])).
 check_non_empty(_, _, _).
 
 %%	raw(+List, +Modules)// is det.
