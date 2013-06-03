@@ -29,7 +29,9 @@
 */
 
 :- module(javascript,
-	  [ js_call//1,			% +Function(Arg..)
+	  [ js_script//1,		% +Content
+
+	    js_call//1,			% +Function(Arg..)
 	    js_new//2,			% +Id, +Function(+Args)
 	    js_expression//1,		% +Expression
 	    js_arg_list//1,		% +ListOfExpressions
@@ -41,6 +43,9 @@
 :- use_module(library(http/json)).
 :- use_module(library(error)).
 :- use_module(library(debug)).
+
+:- html_meta
+	js_script(html, ?, ?).
 
 /** <module> Utilities for including JavaScript
 
@@ -61,6 +66,15 @@ properly escape special characters.
 
 The accepted arguments are described with js_expression//1.
 */
+
+%%	js_script(+Content)// is det.
+%
+%	Generate a JavaScript =script= element with the given content.
+
+js_script(Content) -->
+	html(script(type('text/javascript'),
+		    Content)).
+
 
 %%	js_call(+Term)// is det.
 %
