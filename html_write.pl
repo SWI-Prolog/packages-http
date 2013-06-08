@@ -48,9 +48,11 @@
 	    html_receive//2,		% +Id, :Handler
 	    xhtml_ns//2,		% +Id, +Value
 
+	    html/4,			% <![html[quasi quotations]]>
+
 					% Useful primitives for expanding
 	    html_begin//1,		% +EnvName[(Attribute...)]
-	    html_end//1,			% +EnvName
+	    html_end//1,		% +EnvName
 	    html_quoted//1,		% +Text
 	    html_quoted_attribute//1,	% +Attribute
 
@@ -70,6 +72,8 @@
 :- use_module(library(pairs)).
 :- use_module(library(sgml)).		% Quote output
 :- use_module(library(uri)).
+:- use_module(html_quasiquotations).
+
 :- set_prolog_flag(generate_debug_info, false).
 
 :- meta_predicate
