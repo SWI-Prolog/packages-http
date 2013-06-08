@@ -38,19 +38,42 @@
 /** <module> JavaScript grammar
 
 This file provides a complete grammar  for JavaScript (EcmaScript). This
-code is using for the quasi quotation syntax =javascript=, as defined in
+code supports the  quasi  quotation   syntax  =javascript=,  defined  in
 library(http/js_write).
+
+At this moment, only js_token//1 is used.   The  BNF is quite unsuitable
+for direct us with Prolog. I am seeking  for automatic ways to deal with
+that.
 
 @tbd	This file is a very incomplete attempt to see whether we can
 	use a grammar that does not produce an abstract syntax tree for
 	syntax checking, syntax highlighting and limited rewriting if the
-	quasi quoted material.  *THIS FILE CHANGE DRASTICALLY*.
+	quasi quoted material.  *THIS FILE MAY CHANGE DRASTICALLY*.
 
 @see	http://tomcopeland.blogs.com/EcmaScript.html is used for the
 	high-level syntax.
 @see	http://www.ecma-international.org/ecma-262/5.1/ is used for
 	implementing the tokenization code.
 */
+
+js_program(Node) -->
+	program(Node), !.
+js_program(_, Here, End) :-
+	setup_call_cleanup(
+	    nb_setval(js_error_location, 0),
+	    (   \+ phrase(program(_), Here, End),
+		nb_getval(js_error_location, Location)
+	    ),
+	    nb_delete(js_error_location)),
+	(   integer(Location)
+	->  length(Prefix, Location),
+	    append(Prefix, AtError, Here)
+	;   Location = end_of_file-Offset,
+	    length(AtError, Offset),
+	    append(_, AtError, Here)
+	),
+	syntax_error(javascript, AtError, AtError).
+
 
 :- op(100, xf, ?).
 :- op(100, xf, +).
@@ -89,26 +112,60 @@ library(http/js_write).
 	phrase(RuleEx),
 	*(Rule, T).
 
+start(_Type, Here, Choice, Here, Here) :-
+	(   prolog_current_choice(IfThenChoice),
+	    prolog_choice_attribute(IfThenChoice, parent, StartChoice),
+	    prolog_choice_attribute(StartChoice, parent, Choice)
+	->  true
+	;   true
+	).
+start(_Type, Here, _Choice, Here, Here) :-
+	update_syntax_location(Here),
+	fail.
+
+update_syntax_location(Here) :-
+	nb_current(js_error_location, Old), !,
+	lazy_list_character_count(CharCount, Here, Here),
+	(   further(CharCount, Old)
+	->  nb_setval(js_error_location, CharCount)
+	;   true
+	).
+update_syntax_location(_).
+
+further(Here, Old) :- integer(Here), integer(Old), !, Here > Old.
+further(end_of_file-Here, end_of_file-Old) :- !, Here < Old.
+further(end_of_file-_, _).
+
+
+end(Here, State, Here, Here) :-
+	(   var(State)
+	->  true
+	;   prolog_cut_to(State)
+	).
+
 here(Here, Here, Here).
 
 terminal(Rule, node(Rule, Start, End, [])) -->
+	ws,
 	here(Start),
 	phrase(Rule),
 	here(End).
 
-punct(Punct, node(punct(Punct), Start, End, [])) -->
+punct(Punct, node(punct(Punct), Start, End, [], _)) -->
+	ws,
 	here(Start),
 	punct(Punct),
 	here(End).
 
-keyword(KeyWord, node(keyword(KeyWord), Start, End, [])) -->
+keyword(KeyWord, node(keyword(KeyWord), Start, End, [], _)) -->
+	ws,
 	here(Start),
 	keyword(KeyWord),
 	here(End).
 
-user:portray(node(Type, Start, End, Children)) :-
+user:portray(node(Type, Start, End, Children, Data)) :-
 	diff_list(Start, End, List),
-	format('node(~q, "~s", ~p)', [Type, List, Children]).
+	format('node(~q, "~s", ~p, ~p)', [Type, List, Children, Data]).
 
 diff_list(Start, End, List) :-
 	Start == End, !,
@@ -124,10 +181,14 @@ diff_list([H|Start], End, [H|List]) :-
 :- op(1200, xfx, ::=).
 
 :- record
-	node(type, start, end, children).
+	node(type,				% non-terminal
+	     start,				% list
+	     end,				% list
+	     children,				%
+	     data).				% user data
 
 term_expansion((Head ::= terminal(Body)),
-	       (HeadEx --> (ws, here(Start), Body, here(End), ws,
+	       (HeadEx --> (ws, start(Head, Start, State), Body, end(End, State), ws,
 			    {simplify_node(Node0, Node)}))) :- !,
 	make_node([ type(Head),
 		    start(Start),
@@ -136,7 +197,7 @@ term_expansion((Head ::= terminal(Body)),
 		  ], Node0),
 	extend(Head, Node, HeadEx).
 term_expansion((Head ::= Body),
-	       (HeadEx --> (ws, here(Start), BodyEx, here(End), ws,
+	       (HeadEx --> (ws, start(Head, Start, State), BodyEx, end(End, State), ws,
 			    {simplify_node(Node0, Node)}))) :-
 	make_node([ type(Head),
 		    start(Start),
@@ -176,12 +237,126 @@ terminal_rule(punct(_)).
 terminal_rule(keyword(_)).
 terminal_rule(terminal(_)).
 
-simplify_node(node(_T,S0,E0,Child), Child) :-
-	Child = node(_,S1,E1,_),
+simplify_node(Node0, Node) :-
+	node_children(Node0, Children0),
+	phrase(comma_list(Children0), List),
+	set_children_of_node(List, Node0, Node1),
+	simplify_one_child(Node1, Node).
+
+simplify_one_child(node(_T,S0,E0,[Child], Data), Child) :-
+	Child = node(_,S1,E1,_, Data),
 	S1 == S0,
-	E1 == E0, !,
-	writeln(removed).
-simplify_node(Node, Node).
+	E1 == E0, !.
+simplify_one_child(Node, Node).
+
+comma_list((A,B)) --> !,
+	comma_list(A),
+	comma_list(B).
+comma_list([H|T]) --> !,
+	[H],
+	comma_list(T).
+comma_list([]) --> !.
+comma_list(X) --> [X].
+
+
+		 /*******************************
+		 *	      MATCHING		*
+		 *******************************/
+
+/*
+:- op(400, fx, #).
+:- op(400, xfx, #).
+
+:- meta_predicate
+	#(+,//,?,?).
+
+call_server(Node, Call) :-
+	sub_node(Node, object_literal, OL),
+	child_node(OL, property_name_and_value, KV),
+	phrase(call_server(Call), KV).
+
+sub_node(Node, Type, Node) :-
+	node_type(Node, Type).
+sub_node(Node, Type, Child) :-
+	node_children(Node, Children),
+	member(Sub, Children),
+	sub_node(Sub, Type, Child).
+
+child_node(Node, Type, Child) :-
+	node_children(Node, Children),
+	member(Child, Children),
+	node_type(Child, Type).
+
+node_text(Node, Text) :-
+	node_start(Node, Start),
+	node_end(Node, End),
+	diff_list(Start, End, List),
+	atom_codes(Text, List).
+
+#(Term) -->
+	{ Term =.. [Type, Text] },
+	[ Node ],
+	{ node_type(Node, Type),
+	  node_text(Node, Text)
+	}.
+
+#(Term, ChildRules) -->
+	{ Term =.. [Type, Text] },
+	[ Node ],
+	{ node_type(Node, Type),
+	  node_text(Node, Text),
+	  node_children(Node, Children),
+	  phrase(ChildRules, Children)
+	}.
+
+call_server(Head) -->
+	#identifier(url),
+	#punct(:),
+	call_expression(_) # predicate(Head).
+
+predicate(Head) -->
+	member_expression(_) #
+	  [ identifier(server),
+	    member_expression_part #
+	    [ #punct(.),
+	      #identifier(Name),
+	      arguments(Args)
+	    ]
+	  ],
+	{ Head =.. [Name|Args] }.
+
+arguments(Args) -->
+	arguments(_) #
+	  [ punct('('),
+	    argument_list(_) #
+	      argument_list(Args),
+	    punct(')')
+	  ].
+
+argument_list([H|T]) -->
+	#identifier(H),
+	(   #punct(',')
+	->  argument_list(T)
+	;   {T=[]}
+	).
+*/
+
+
+		 /*******************************
+		 *	      PRINTING		*
+		 *******************************/
+
+node(node(_Type, Start, End, Children, _Data)) -->
+	(   { Children == [] }
+	->  { diff_list(Start, End, List),
+	      atom_codes(Atom, List)
+	    },
+	    [Atom]
+	;   node(Children)
+	).
+node(eof) --> [].
+node([]) --> [].
+node([H|T]) --> node(H), node(T).
 
 
 		 /*******************************
@@ -334,7 +509,7 @@ function_declaration ::= keyword("function"), identifier, (punct("("), formal_pa
 function_expression ::= keyword("function"), identifier?, (punct("("), formal_parameter_list?, punct(")")), function_body .
 formal_parameter_list ::= identifier, (punct(","), identifier)* .
 function_body ::= punct("{"), source_elements?, punct("}") .
-js_program ::= source_elements?, eof .
+program ::= source_elements?, eof .
 source_elements ::= source_element+ .
 source_element ::=
 	(   function_declaration
