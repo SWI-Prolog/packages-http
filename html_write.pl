@@ -331,18 +331,18 @@ hook_module(_, user, PI) :-
 
 html(Spec) -->
 	{ strip_module(Spec, M, T) },
-	html(T, M).
+	qhtml(T, M).
 
-html([], _) --> !,
+qhtml([], _) --> !,
 	[].
-html([H|T], M) --> !,
+qhtml([H|T], M) --> !,
 	html_expand(H, M),
-	html(T, M).
-html(X, M) -->
+	qhtml(T, M).
+qhtml(X, M) -->
 	html_expand(X, M).
 
 html_expand(M:Term, _) --> !,
-	html(Term, M).
+	qhtml(Term, M).
 html_expand(Term, Module) -->
 	do_expand(Term, Module), !.
 html_expand(Term, _Module) -->
@@ -362,7 +362,7 @@ do_expand(\List, Module) -->
 do_expand(\Term, Module, In, Rest) :- !,
 	call(Module:Term, In, Rest).
 do_expand(Module:Term, _) --> !,
-	html(Term, Module).
+	qhtml(Term, Module).
 do_expand(script(Content), _) --> !,	% general CDATA declared content elements?
 	html_begin(script),
 	[ Content
@@ -384,7 +384,7 @@ do_expand(element(Env, Attributes, Contents), M) --> !,
 	    }
 	->  xhtml_empty(Env, Attributes)
 	;   html_begin(Env, Attributes),
-	    html(Contents, M),
+	    qhtml(Contents, M),
 	    html_end(Env)
 	).
 do_expand(Term, M) -->
@@ -398,7 +398,7 @@ do_expand(Term, M) -->
 		}
 	    ->  xhtml_empty(Env, [])
 	    ;	html_begin(Env),
-		html(Contents, M),
+		qhtml(Contents, M),
 		html_end(Env)
 	    )
 	).
@@ -411,7 +411,7 @@ do_expand(Term, M) -->
 	    }
 	->  xhtml_empty(Env, Attributes)
 	;   html_begin(Env, Attributes),
-	    html(Contents, M),
+	    qhtml(Contents, M),
 	    html_end(Env)
 	).
 
