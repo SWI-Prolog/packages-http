@@ -12,7 +12,7 @@ LIBPL=		html_write.pl http_client.pl http_header.pl \
 		http_server_files.pl http_pwp.pl http_host.pl \
 		http_openid.pl js_write.pl js_grammar.pl http_cookie.pl \
 		http_files.pl http_cors.pl http_unix_daemon.pl \
-		yadis.pl ax.pl html_quasiquotations.pl
+		yadis.pl ax.pl html_quasiquotations.pl http_load.pl
 EXAMPLES=	demo_body.pl demo_client.pl demo_threads.pl demo_xpce.pl \
 		calc.pl demo_files.pl demo_pwp.pl demo_openid.pl \
 		demo_daemon.pl
