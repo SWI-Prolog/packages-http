@@ -119,6 +119,11 @@ command recognises the names of HTML resources.
 %		but only its dependencies.  This allows for defining an
 %		alias for one or more resources.
 %
+%		* ordered(+Bool)
+%		Defines that the list of requirements is ordered, which
+%		means that each requirement in the list depends on its
+%		predecessor.
+%
 %		* aggregate(+List)
 %		States that About is an aggregate of the resources in
 %		List.
@@ -292,12 +297,12 @@ requires([H|T], Base) --> !,
 	requires(H, Base),
 	requires(T, Base).
 requires(Spec, Base) -->
-	requires(Spec, Base, true).
+	requires(Spec, Base, _, true).
 
-requires('V'(Spec), Base, Virtual) -->
+requires('V'(Spec), Base, Properties, Virtual) -->
 	{ nonvar(Spec) }, !,
-	requires('V'(Spec), Base, Virtual).
-requires(Spec, Base, Virtual) -->
+	requires(Spec, Base, Properties, Virtual).
+requires(Spec, Base, Properties, Virtual) -->
 	{ res_properties(Spec, Properties),
 	  http_absolute_location(Spec, File, [relative_to(Base)])
 	},
@@ -353,7 +358,10 @@ prerequisites([R|T], AggregatedBy, Vs, Vt) -->
 	prerequisites(T, AggregatedBy, Vt0, Vt).
 
 prerequisites_for(R, AggregatedBy, Vs, Vt) -->
-	{ phrase(requires(R, /, true), Req) },
+	{ phrase(requires(R, /, Properties, true), Req0),
+	  delete(Req0, R, Req)
+	},
+	prop_edges(Properties),
 	(   {Req == []}
 	->  {Vs = [R|Vt]}
 	;   req_edges(Req, AggregatedBy, R),
@@ -368,6 +376,40 @@ req_edges([H|T], AggregatedBy, R) -->
 	;   [H-R]
 	),
 	req_edges(T, AggregatedBy, R).
+
+%%	prop_edges(+Properties)//
+%
+%	Subscribes a list of dependencies   from  resources that declare
+%	their requirements with ordered(true).
+
+prop_edges(Properties) -->
+	{ option(ordered(true), Properties) }, !,
+	ordered_reqs(Properties).
+prop_edges(_) --> [].
+
+ordered_reqs([]) --> [].
+ordered_reqs([H|T]) --> ordered_req(H), ordered_reqs(T).
+
+ordered_req(requires([H|T])) -->
+	{ T \== [], !,
+	  absolute_req(H, File)
+	},
+	order_pairs(T, File).
+ordered_req(_) --> [].
+
+order_pairs([H|T], P) --> !,
+	{ absolute_req(H, File)
+	},
+	[ P-File ],
+	order_pairs(T, File).
+order_pairs(_, _) --> [].
+
+absolute_req(Virtual, Abs) :-
+	html_resource(Virtual, _, Properties),
+	option(virtual(true), Properties), !,
+	Abs = 'V'(Virtual).
+absolute_req(Spec, Abs) :-
+	http_absolute_location(Spec, Abs, [relative_to(/)]).
 
 
 %%	connect_graph(+Graph, -Start, -Connected) is det.
