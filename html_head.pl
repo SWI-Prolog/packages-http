@@ -200,7 +200,10 @@ requirements(Required, Paths) :-
 	phrase(requires(Required), List),
 	sort(List, Paths0),		% remove duplicates
 	use_agregates(Paths0, Paths1, AggregatedBy),
-	order_html_resources(Paths1, AggregatedBy, Paths).
+	order_html_resources(Paths1, AggregatedBy, Paths2),
+	exclude(virtual, Paths2, Paths).
+
+virtual('V'(_)).
 
 %%	use_agregates(+Paths, -Aggregated, -AggregatedBy) is det.
 %
@@ -291,6 +294,9 @@ requires([H|T], Base) --> !,
 requires(Spec, Base) -->
 	requires(Spec, Base, true).
 
+requires('V'(Spec), Base, Virtual) -->
+	{ nonvar(Spec) }, !,
+	requires('V'(Spec), Base, Virtual).
 requires(Spec, Base, Virtual) -->
 	{ res_properties(Spec, Properties),
 	  http_absolute_location(Spec, File, [relative_to(Base)])
@@ -298,7 +304,7 @@ requires(Spec, Base, Virtual) -->
 	(   { option(virtual(true), Properties)
 	    ; Virtual == false
 	    }
-	->  []
+	->  ['V'(Spec)]
 	;   [File]
 	),
 	requires_from_properties(Properties, File).
@@ -347,7 +353,7 @@ prerequisites([R|T], AggregatedBy, Vs, Vt) -->
 	prerequisites(T, AggregatedBy, Vt0, Vt).
 
 prerequisites_for(R, AggregatedBy, Vs, Vt) -->
-	{ phrase(requires(R, /, false), Req) },
+	{ phrase(requires(R, /, true), Req) },
 	(   {Req == []}
 	->  {Vs = [R|Vt]}
 	;   req_edges(Req, AggregatedBy, R),
