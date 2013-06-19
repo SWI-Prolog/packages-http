@@ -207,7 +207,7 @@ requirements(Required, Paths) :-
 %	Try to replace sets of  resources   by  an  `aggregate', a large
 %	javascript or css file that  combines   the  content of multiple
 %	small  ones  to  reduce  the  number   of  files  that  must  be
-%	transferred to the server. The current rule says that aggregates
+%	transferred to the client. The current rule says that aggregates
 %	are used if at least half of the members are used.
 
 use_agregates(Paths, Aggregated, AggregatedBy) :-
