@@ -129,23 +129,26 @@ encoding.
 %%	html_set_options(+Options) is det.
 %
 %	Set options for the HTML output.   Options  are stored in prolog
-%	flags to ensure  with  proper   multi-threaded  behaviour  where
-%	setting an option is local to the   thread and new threads start
-%	with the options from the parent thread.  Defined options are:
+%	flags to ensure proper multi-threaded behaviour where setting an
+%	option is local to the thread  and   new  threads start with the
+%	options from the parent thread. Defined options are:
 %
-%		* dialect(Dialect)
-%		One of =html= (default) or =xhtml=.
+%	  * dialect(Dialect)
+%	    One of =html4=, =xhtml= or =html5= (default). For
+%	    compatibility reasons, =html= is accepted as an
+%	    alias for =html4=.
 %
-%		* doctype(+DocType)
-%		Set the =|<|DOCTYPE|= DocType =|>|= line for page//1 and
-%		page//2.
+%	  * doctype(+DocType)
+%	    Set the =|<|DOCTYPE|= DocType =|>|= line for page//1 and
+%	    page//2.
 %
-%		* content_type(+ContentType)
-%		Set the =|Content-type|= for reply_html_page/3
+%	  * content_type(+ContentType)
+%	    Set the =|Content-type|= for reply_html_page/3
 %
-%	Note  that  the  doctype  is  covered    by  two  prolog  flags:
-%	=html_doctype= for the html dialect  and =xhtml_doctype= for the
-%	xhtml dialect. Dialect muct be switched before doctype.
+%	Note that the doctype and  content_type   flags  are  covered by
+%	distinct  prolog  flags:  =html4_doctype=,  =xhtml_doctype=  and
+%	=html5_doctype= and similar for the   content  type. The Dialect
+%	must be switched before doctype and content type.
 
 html_set_options(Options) :-
 	must_be(list, Options),
@@ -156,24 +159,27 @@ set_options([H|T]) :-
 	html_set_option(H),
 	set_options(T).
 
-html_set_option(dialect(Dialect)) :- !,
-	must_be(oneof([html,xhtml]), Dialect),
+html_set_option(dialect(Dialect0)) :- !,
+	must_be(oneof([html,html4,xhtml,html5]), Dialect0),
+	(   html_version_alias(Dialect0, Dialect)
+	->  true
+	;   Dialect = Dialect0
+	),
 	set_prolog_flag(html_dialect, Dialect).
 html_set_option(doctype(Atom)) :- !,
 	must_be(atom, Atom),
-	(   current_prolog_flag(html_dialect, html)
-	->  set_prolog_flag(html_doctype, Atom)
-	;   set_prolog_flag(xhtml_doctype, Atom)
-	).
+	current_prolog_flag(html_dialect, Dialect),
+	dialect_doctype_flag(Dialect, Flag),
+	set_prolog_flag(Flag, Atom).
 html_set_option(content_type(Atom)) :- !,
 	must_be(atom, Atom),
-	(   current_prolog_flag(html_dialect, html)
-	->  set_prolog_flag(html_content_type, Atom)
-	;   set_prolog_flag(xhtml_content_type, Atom)
-	).
+	current_prolog_flag(html_dialect, Dialect),
+	dialect_content_type_flag(Dialect, Flag),
+	set_prolog_flag(Flag, Atom).
 html_set_option(O) :-
 	domain_error(html_option, O).
 
+html_version_alias(html, html4).
 
 %%	html_current_option(?Option) is nondet.
 %
@@ -182,26 +188,34 @@ html_set_option(O) :-
 html_current_option(dialect(Dialect)) :-
 	current_prolog_flag(html_dialect, Dialect).
 html_current_option(doctype(DocType)) :-
-	(   current_prolog_flag(html_dialect, html)
-	->  current_prolog_flag(html_doctype, DocType)
-	;   current_prolog_flag(xhtml_doctype, DocType)
-	).
+	current_prolog_flag(html_dialect, Dialect),
+	dialect_doctype_flag(Dialect, Flag),
+	current_prolog_flag(Flag, DocType).
 html_current_option(content_type(ContentType)) :-
-	(   current_prolog_flag(html_dialect, html)
-	->  current_prolog_flag(html_content_type, ContentType)
-	;   current_prolog_flag(xhtml_content_type, ContentType)
-	).
+	current_prolog_flag(html_dialect, Dialect),
+	dialect_content_type_flag(Dialect, Flag),
+	current_prolog_flag(Flag, ContentType).
 
+dialect_doctype_flag(html4, html4_doctype).
+dialect_doctype_flag(html5, html5_doctype).
+dialect_doctype_flag(xhtml, xhtml_doctype).
 
-option_default(html_dialect, html).
-option_default(html_doctype,
+dialect_content_type_flag(html4, html4_content_type).
+dialect_content_type_flag(html5, html5_content_type).
+dialect_content_type_flag(xhtml, xhtml_content_type).
+
+option_default(html_dialect, html5).
+option_default(html4_doctype,
 	       'HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" \c
 	       "http://www.w3.org/TR/html4/loose.dtd"').
+option_default(html5_doctype,
+	       'html').
 option_default(xhtml_doctype,
 	       'html PUBLIC "-//W3C//DTD XHTML 1.0 \c
 	       Transitional//EN" \c
 	       "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"').
-option_default(html_content_type, 'text/html; charset=UTF-8').
+option_default(html4_content_type, 'text/html; charset=UTF-8').
+option_default(html5_content_type, 'text/html; charset=UTF-8').
 option_default(xhtml_content_type, 'application/xhtml+xml; charset=UTF-8').
 
 %%	init_options is det.
@@ -280,6 +294,9 @@ content_type -->
 	html_post(head, meta([ 'http-equiv'('content-type'),
 			       content(Type)
 			     ], [])).
+content_type -->
+	{ html_current_option(dialect(html5)) }, !,
+	html_post(head, meta('charset=UTF-8')).
 content_type -->
 	[].
 
