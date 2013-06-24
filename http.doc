@@ -1193,7 +1193,7 @@ unifies \arg{RelPath} to \arg{AbsPath}.
 
 \input{httplog}
 
-\subsection{Debugging Servers}				\label{sec:debug}
+\subsection{Debugging Servers}				\label{sec:http-debug}
 
 The library \pllib{http/http_error.pl} defines a hook that decorates
 uncaught exceptions with a stack-trace. This will generate a \emph{500
@@ -1831,6 +1831,7 @@ installed.  Spy-points may be placed using tspy/1.
 \end{itemlist}
 
 \section{Status}
+\label{sec:http-status}
 
 The SWI-Prolog HTTP library is in active use in a large number of
 projects. It is considered one of the SWI-Prolog core libraries that is
