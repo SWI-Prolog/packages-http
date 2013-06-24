@@ -1,4 +1,4 @@
----+++ Repositioning HTML for CSS and javascript links
+### Repositioning HTML for CSS and javascript links {#html-post}
 
 Modern HTML commonly uses  CSS  and   Javascript.  This  requires <link>
 elements in the HTML <head> element or  <script> elements in the <body>.

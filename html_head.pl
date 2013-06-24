@@ -68,7 +68,7 @@ html_include//1.
 For usage in HTML generation,  there   is  the DCG rule html_requires//1
 that demands named resources  in  the   HTML  head.
 
----++ About resource ordering
+## About resource ordering {#html-resource-ordering}
 
 All calls to html_requires//1 for the page are collected and duplicates
 are removed.  Next, the following steps are taken:
@@ -82,13 +82,13 @@ are removed.  Next, the following steps are taken:
        that if the order matters the dependency list must be split
        and only the primary dependency must be added.
 
----++ Debugging dependencies
+## Debugging dependencies {#html-resource-debugging}
 
 Use ?- debug(html(script)). to  see  the   requested  and  final  set of
 resources. All declared resources  are   in  html_resource/3. The edit/1
 command recognises the names of HTML resources.
 
----++ Predicates
+## Predicates {#html-resource-predicates}
 
 @tbd	Possibly we should add img//2 to include images from symbolic
 	path notation.

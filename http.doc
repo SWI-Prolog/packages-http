@@ -51,6 +51,7 @@ Further reading:
 
 
 \section{Introduction}
+\label{sec:http-intro}
 
 The HTTP (HyperText Transfer Protocol) is the W3C standard protocol for
 transferring information between a web-client (browser) and a
@@ -66,6 +67,7 @@ web-servers from SWI-Prolog and turn Prolog into a web-server.
 
 
 \subsection*{Acknowledgements}
+\label{sec:http-acknowledgements}
 
 This work has been carried out under the following projects:
 \url[GARP]{http://hcs.science.uva.nl/projects/GARP/},
@@ -80,6 +82,7 @@ van Ossenbruggen, Michiel Hildebrandt, Matt Lilley and Keri Harris.
 
 
 \section{The HTTP client libraries}
+\label{sec:http-clients}
 
 This package provides two packages for building HTTP clients. The first,
 \pllib{http/http_open} is a lightweight library for opening a HTTP
@@ -90,7 +93,8 @@ a plug-in mechanism providing conversions based on the MIME content-type.
 
 \input{httpopen.tex}
 
-\subsection{The \pllib{http/http_client} library} \label{sec:httpclient}
+\subsection{The \pllib{http/http_client} library}
+\label{sec:httpclient}
 
 The \pllib{http/http_client} library provides more powerful access to
 reading HTTP resources, providing \jargon{keep-alive} connections,
@@ -745,6 +749,7 @@ X = [ input(user),
 
 
 \subsubsection{Handling POST requests}
+\label{sec:http-read-post}
 
 Where the HTTP \const{GET} operation is intended to get a document,
 using a \arg{path} and possibly some additional search information,
@@ -773,6 +778,7 @@ if the plug-in \pllib{http/http_mime_plugin} is loaded.
 
 
 \subsection{Running the server}
+\label{sec:http-running-server}
 
 The functionality of the server should be defined in one Prolog file (of
 course this file is allowed to load other files). Depending on the
@@ -814,6 +820,7 @@ can be started quickly.
 
 
 \subsubsection{Common server interface options}
+\label{sec:http-server-options}
 
 All the server interfaces provide \term{http_server}{:Goal, +Options}
 to create the server.  The list of options differ, but the servers share
@@ -984,6 +991,7 @@ image thumbnails.
 \input{httpunixdaemon.tex}
 
 \subsubsection{From (Unix) inetd}
+\label{sec:http-inetd}
 
 All modern Unix systems handle a large number of the services they run
 through the super-server \emph{inetd}. This program reads
@@ -1040,11 +1048,13 @@ For more information, please check \manref{inetd.conf}{5}.
 
 
 \subsubsection{MS-Windows}
+\label{sec:http-inetd-mswin}
 
 There are rumours that \emph{inetd} has been ported to Windows.
 
 
 \subsubsection{As CGI script}
+\label{sec:http-server-as-cgi}
 
 To be done.
 
@@ -1111,6 +1121,7 @@ appear in many places in generated documents.  JavaScript can create
 URLs on the fly, which makes rewriting virtually impossible.
 
 \subsection{The wrapper library}
+\label{sec:http-wrapper}
 
 The body is called by the module \pllib{http/http_wrapper.pl}. This
 module realises the communication between the I/O streams and the body
@@ -1472,6 +1483,7 @@ End an element.  See html_begin/1 for details.
 
 
 \subsubsection{Emitting HTML documents}
+\label{sec:html-write}
 
 The non-terminal html//1 translates a specification into a list of
 atoms and layout instructions. Currently the layout instructions are
@@ -1539,6 +1551,7 @@ provide the \const{Content-length} field of an HTTP reply-header.
 \input{post.tex}
 
 \subsubsection{Adding rules for html//1}
+\label{sec:html-write-rules}
 
 In some cases it is practical to extend the translations imposed by
 html//1. We used this technique to define translation rules for the
@@ -1586,7 +1599,8 @@ library source for examples.
 \end{description}
 
 
-\subsubsection{Examples}
+\subsubsection{Examples for using the HTML write library}
+\label{sec:html-write-examples}
 
 In the following example we will generate a table of Prolog predicates
 we find from the SWI-Prolog help system based on a keyword. The primary
@@ -1658,6 +1672,7 @@ apropos_predicate(Pattern, pred(Name, Arity, Summary)) :-
 
 
 \subsubsection{Remarks on the \pllib{http/html_write} library}
+\label{sec:html-write-remarks}
 
 This library is the result of various attempts to reach at a more
 satisfactory and Prolog-minded way to produce HTML text from a program.
@@ -1709,6 +1724,7 @@ Note that both \file{http_open.pl} \emph{and} \file{http_chunked.pl}
 must be loaded for http_open/3 to support chunked encoding.
 
 \subsection{The \pllib{http/http_chunked} library}
+\label{sec:http-chunked}
 
 \begin{description}
     \predicate{http_chunked_open}{3}{+RawStream, -DataStream, +Options}
@@ -1721,10 +1737,12 @@ on another stream.  See online documentation at
 \input{json.tex}
 
 \section{MIME support}
+\label{sec:http-mime}
 
 \input{mimepack.tex}
 
 \section{Security}
+\label{sec:http-security}
 
 Writing servers is an inherently dangerous job that should be carried out
 with some considerations. You have basically started a program on a
