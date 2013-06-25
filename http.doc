@@ -1805,6 +1805,7 @@ and \arg{Arg} as \const{/bin/sh} and he has an uncontrolled shell!
 
 
 \section{Tips and tricks}
+\label{sec:http-tips-and-tricks}
 
 \begin{itemlist}
     \item [URL Locations]
