@@ -128,6 +128,12 @@ command recognises the names of HTML resources.
 %		States that About is an aggregate of the resources in
 %		List.
 %
+%		* mime_type(-Mime)
+%		May be specified for non-virtual resources to specify
+%		the mime-type of the resource.  By default, the mime
+%		type is derived from the file name using
+%		file_mime_type/2.
+%
 %	Registering the same About multiple times extends the properties
 %	defined  for  About.  In  particular,  this  allows  for  adding
 %	additional dependencies to a (virtual) resource.
@@ -519,6 +525,10 @@ html_include([]) --> !.
 html_include([H|T]) --> !,
 	html_include(H),
 	html_include(T).
+html_include(Path) -->
+	{ res_property(Path, mime_type(Mime))
+	}, !,
+	html_include(Mime, Path).
 html_include(Path) -->
 	{ file_mime_type(Path, Mime) }, !,
 	html_include(Mime, Path).
