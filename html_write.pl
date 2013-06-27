@@ -991,6 +991,7 @@ layout(base,	   1-1, empty).
 layout(link,	   1-1, empty).
 layout(input,	   0-0, empty).
 layout(frame,	   1-1, empty).
+layout(iframe,	   1-1, empty).
 layout(col,	   0-0, empty).
 layout(area,	   1-0, empty).
 layout(input,	   1-0, empty).
