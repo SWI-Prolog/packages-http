@@ -983,6 +983,8 @@ layout(h2,	   2-0,	0-2).
 layout(h3,	   2-0,	0-2).
 layout(h4,	   2-0,	0-2).
 
+layout(iframe,	   1-1, 1-1).
+
 layout(hr,	   1-1, empty).		% empty elements
 layout(br,	   0-1, empty).
 layout(img,	   0-0, empty).
@@ -991,7 +993,6 @@ layout(base,	   1-1, empty).
 layout(link,	   1-1, empty).
 layout(input,	   0-0, empty).
 layout(frame,	   1-1, empty).
-layout(iframe,	   1-1, empty).
 layout(col,	   0-0, empty).
 layout(area,	   1-0, empty).
 layout(input,	   1-0, empty).
