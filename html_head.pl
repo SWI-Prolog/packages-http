@@ -126,7 +126,13 @@ command recognises the names of HTML resources.
 %
 %		* aggregate(+List)
 %		States that About is an aggregate of the resources in
-%		List.
+%		List. This means that if both About and one of the
+%		elements of List appears in the dependencies, About
+%		is kept and the smaller one is dropped. If there are a
+%		number of dependencies on the small members, these are
+%		replaced with dependency on the big (aggregate) one,
+%		for example, to specify that a big javascript is
+%		actually the composition of a number of smaller ones.
 %
 %		* mime_type(-Mime)
 %		May be specified for non-virtual resources to specify
