@@ -60,12 +60,12 @@ This module is included and re-exported from library(http/html_write).
 %	attribute. Note that the document is valid HTML.
 %
 %	  ==
-%	    html(<![html(Name, URL)
-%		    [<p>Dear <span class="name">Name</span>,
+%	    html({|html(Name, URL)||
+%		   <p>Dear <span class="name">Name</span>,
 %
-%		     <p>You can <a href="URL">download</a> the requested
-%		     article now.
-%		    ]]>
+%		   <p>You can <a href="URL">download</a> the requested
+%		   article now.
+%		   |}
 %	  ==
 
 :- quasi_quotation_syntax(html).

@@ -99,11 +99,11 @@ js_script(Content) -->
 %
 %	  ==
 %	      ...,
-%	      js_script(<![javascript(Id, Config)
-%			   [ $(document).ready(function() {
-%			       $("#"+Id).tagit(Config);
-%			     });
-%			   ]]>),
+%	      js_script({|javascript(Id, Config)||
+%			  $(document).ready(function() {
+%			     $("#"+Id).tagit(Config);
+%			   });
+%			 |}),
 %	      ...
 %	  ==
 %
