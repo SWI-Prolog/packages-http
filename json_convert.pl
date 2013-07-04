@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2010, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -63,19 +61,19 @@ This module allows for defining records (just like library(record)) that
 provide   transparent   two-way   transformation     between   the   two
 representations.
 
-==
-:- json_object
-	point(x:integer, y:integer).
-==
+  ==
+  :- json_object
+	  point(x:integer, y:integer).
+  ==
 
 This declaration causes prolog_to_json/2 to translate the native Prolog
 representation into a JSON Term:
 
-==
-?- prolog_to_json(point(25,50), X).
+  ==
+  ?- prolog_to_json(point(25,50), X).
 
-X = json([x=25, y=50])
-==
+  X = json([x=25, y=50])
+  ==
 
 A json_object/1 declaration can define multiple   objects separated by a
 comma (,), similar to the dynamic/1 directive. Optionally, a declaration
@@ -89,18 +87,18 @@ to the JSON object, e.g. =|{"type":"point", "x":25, "y":50}|=. As Prolog
 records are typed by their functor we need some notation to handle this
 gracefully. This is achieved by adding +Fields to the declaration. I.e.
 
-==
-:- json_object
-	point(x:integer, y:integer) + [type=point].
-==
+  ==
+  :- json_object
+	  point(x:integer, y:integer) + [type=point].
+  ==
 
 Using this declaration, the conversion becomes:
 
-==
-?- prolog_to_json(point(25,50), X).
+  ==
+  ?- prolog_to_json(point(25,50), X).
 
-X = json([x=25, y=50, type=point])
-==
+  X = json([x=25, y=50, type=point])
+  ==
 
 The predicate json_to_prolog/2 is often  used after http_read_json/2 and
 prolog_to_json/2 before reply_json/1. For now  we consider them seperate
@@ -125,10 +123,10 @@ simplifies debugging this rather complicated process.
 %%	current_json_object(Term, Module, Fields)
 %
 %	Multifile   predicate   computed   from     the    json_object/1
-%	declarations.  Term is the most general Prolog term representing
-%	the object.  Module is the module in which the object is defined
-%	and Fields is a list of f(Name, Type, Var), sorted by Name.  Var
-%	is the corresponding variable in Term.
+%	declarations. Term is the most  general Prolog term representing
+%	the object. Module is the module in  which the object is defined
+%	and Fields is a list of f(Name,  Type, Default, Var), ordered by
+%	Name. Var is the corresponding variable in Term.
 
 :- multifile
 	json_object_to_pairs/3,		% Term, Module, Pairs
@@ -139,10 +137,10 @@ simplifies debugging this rather complicated process.
 %	Declare a JSON object.  The declaration takes the same format as
 %	using in record/1 from library(record).  E.g.
 %
-%	==
-%	?- json_object
+%	  ==
+%	  ?- json_object
 %		point(x:int, y:int, z:int=0).
-%	==
+%	  ==
 %
 %	The type arguments are either types as know to library(error) or
 %	functor  names  of  other  JSON   objects.  The  constant  =any=
@@ -150,6 +148,11 @@ simplifies debugging this rather complicated process.
 %	becomes  subject  to  json_to_prolog/2.  I.e.,  using  the  type
 %	list(any) causes the conversion to be   executed on each element
 %	of the list.
+%
+%	If a field has a default, the default   is  used if the field is
+%	not specified in the JSON  object.   Extending  the  record type
+%	definition, types can be of  the   form  (Type1|Type2). The type
+%	=null= means that the field may _not_ be present.
 
 json_object(Declaration) :-
 	throw(error(context_error(nodirective, json_object(Declaration)), _)).
@@ -184,11 +187,11 @@ compile_object(ObjectDef) -->
 	  strip_module(CM:ObjectDef, M, Def),
 	  extra_defs(Def, Term, ExtraFields),
 	  Term =.. [Constructor|Args],
-	  defaults(Args, _Defs, TypedArgs),
+	  defaults(Args, Defs, TypedArgs),
 	  types(TypedArgs, Names, Types)
 	},
 	record_to_json_clause(Constructor, M, Types, Names, ExtraFields),
-	current_clause(Constructor, M, Types, Names, ExtraFields),
+	current_clause(Constructor, M, Types, Defs, Names, ExtraFields),
 	[ (:- json_convert:clear_cache) ].
 
 extra_defs(Term+Extra0, Term, Extra) :- !,
@@ -323,6 +326,8 @@ clean_body((integer(Low) -> If ; Then), Goal) :- % generated from between(Low,Hi
 	->  Goal = If
 	;   Goal = Then
 	).
+clean_body((A->true;fail), A) :- !.	% nullable fields.
+clean_body((fail->_;A), A) :- !.
 clean_body(A, A).
 
 conj(T, A, A) :- T == true, !.
@@ -333,28 +338,29 @@ make_pairs([], [], L, L).
 make_pairs([N|TN], [V|TV], [N=V|T], Tail) :-
 	make_pairs(TN, TV, T, Tail).
 
-%%	current_clause(+Constructor, +Module, +Type, +Names)
+%%	current_clause(+Constructor, +Module, +Types, +Defs, +Names, +Extra)
 %
 %	Create the clause current_json_object/3.
 
-current_clause(Constructor, Module, Types, Names, Extra) -->
+current_clause(Constructor, Module, Types, Defs, Names, Extra) -->
 	{ length(Types, Arity),
 	  functor(Term, Constructor, Arity),
 	  extra_fields(Extra, EF),
 	  Term =.. [_|Vars],
-	  mk_fields(Names, Types, Vars, Fields0, EF),
+	  mk_fields(Names, Types, Defs, Vars, Fields0, EF),
 	  sort(Fields0, Fields),
 	  Head =.. [current_json_object, Term, Module, Fields]
 	},
 	[ json_convert:Head ].
 
 extra_fields([], []).
-extra_fields([Name=Value|T0], [f(Name, oneof([Value]), Value)|T]) :-
+extra_fields([Name=Value|T0], [f(Name, oneof([Value]), _, Value)|T]) :-
 	extra_fields(T0, T).
 
-mk_fields([], [], [], Fields, Fields).
-mk_fields([Name|TN], [Type|TT], [Var|VT], [f(Name, Type, Var)|T], Tail) :-
-	mk_fields(TN, TT, VT, T, Tail).
+mk_fields([], [], [], [], Fields, Fields).
+mk_fields([Name|TN], [Type|TT], [Def|DT], [Var|VT],
+	  [f(Name, Type, Def, Var)|T], Tail) :-
+	mk_fields(TN, TT, DT, VT, T, Tail).
 
 
 /* The code below is copied from library(record) */
@@ -366,9 +372,11 @@ mk_fields([Name|TN], [Type|TT], [Var|VT], [f(Name, Type, Var)|T], Tail) :-
 defaults([], [], []).
 defaults([Arg=Default|T0], [Default|TD], [Arg|TA]) :- !,
 	defaults(T0, TD, TA).
-defaults([Arg|T0], [_|TD], [Arg|TA]) :-
+defaults([Arg|T0], [NoDefault|TD], [Arg|TA]) :-
+	no_default(NoDefault),
 	defaults(T0, TD, TA).
 
+no_default('$no-default$').
 
 %%	types(+ArgsSpecs, -Defaults, -Args)
 %
@@ -512,16 +520,23 @@ pairs_args([], []).
 pairs_args([Name=_Value|T0], [Name=_|T]) :-
 	pairs_args(T0, T).
 
-%%	create_rule(+PairArgs, +Vars, -Term, -Body) is det.
+%%	create_rule(+PairArgs, +Module, -ObjectM, -Term, -Body) is det.
 %
 %	Create a new rule for dealing with Pairs, a Name=Value list of a
 %	particular order.  Here is an example rule:
 %
-%	==
-%	json_to_prolog_rule([x=X, y=Y], point(X,Y)) :-
+%	  ==
+%	  json_to_prolog_rule([x=X, y=Y], point(X,Y)) :-
 %		integer(X),
 %		integer(Y).
-%	==
+%	  ==
+%
+%	@arg PairArgs is an ordered list of Name=Variable pairs
+%	@arg Module is the module requesting the conversion
+%	@arg ObjectM is the module where the object is defined
+%	@arg Term is the converted term (with variable arguments)
+%	@arg Body is a Prolog goal that validates the types and
+%	     converts arguments.
 
 create_rule(PairArgs, Module, M, Term, Body) :-
 	current_json_object(Term, M, Fields),
@@ -529,10 +544,26 @@ create_rule(PairArgs, Module, M, Term, Body) :-
 	clean_body(Body0, Body).
 
 match_fields([], [], true, _).
-match_fields([Name=JSON|TP], [f(Name, Type, Prolog)|TF], (Goal,Body), M) :- !,
+match_fields([Name=JSON|TP], [f(Name, Type, _, Prolog)|TF], (Goal,Body), M) :- !,
 	match_field(Type, JSON, Prolog, M, Goal),
 	match_fields(TP, TF, Body, M).
+match_fields([Name=JSON|TP], [f(OptName, Type, Def, Prolog)|TF], Body, M) :-
+	OptName @< Name,
+	(   nullable(Type)
+	->  true
+	;   no_default(NoDef),
+	    Def \== NoDef
+	->  Prolog = Def
+	),
+	match_fields([Name=JSON|TP], TF, Body, M).
 
+nullable(null).
+nullable((A|B)) :- ( nullable(A) -> true ; nullable(B) ).
+
+match_field((A|B), JSON, Prolog, M, (BodyA->true;BodyB)) :- !,
+	match_field(A, JSON, Prolog, M, BodyA),
+	match_field(B, JSON, Prolog, M, BodyB).
+match_field(null, _, _, _, fail) :- !.
 match_field(any, JSON, Prolog, M, json_to_prolog(JSON,Prolog,M)) :- !.
 match_field(F/A, JSON, Prolog, M, json_to_prolog(JSON,Prolog,M)) :- !,
 	functor(Prolog, F, A).
