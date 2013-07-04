@@ -296,6 +296,9 @@ primitive(_:G, G) :- !,
 primitive(G, G) :-
 	predicate_property(system:G, built_in).
 
+non_json_type(Type) :-
+	clause(error:has_type(Type, _), _), !.
+
 
 %%	clean_body(+BodyIn, -BodyOut) is det.
 %
@@ -470,7 +473,7 @@ json_to_prolog(json(Pairs), Term, Module) :- !,
 json_to_prolog(List, Prolog, Module) :-
 	is_list(List), !,
 	json_list_to_prolog(List, Prolog, Module).
-json_to_prolog(@(Special), @(Special), _).
+json_to_prolog(@(Special), @(Special), _) :- !.
 json_to_prolog(Atomic, Atomic, _).
 
 json_pairs_to_prolog([], [], _).
@@ -535,7 +538,9 @@ match_field(F/A, JSON, Prolog, M, json_to_prolog(JSON,Prolog,M)) :- !,
 	functor(Prolog, F, A).
 match_field(boolean, JSON, Prolog, _, json_bool_to_prolog(JSON, Prolog)) :- !.
 match_field(list(Type), JSON, Prolog, M, json_list_to_prolog(JSON, Prolog, M)) :- !,
-	(   Type == any
+	(   Type = _Funcor/_Arity
+	->  true
+	;   non_json_type(Type)
 	->  true
 	;   current_json_object(Term, M, _Fields),
 	    functor(Term, Type, _)
