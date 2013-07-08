@@ -533,7 +533,7 @@ pairs_args([], []).
 pairs_args([Name=_Value|T0], [Name=_|T]) :-
 	pairs_args(T0, T).
 
-%%	create_rule(+PairArgs, +Module, -ObjectM, -Term, -Body
+%%	create_rule(+PairArgs, +Module, -ObjectM, -Term, -Body,
 %%		    -Quality) is det.
 %
 %	Create a new rule for dealing with Pairs, a Name=Value list of a
