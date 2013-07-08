@@ -517,14 +517,13 @@ pairs_to_term(Pairs, Term, Module) :-
 	->  !, fail
 	;   pairs_args(Pairs, PairArgs),
 	    sort(PairArgs, SortedPairArgs),
-	    findall(Arity-Rule,
-		    ( create_rule(SortedPairArgs, Module, M, Term0, Body),
-		      functor(Term0, _, Arity),
+	    findall(Q-Rule,
+		    ( create_rule(SortedPairArgs, Module, M, Term0, Body, Q),
 		      Rule = (json_to_prolog_rule(M, PairArgs, Term0) :- Body)
 		    ),
 		    RulePairs),
-	    keysort(RulePairs, ByArity),
-	    pairs_values(ByArity, Rules),
+	    keysort(RulePairs, ByQuality),
+	    pairs_values(ByQuality, Rules),
 	    maplist(asserta, Rules),
 	    asserta(created_rules_for_pairs(M, PairArgs)),
 	    json_to_prolog_rule(M, Pairs, Term), !
@@ -534,7 +533,8 @@ pairs_args([], []).
 pairs_args([Name=_Value|T0], [Name=_|T]) :-
 	pairs_args(T0, T).
 
-%%	create_rule(+PairArgs, +Module, -ObjectM, -Term, -Body) is det.
+%%	create_rule(+PairArgs, +Module, -ObjectM, -Term, -Body
+%%		    -Quality) is det.
 %
 %	Create a new rule for dealing with Pairs, a Name=Value list of a
 %	particular order.  Here is an example rule:
@@ -551,17 +551,23 @@ pairs_args([Name=_Value|T0], [Name=_|T]) :-
 %	@arg Term is the converted term (with variable arguments)
 %	@arg Body is a Prolog goal that validates the types and
 %	     converts arguments.
+%	@arg Quality is a number that indicates the matching quality.
+%	     Larger values are better.  Max is 0.  There is a penalty
+%	     of 1 for applying a default value and a penalty of 2 for
+%	     ignoring a value in the JSON term.
 
-create_rule(PairArgs, Module, M, Term, Body) :-
+create_rule(PairArgs, Module, M, Term, Body, Quality) :-
 	current_json_object(Term, M, Fields),
-	match_fields(PairArgs, Fields, Body0, Module),
+	match_fields(PairArgs, Fields, Body0, Module, 0, Quality),
 	clean_body(Body0, Body).
 
-match_fields(_, [], true, _) :- !.
-match_fields([Name=JSON|TP], [f(Name, Type, _, Prolog)|TF], (Goal,Body), M) :- !,
+match_fields(_, [], true, _, Q, Q) :- !.
+match_fields([Name=JSON|TP], [f(Name, Type, _, Prolog)|TF], (Goal,Body),
+	     M, Q0, Q) :- !,
 	match_field(Type, JSON, Prolog, M, Goal),
-	match_fields(TP, TF, Body, M).
-match_fields([Name=JSON|TP], [f(OptName, Type, Def, Prolog)|TF], Body, M) :-
+	match_fields(TP, TF, Body, M, Q0, Q).
+match_fields([Name=JSON|TP], [f(OptName, Type, Def, Prolog)|TF], Body,
+	     M, Q0, Q) :-
 	OptName @< Name, !,
 	(   nullable(Type)
 	->  true
@@ -569,11 +575,13 @@ match_fields([Name=JSON|TP], [f(OptName, Type, Def, Prolog)|TF], Body, M) :-
 	    Def \== NoDef
 	->  Prolog = Def
 	),
-	match_fields([Name=JSON|TP], TF, Body, M).
-match_fields([Name=_|TP], [F|TF], Body, M) :-
+	Q1 is Q0-1,
+	match_fields([Name=JSON|TP], TF, Body, M, Q1, Q).
+match_fields([Name=_|TP], [F|TF], Body, M, Q0, Q) :-
 	arg(1, F, Next),
 	Name @< Next,
-	match_fields(TP, [F|TF], Body, M).
+	Q1 is Q0-2,
+	match_fields(TP, [F|TF], Body, M, Q1, Q).
 
 nullable(null).
 nullable((A|B)) :- ( nullable(A) -> true ; nullable(B) ).
