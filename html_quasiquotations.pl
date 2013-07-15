@@ -75,7 +75,8 @@ html(Content, Vars, Dict, DOM) :-
 	with_quasi_quotation_input(
 	    Content, In,
 	    load_html(In, DOM0,
-		      [ max_errors(0)
+		      [ max_errors(0),
+			case_sensitive_attributes(true)
 		      ])),
 	xml_content(QQDict, DOM0, DOM).
 
