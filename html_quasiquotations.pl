@@ -31,6 +31,7 @@
 :- module(html_quasi_quotations, [ html/4 ]).
 :- use_module(library(sgml)).
 :- use_module(library(apply)).
+:- use_module(library(error)).
 :- use_module(library(lists)).
 :- use_module(library(quasi_quotations)).
 
@@ -71,6 +72,7 @@ This module is included and re-exported from library(http/html_write).
 :- quasi_quotation_syntax(html).
 
 html(Content, Vars, Dict, DOM) :-
+	must_be(list, Dict),
 	include(qq_var(Vars), Dict, QQDict),
 	with_quasi_quotation_input(
 	    Content, In,
