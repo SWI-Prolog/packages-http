@@ -743,7 +743,7 @@ html_quoted_attribute(Text) -->
 
 %%	html_post(+Id, :HTML)// is det.
 %
-%	Reposition HTML to  the  receiving   Id.  The  http_post//2 call
+%	Reposition HTML to  the  receiving   Id.  The  html_post//2 call
 %	processes HTML using html//1. Embedded   \-commands are executed
 %	by mailman/1 from  print_html/1   or  html_print_length/2. These
 %	commands are called in the calling   context of the html_post//2
