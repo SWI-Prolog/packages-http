@@ -563,18 +563,17 @@ html_include(Mime, Path) -->
 :- dynamic
 	user:message_hook/3.
 
-user:message_hook(make(done(Reload)), _Level, _Lines) :-
-	Reload \== [],
+user:message_hook(load_file(done(_Nesting, _File, _Action,
+				 _Module, _Time, _Clauses)),
+		  _Level, _Lines) :-
 	clean_same_about_cache,
 	clean_aggregate_cache,
 	fail.
-
 
 prolog:message(html_include(dont_know, Mime, Path)) -->
 	[ 'Don\'t know how to include resource ~q (mime-type ~q)'-
 	  [Path, Mime]
 	].
-
 
 
 		 /*******************************
