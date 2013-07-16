@@ -850,6 +850,13 @@ mail_id(Id-List) :-
 	;   print_message(error, html(no_receiver(Id)))
 	).
 
+
+%%	mail_handlers(+Boxes, -Handlers, -Posters) is det.
+%
+%	Collect all post(Module,HTML) into Posters  and the remainder in
+%	Handlers.  Handlers  consists  of  accept(Handler,  Tokens)  and
+%	ignore(_,_).
+
 mail_handlers([], [], []).
 mail_handlers([post(Module,HTML)|T0], H, [Module:HTML|T]) :- !,
 	mail_handlers(T0, H, T).
@@ -880,7 +887,7 @@ sorted_html(List) -->
 %	a user hook  html_write:html_head_expansion/2   to  process  the
 %	collected head material into a term suitable for html//1.
 %
-%	@tbd  This  has  been  added    to   facilate  html_head.pl,  an
+%	@tbd  This  has  been  added   to  facilitate  html_head.pl,  an
 %	experimental  library  for  dealing  with   css  and  javascript
 %	resources. It feels a bit like a hack, but for now I do not know
 %	a better solution.
