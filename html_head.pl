@@ -36,14 +36,12 @@
 :- use_module(library(http/mimetype)).
 :- use_module(library(http/http_path)).
 :- use_module(library(error)).
-:- use_module(library(settings)).
 :- use_module(library(lists)).
 :- use_module(library(occurs)).
 :- use_module(library(option)).
 :- use_module(library(ordsets)).
 :- use_module(library(assoc)).
 :- use_module(library(ugraphs)).
-:- use_module(library(broadcast)).
 :- use_module(library(apply)).
 :- use_module(library(debug)).
 
