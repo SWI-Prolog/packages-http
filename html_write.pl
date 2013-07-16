@@ -72,6 +72,7 @@
 :- use_module(library(pairs)).
 :- use_module(library(sgml)).		% Quote output
 :- use_module(library(uri)).
+:- use_module(library(debug)).
 :- use_module(html_quasiquotations).
 
 :- set_prolog_flag(generate_debug_info, false).
@@ -821,7 +822,11 @@ html_noreceive(Id) -->
 %%	mailman(+Tokens) is det.
 %
 %	Collect  posted  tokens  and  copy    them  into  the  receiving
-%	mailboxes.
+%	mailboxes. Mailboxes may produce output for  each other, but not
+%	cyclic. The current scheme to resolve   this is rather naive: It
+%	simply permutates the mailbox resolution order  until it found a
+%	working one. Before that, it puts   =head= and =script= boxes at
+%	the end.
 
 mailman(Tokens) :-
 	memberchk(mailbox(_, accept(_, Accepted)), Tokens),
@@ -829,8 +834,24 @@ mailman(Tokens) :-
 	mailboxes(Tokens, Boxes),
 	keysort(Boxes, Keyed),
 	group_pairs_by_key(Keyed, PerKey),
-	maplist(mail_id, PerKey).
+	move_last(PerKey, script, PerKey2),
+	move_last(PerKey, head, PerKey2),
+	(   permutation(PerKey2, PerKeyPerm),
+	    (	mail_ids(PerKeyPerm)
+	    ->	true
+	    ;	debug(html(mailman),
+		      'Failed mail delivery order; retrying', []),
+		fail
+	    )
+	->  true
+	;   print_message(error, html(cyclic_mailboxes))
+	).
 mailman(_).
+
+move_last(Box0, Id, Box) :-
+	selectchk(Id-List, Box0, Box1), !,
+	append(Box1, [Id-List], Box).
+move_last(_, _, _).
 
 mailboxes([], []).
 mailboxes([mailbox(Id, Value)|T0], [Id-Value|T]) :- !,
@@ -838,17 +859,37 @@ mailboxes([mailbox(Id, Value)|T0], [Id-Value|T]) :- !,
 mailboxes([_|T0], T) :-
 	mailboxes(T0, T).
 
-mail_id(Id-List) :-
+mail_ids([]).
+mail_ids([H|T0]) :-
+	mail_id(H, NewPosts),
+	add_new_posts(NewPosts, T0, T),
+	mail_ids(T).
+
+mail_id(Id-List, NewPosts) :-
 	mail_handlers(List, Boxes, Content),
 	(   Boxes = [accept(MH:Handler, In)]
 	->  extend_args(Handler, Content, Goal),
-	    phrase(MH:Goal, In)
+	    phrase(MH:Goal, In),
+	    mailboxes(In, NewBoxes),
+	    keysort(NewBoxes, Keyed),
+	    group_pairs_by_key(Keyed, NewPosts)
 	;   Boxes = [ignore(_, _)|_]
-	->  true
+	->  NewPosts = []
 	;   Boxes = [accept(_,_),accept(_,_)|_]
-	->  print_message(error, html(multiple_receivers(Id)))
-	;   print_message(error, html(no_receiver(Id)))
+	->  print_message(error, html(multiple_receivers(Id))),
+	    NewPosts = []
+	;   print_message(error, html(no_receiver(Id))),
+	    NewPosts = []
 	).
+
+add_new_posts([], T, T).
+add_new_posts([Id-Posts|NewT], T0, T) :-
+	(   select(Id-List0, T0, Id-List, T1)
+	->  append(List0, Posts, List)
+	;   debug(html(mailman), 'Stuck with new posts on ~q', [Id]),
+	    fail
+	),
+	add_new_posts(NewT, T1, T).
 
 
 %%	mail_handlers(+Boxes, -Handlers, -Posters) is det.
