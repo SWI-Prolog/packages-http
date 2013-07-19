@@ -834,8 +834,8 @@ mailman(Tokens) :-
 	mailboxes(Tokens, Boxes),
 	keysort(Boxes, Keyed),
 	group_pairs_by_key(Keyed, PerKey),
-	move_last(PerKey, script, PerKey2),
-	move_last(PerKey, head, PerKey2),
+	move_last(PerKey, script, PerKey1),
+	move_last(PerKey1, head, PerKey2),
 	(   permutation(PerKey2, PerKeyPerm),
 	    (	mail_ids(PerKeyPerm)
 	    ->	true
