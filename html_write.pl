@@ -838,7 +838,7 @@ mailman(Tokens) :-
 	move_last(PerKey1, head, PerKey2),
 	(   permutation(PerKey2, PerKeyPerm),
 	    (	mail_ids(PerKeyPerm)
-	    ->	true
+	    ->	!
 	    ;	debug(html(mailman),
 		      'Failed mail delivery order; retrying', []),
 		fail
