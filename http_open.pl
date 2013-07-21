@@ -54,7 +54,7 @@ two additional modules that acts as plugins:
 
     * library(http/http_header)
     Loading this library causes http_open/3 to support the =POST= method
-    in addition to =GET= and =HEAD=.
+    in addition to =GET=, =HEAD= and =DELETE=.
 
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 HTTPS connections.  Relevant
@@ -106,7 +106,7 @@ resource. See also parse_time/2.
 		     [ authorization(compound),
 		       final_url(-atom),
 		       header(+atom, -atom),
-		       method(oneof([get,head,post])),
+		       method(oneof([delete,get,head,post])),
 		       size(-integer),
 		       status_code(-integer),
 		       timeout(number),
@@ -155,7 +155,8 @@ user_agent('SWI-Prolog').
 %	  AtomValue is unified to the empty atom ('').
 %
 %	  * method(+Method)
-%	  One of =get= (default) or =head=.   The  =head= message can be
+%	  One of =get= (default), =head= or =delete=.
+%	  The  =head= message can be
 %	  used in combination with  the   header(Name,  Value) option to
 %	  access information on the resource   without actually fetching
 %	  the resource itself.  The  returned   stream  must  be  closed
@@ -348,6 +349,7 @@ method(Options, MNAME) :-
 	;   domain_error(method, M)
 	).
 
+map_method(delete, 'DELETE').
 map_method(get,  'GET').
 map_method(head, 'HEAD').
 map_method(post, 'POST') :-
@@ -472,6 +474,7 @@ redirect_options(Options0, Options) :-
 	;   Options = Options1
 	).
 
+redirect_method(delete).
 redirect_method(get).
 redirect_method(head).
 
