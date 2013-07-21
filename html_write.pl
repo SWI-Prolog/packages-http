@@ -851,7 +851,7 @@ mailman(_).
 move_last(Box0, Id, Box) :-
 	selectchk(Id-List, Box0, Box1), !,
 	append(Box1, [Id-List], Box).
-move_last(_, _, _).
+move_last(Box, _, Box).
 
 mailboxes([], []).
 mailboxes([mailbox(Id, Value)|T0], [Id-Value|T]) :- !,
