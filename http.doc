@@ -528,7 +528,7 @@ the value is returned as a list. Type checking options are processed on
 each value.
 
     \termitem{zero_or_more}{}
-Deprecated.  Use \term{List}{Type}.
+Deprecated.  Use \term{list}{Type}.
 \end{description}
 
 The type and conversion options are given below. The type-language can
