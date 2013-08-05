@@ -932,10 +932,18 @@ update_cookies(Lines, Parts, Options) :-
 %	open stream to the HTTP server, Parts is the broken-down request
 %	(see uri_components/2) and Options is the list of options passed
 %	to http_open.  The predicate is called as if using ignore/1.
+%
+%	@see complements http:update_cookies/3.
+%	@see library(http/http_cookies) implements cookie handling on
+%	top of these hooks.
 
-%%	update_cookies(+CookieData, +Parts, +Options) is semidet.
+%%	http:update_cookies(+CookieData, +Parts, +Options) is semidet.
 %
 %	Update the cookie database.  CookieData  is   the  value  of the
 %	=|Set-Cookie|= field, Parts is  the   broken-down  request  (see
 %	uri_components/2) and Options is the list   of options passed to
 %	http_open.
+%
+%	@see complements http:write_cookies
+%	@see library(http/http_cookies) implements cookie handling on
+%	top of these hooks.
