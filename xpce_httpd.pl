@@ -140,13 +140,14 @@ authorise(S) :->
 	(   Allowed == @nil
 	->  true
 	;   get(S, peer, Peer),
-	    get(Allowed, find,
-		message(@arg1, match, Peer),
-		_)
-	->  true
-	;   debug(connection, 'Refused connection from ~w', [Peer]),
-	    free(S),
-	    fail
+	    (	get(Allowed, find,
+		    message(@arg1, match, Peer),
+		    _)
+	    ->  true
+	    ;   debug(connection, 'Refused connection from ~w', [Peer]),
+		free(S),
+		fail
+	    )
 	).
 
 unlink(S) :->
