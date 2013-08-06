@@ -73,7 +73,7 @@ http_server(Goal, Port, _Options) :-
 	(   var(Port)
 	->  new(X, interactive_httpd(M:PlainGoal)),
 	    get(X, address, Port)
-	;   new(X, interactive_httpd(M:PlainGoal, Port))
+	;   new(_, interactive_httpd(M:PlainGoal, Port))
 	).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
