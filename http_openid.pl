@@ -905,10 +905,6 @@ associate_server(Request, Form, Options) :-
 	memberchk('openid.dh_modulus'	      =	P64,	     Form),
 	memberchk('openid.dh_gen'	      =	G64,	     Form),
 	memberchk('openid.dh_consumer_public' =	CPX64,       Form),
-	(   memberchk('openid.ns'	      =	NS,          Form)
-	->  true
-	;   NS = 'http://openid.net/signon/1.1'
-	),
 	base64_btwoc(P, P64),
 	base64_btwoc(G, G64),
 	base64_btwoc(CPX, CPX64),
