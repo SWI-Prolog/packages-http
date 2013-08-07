@@ -263,7 +263,7 @@ accept_server2(Goal, Options) :-
 	      ;   print_message(error, E),
 		  fail
 	      )
-	  ;   print_message(error, goal_failed(tcp_accept(Socket, Client, Peer)))
+	  ;   print_message(error, goal_failed(tcp_accept(Socket, _, _)))
 	  ).
 
 accept_rethrow_error(http_stop).
