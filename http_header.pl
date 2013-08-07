@@ -601,20 +601,17 @@ transfer(Header, Transfer) :-
 %	represented with the given encoding.
 
 content_length_in_encoding(Enc, Stream, Bytes) :-
-	open_null_stream(Out),
-	set_stream(Out, encoding(Enc)),
 	stream_property(Stream, position(Here)),
-	(   catch((copy_stream_data(Stream, Out),
-		   flush_output(Out)), _, fail)
-	->  byte_count(Out, Bytes0)
-	;   true
-	),
-	close(Out),
-	set_stream_position(Stream, Here),
-	(   var(Bytes0)
-	->  fail
-	;   Bytes = Bytes0
-	).
+	setup_call_cleanup(
+	    open_null_stream(Out),
+	    ( set_stream(Out, encoding(Enc)),
+	      catch(copy_stream_data(Stream, Out), _, fail),
+	      flush_output(Out),
+	      byte_count(Out, Bytes)
+	    ),
+	    ( close(Out, [force(true)]),
+	      set_stream_position(Stream, Here)
+	    )).
 
 
 		 /*******************************
