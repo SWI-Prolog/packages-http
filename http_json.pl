@@ -215,7 +215,7 @@ request_to_json(Request, JSON, Options) :-
 %	it.
 
 reply_json(Term) :-
-	format('Content-type: application/json; charset=UTF8~n~n'),
+	format('Content-type: application/json; charset=UTF-8~n~n'),
 	json_write(current_output, Term).
 
 reply_json(Term, Options) :-
