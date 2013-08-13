@@ -208,9 +208,14 @@ request_to_json(Request, JSON, Options) :-
 %	Formulate a JSON  HTTP  reply.   See  json_write/2  for details.
 %	Options accepts content_type(+Type)  and   options  accepted  by
 %	json_write/3.
+%
+%	The    default    =|Content-type|=     is    =|application/json;
+%	charset=UTF8|=. =|charset=UTF8|= should not  be required because
+%	JSON is defined to be UTF-8 encoded,  but some clients insist on
+%	it.
 
 reply_json(Term) :-
-	format('Content-type: application/json~n~n'),
+	format('Content-type: application/json; charset=UTF8~n~n'),
 	json_write(current_output, Term).
 
 reply_json(Term, Options) :-
