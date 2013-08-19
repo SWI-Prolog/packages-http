@@ -10,8 +10,7 @@
 	      ]).
 
 txttotex :-
-	current_prolog_flag(argv, Argv),
-	append(_, [--|Files], Argv), !,
+	current_prolog_flag(argv, Files),
 	maplist(txttotex, Files).
 
 txttotex(File) :-

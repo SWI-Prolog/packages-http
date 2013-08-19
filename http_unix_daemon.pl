@@ -151,20 +151,13 @@ http_daemon :-
 	      )).
 
 http_daemon_2 :-
-	program_argv(Argv),
+	current_prolog_flag(argv, Argv),
 	argv_options(Argv, _RestArgv, Options),
 	(   option(gtrace(true), Options)
 	->  gtrace
 	;   true
 	),
 	http_daemon(Options).
-
-program_argv(Argv) :-
-	current_prolog_flag(argv, Argv0),
-	(   append(_, [--|Argv], Argv0)
-	->  true
-	;   Argv0 = [_Program|Argv]
-	).
 
 %%	argv_options(+Argv, -RestArgv, -Options) is det.
 %
