@@ -640,11 +640,13 @@ wrap_spawned(CGI, Goal) :-
 %
 %	Lazy  creation  of  worker-pools  for   the  HTTP  server.  This
 %	predicate calls the hook http:create_pool/1.   If the hook fails
-%	it creates a default pool of size 10.   This should suffice most
-%	typical usecases.
+%	it creates a default pool of size   10. This should suffice most
+%	typical usecases. Note that we  get   a  permission error if the
+%	pool is already created.  We can ignore this.
 
 create_pool(Pool) :-
-	http:create_pool(Pool), !.
+	E = error(permission_error(create, thread_pool, Pool), _),
+	catch(http:create_pool(Pool), E, true).
 create_pool(Pool) :-
 	print_message(informational, httpd(created_pool(Pool))),
 	thread_pool_create(Pool, 10, []).
