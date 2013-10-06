@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2011, University of Amsterdam
+    Copyright (C): 2008-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -379,7 +379,7 @@ x_header(_, _).
 auth_header(basic(User, Password), Header, Out) :- !,
 	format(codes(Codes), '~w:~w', [User, Password]),
 	phrase(base64(Codes), Base64Codes),
-	format(Out, '~w: basic ~s\r\n', [Header, Base64Codes]).
+	format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
 auth_header(Auth, _, _) :-
 	domain_error(authorization, Auth).
 
