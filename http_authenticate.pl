@@ -242,8 +242,6 @@ field(Value) -->
 peek_eof, ":" --> ":".
 peek_eof --> eos.
 
-eos([], []).
-
 
 		 /*******************************
 		 *   PLUGIN FOR HTTP_DISPATCH   *
