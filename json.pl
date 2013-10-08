@@ -262,7 +262,7 @@ json_array(C0, Stream, [Value|Tail], Options) :-
 codes_to_type(atom, Codes, Atom) :-
 	atom_codes(Atom, Codes).
 codes_to_type(string, Codes, Atom) :-
-	string_to_list(Atom, Codes).
+	string_codes(Atom, Codes).
 codes_to_type(codes, Codes, Codes).
 
 json_string_as_atom(0'", Stream, Atom) :-
