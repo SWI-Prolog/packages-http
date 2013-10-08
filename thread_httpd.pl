@@ -460,7 +460,9 @@ check_keep_alife_connection(In, TMO, Peer, In, Out) :-
 
 %%	done_worker
 %
-%	Called when worker is terminated due to http_workers/2.
+%	Called when worker is terminated  due   to  http_workers/2  or a
+%	(debugging) exception. In  the   latter  case, recreate_worker/2
+%	creates a new worker.
 
 done_worker :-
 	thread_self(Self),
