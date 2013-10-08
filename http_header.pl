@@ -1911,8 +1911,6 @@ header(_) -->
 	  syntax_error(http_request_line(Line))
 	}.
 
-eos([], []).
-
 %%	address//
 %
 %	Emit the HTML for the server address on behalve of error and
