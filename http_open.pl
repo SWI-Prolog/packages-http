@@ -531,9 +531,8 @@ return_size(_, _).
 
 return_fields([], _).
 return_fields([header(Name, Value)|T], Lines) :- !,
-	atom_codes(Name, Codes),
 	(   member(Line, Lines),
-	    phrase(atom_field(Codes, Value), Line)
+	    phrase(atom_field(Name, Value), Line)
 	->  true
 	;   Value = ''
 	),
@@ -580,7 +579,7 @@ transfer_encoding(Lines, Encoding) :-
 	Encoding = Encoding0.
 
 transfer_encoding(Encoding) -->
-	field("transfer-encoding"),
+	field('transfer-encoding'),
 	rest(Encoding).
 
 %%	read_header(+In:stream, -Code:int, -Comment:atom, -Lines:list) is det.
@@ -605,7 +604,7 @@ read_header(In, Code, Comment, Lines) :-
 	).
 read_header(_, 500, 'Invalid reply header', []).
 
-rest_header("", _, []) :- !.		% blank line: end of header
+rest_header([], _, []) :- !.		% blank line: end of header
 rest_header(L0, In, [L0|L]) :-
 	read_line_to_codes(In, L1),
 	rest_header(L1, In, L).
@@ -621,7 +620,7 @@ content_length(Lines, Length) :-
 
 location(Lines, RequestURI) :-
 	member(Line, Lines),
-	phrase(atom_field("location", RequestURI), Line), !.
+	phrase(atom_field(location, RequestURI), Line), !.
 
 first_line(Code, Comment) -->
 	"HTTP/", [_], ".", [_],
@@ -635,17 +634,21 @@ atom_field(Name, Value) -->
 	rest(Value).
 
 content_length(Len) -->
-	field("content-length"),
+	field('content-length'),
 	integer(Len).
 
-field([]) -->
+field(Name) -->
+	{ atom_codes(Name, Codes) },
+	field_codes(Codes).
+
+field_codes([]) -->
 	":",
 	skip_blanks.
-field([H|T]) -->
+field_codes([H|T]) -->
 	[C],
 	{ match_header_char(H, C)
 	},
-	field(T).
+	field_codes(T).
 
 match_header_char(C, C) :- !.
 match_header_char(C, U) :-
@@ -899,7 +902,7 @@ update_cookies(_, _, _) :-
 	predicate_property(http:update_cookies(_,_,_), number_of_clauses(0)), !.
 update_cookies(Lines, Parts, Options) :-
 	(   member(Line, Lines),
-	    phrase(atom_field("set_cookie", CookieData), Line),
+	    phrase(atom_field('set_cookie', CookieData), Line),
 	    http:update_cookies(CookieData, Parts, Options),
 	    fail
 	;   true

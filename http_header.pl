@@ -1554,14 +1554,15 @@ rd_field_chars([]) -->
 %
 %	CharCodes is a list of separators according to RFC2616
 
-separators("()<>@,;:\\\"/[]?={} \t").	% \"
+separators("()<>@,;:\\\"/[]?={} \t").
 
 term_expansion(rd_field_char('expand me',_), Clauses) :-
 
 	Clauses = [ rd_field_char(0'-, 0'_)
 		  | Cls
 		  ],
-	separators(Seps),
+	separators(SepString),
+	string_codes(SepString, Seps),
 	findall(rd_field_char(In, Out),
 		(   between(32, 127, In),
 		    \+ memberchk(In, Seps),
