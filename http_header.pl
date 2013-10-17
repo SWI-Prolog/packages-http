@@ -1635,7 +1635,7 @@ request(Fd, [unknown(What)|Header]) -->
 	eos, !,
 	{   http_read_header(Fd, Header)
         ->  true
-	;   Header = ""
+	;   Header = []
 	}.
 
 method(get)     --> "GET", !.
@@ -1878,9 +1878,9 @@ read_header_data(Fd, Header) :-
 	read_header_data(Header, Fd, Tail),
 	debug(http(header), 'Header = ~n~s~n', [Header]).
 
-read_header_data("\r\n", _, _) :- !.
-read_header_data("\n", _, _) :- !.
-read_header_data("", _, _) :- !.
+read_header_data([0'\r,0'\n], _, _) :- !.
+read_header_data([0'\n], _, _) :- !.
+read_header_data([], _, _) :- !.
 read_header_data(_, Fd, Tail) :-
 	read_line_to_codes(Fd, Tail, NewTail),
 	read_header_data(Tail, Fd, NewTail).
