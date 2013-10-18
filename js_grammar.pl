@@ -34,6 +34,7 @@
 :- use_module(library(record)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(pure_input)).	% syntax_error//1
+:- set_prolog_flag(double_quotes, codes).
 
 /** <module> JavaScript grammar
 
