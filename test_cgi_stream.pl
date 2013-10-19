@@ -92,7 +92,7 @@ free_dest(TmpF, Out) :-
 http_read_mf(TmpF, Header, Data) :-
 	open(TmpF, read, In, [type(binary)]),
 	http_read_reply_header(In, Header),
-	http_read_data(Header, Data, to(atom)),
+	http_read_data(Header, Data, [to(atom)]),
 	close(In).
 
 
@@ -235,7 +235,7 @@ test(chunked,
      ]) :-
 	data(Name, Data, ContentType),
 	cgi_open(Out, CGI, cgi_hook,
- 		 [ request([http_version(1-1)])
+		 [ request([http_version(1-1)])
 		 ]),
 	format(CGI, 'Transfer-encoding: chunked\n', []),
 	format(CGI, 'Content-type: ~w\n\n', [ContentType]),
@@ -301,8 +301,8 @@ test(hook_failed,
         cleanup(free_dest(TmpF, Out)),
 	error(io_error(_,_))
       ]) :-
- 	cgi_open(Out, CGI, cgi_fail_hook, []),
- 	close(CGI).
+	cgi_open(Out, CGI, cgi_fail_hook, []),
+	close(CGI).
 
 test(hook_error,
      [ setup(open_dest(TmpF, Out)),
