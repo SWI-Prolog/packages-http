@@ -365,10 +365,10 @@ status_reply(forbidden(URL), Out, HrdExtra, Code) :- !,
 		      \address
 		    ]),
 	       HTML),
-	phrase(reply_header(status(forbidden, HTML), HrdExtra, Code), Header),
+	phrase(reply_header(status(forbidden, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(authorise(Method, Realm), Out, HrdExtra, Code) :- !,
+status_reply(authorise(Method, Realm), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('401 Authorization Required')
 		    ],
 		    [ h1('Authorization Required'),
@@ -383,14 +383,14 @@ status_reply(authorise(Method, Realm), Out, HrdExtra, Code) :- !,
 		    ]),
 	       HTML),
 	phrase(reply_header(authorise(Method, Realm, HTML),
-			    HrdExtra, Code), Header),
+			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_modified, Out, HrdExtra, Code) :- !,
-	phrase(reply_header(status(not_modified), HrdExtra, Code), Header),
+status_reply(not_modified, Out, HdrExtra, Code) :- !,
+	phrase(reply_header(status(not_modified), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(server_error(ErrorTerm), Out, HrdExtra, Code) :-
+status_reply(server_error(ErrorTerm), Out, HdrExtra, Code) :-
 	'$messages':translate_message(ErrorTerm, Lines, []),
 	phrase(page([ title('500 Internal server error')
 		    ],
@@ -400,7 +400,7 @@ status_reply(server_error(ErrorTerm), Out, HrdExtra, Code) :-
 		    ]),
 	       HTML),
 	phrase(reply_header(status(server_error, HTML),
-			    HrdExtra, Code), Header),
+			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
 status_reply(not_acceptable(WhyHTML), Out, HdrExtra, Code) :- !,
