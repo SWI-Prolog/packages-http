@@ -205,27 +205,27 @@ http_reply(Status, Out, HdrExtra, Code) :-
 %
 %	@error Various I/O errors.
 
-http_reply_data(html(HTML), Out, HrdExtra, Code) :- !,
-	phrase(reply_header(html(HTML), HrdExtra, Code), Header),
+http_reply_data(html(HTML), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(html(HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-http_reply_data(file(Type, File), Out, HrdExtra, Code) :- !,
-	phrase(reply_header(file(Type, File), HrdExtra, Code), Header),
+http_reply_data(file(Type, File), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(file(Type, File), HdrExtra, Code), Header),
 	reply_file(Out, File, Header).
-http_reply_data(file(Type, File, Range), Out, HrdExtra, Code) :- !,
-	phrase(reply_header(file(Type, File, Range), HrdExtra, Code), Header),
+http_reply_data(file(Type, File, Range), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(file(Type, File, Range), HdrExtra, Code), Header),
 	reply_file_range(Out, File, Header, Range).
-http_reply_data(tmp_file(Type, File), Out, HrdExtra, Code) :- !,
-	phrase(reply_header(tmp_file(Type, File), HrdExtra, Code), Header),
+http_reply_data(tmp_file(Type, File), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(tmp_file(Type, File), HdrExtra, Code), Header),
 	reply_file(Out, File, Header).
 http_reply_data(stream(In, Len), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(cgi_data(Len), HdrExtra, Code), Header),
 	copy_stream(Out, In, Header, 0, end).
-http_reply_data(cgi_stream(In, Len), Out, HrdExtra, Code) :- !,
+http_reply_data(cgi_stream(In, Len), Out, HdrExtra, Code) :- !,
 	http_read_header(In, CgiHeader),
 	seek(In, 0, current, Pos),
 	Size is Len - Pos,
-	http_join_headers(HrdExtra, CgiHeader, Hdr2),
+	http_join_headers(HdrExtra, CgiHeader, Hdr2),
 	phrase(reply_header(cgi_data(Size), Hdr2, Code), Header),
 	copy_stream(Out, In, Header, 0, end).
 
@@ -268,15 +268,15 @@ http_status_reply(Status, Out, HdrExtra, Code) :-
 	    set_stream(Out, encoding(octet))), !.
 
 
-status_reply(no_content, Out, HrdExtra, Code) :- !,
-	phrase(reply_header(status(no_content), HrdExtra, Code), Header),
+status_reply(no_content, Out, HdrExtra, Code) :- !,
+	phrase(reply_header(status(no_content), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(switching_protocols(_,_), Out, HrdExtra, Code) :- !,
-	phrase(reply_header(status(switching_protocols), HrdExtra, Code), Header),
+status_reply(switching_protocols(_,_), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(created(Location), Out, HrdExtra, Code) :- !,
+status_reply(created(Location), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('201 Created')
 		    ],
 		    [ h1('Created'),
@@ -286,10 +286,10 @@ status_reply(created(Location), Out, HrdExtra, Code) :- !,
 		      \address
 		    ]),
 	       HTML),
-	phrase(reply_header(created(Location, HTML), HrdExtra, Code), Header),
+	phrase(reply_header(created(Location, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(moved(To), Out, HrdExtra, Code) :- !,
+status_reply(moved(To), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('301 Moved Permanently')
 		    ],
 		    [ h1('Moved Permanently'),
@@ -299,10 +299,10 @@ status_reply(moved(To), Out, HrdExtra, Code) :- !,
 		      \address
 		    ]),
 	       HTML),
-	phrase(reply_header(moved(To, HTML), HrdExtra, Code), Header),
+	phrase(reply_header(moved(To, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(moved_temporary(To), Out, HrdExtra, Code) :- !,
+status_reply(moved_temporary(To), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('302 Moved Temporary')
 		    ],
 		    [ h1('Moved Temporary'),
@@ -313,7 +313,7 @@ status_reply(moved_temporary(To), Out, HrdExtra, Code) :- !,
 		    ]),
 	       HTML),
 	phrase(reply_header(moved_temporary(To, HTML),
-			    HrdExtra, Code), Header),
+			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
 status_reply(see_other(To),Out,HdrExtra, Code) :- !,
@@ -342,7 +342,7 @@ status_reply(bad_request(ErrorTerm), Out, HdrExtra, Code) :- !,
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_found(URL), Out, HrdExtra, Code) :- !,
+status_reply(not_found(URL), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('404 Not Found')
 		    ],
 		    [ h1('Not Found'),
@@ -352,10 +352,10 @@ status_reply(not_found(URL), Out, HrdExtra, Code) :- !,
 		      \address
 		    ]),
 	       HTML),
-	phrase(reply_header(status(not_found, HTML), HrdExtra, Code), Header),
+	phrase(reply_header(status(not_found, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(forbidden(URL), Out, HrdExtra, Code) :- !,
+status_reply(forbidden(URL), Out, HdrExtra, Code) :- !,
 	phrase(page([ title('403 Forbidden')
 		    ],
 		    [ h1('Forbidden'),
