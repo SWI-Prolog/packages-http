@@ -476,13 +476,43 @@ code to generate an HTTP 401 reply.
     ...,
     (   http_authenticate(basic(passwd), Request, User)
     ->  true
-    ;   throw(http_reply(authorise(basic, Realm)))
+    ;   throw(http_reply(authorise(basic(Realm))))
     ).
 \end{code}
 
 Alternatively \term{basic}{+PasswordFile} can be passed as an option to
 http_handler/3.
 \end{description}
+
+\subsection:{Custom Error Pages}
+It is possible to create arbitrary error pages for responses generated when a
+http_reply term is thrown. Currently this is only supported for status 403
+(authentication required). To do this, instead of throwing http_reply(authorise(Term))
+throw http_reply(authorise(Term), [], Key), where Key is an arbitrary term relating
+to the page you want to generate. You must then also define a clause of the multifile
+predicate http:status_page_hook:
+\begin{description}
+    \predicate{http}{+StatusCode, +Key, -CustomHTML}
+StatusCode is the page status code (such as 401), Key is the third argument of the
+http_reply exception which was thrown, and CustomHTML is a list of HTML tokens. The
+default page for 401 is generated via this code:
+\begin{code}
+        phrase(page([ title('401 Authorization Required')
+		    ],
+		    [ h1('Authorization Required'),
+		      p(['This server could not verify that you ',
+			 'are authorized to access the document ',
+			 'requested.  Either you supplied the wrong ',
+			 'credentials (e.g., bad password), or your ',
+			 'browser doesn\'t understand how to supply ',
+			 'the credentials required.'
+			]),
+		      \address
+		    ]),
+	       CustomHTML).
+\end{code}
+\end{description}
+
 
 \input{httpopenid.tex}
 

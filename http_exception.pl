@@ -28,7 +28,7 @@
 */
 
 :- module(http_exception,
-	  [ map_exception_to_http_status/3
+	  [ map_exception_to_http_status/4
 	  ]).
 
 /** <module> Internal module of the HTTP server
@@ -36,7 +36,7 @@
 @see	http_header.pl, http_wrapper.pl
 */
 
-%%	map_exception_to_http_status(+Exception, -Reply, -HdrExtra)
+%%	map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
 %
 %	Map certain defined  exceptions  to   special  reply  codes. The
 %	http(not_modified)   provides   backward     compatibility    to
@@ -44,17 +44,29 @@
 
 map_exception_to_http_status(http(not_modified),
 	      not_modified,
-	      [connection('Keep-Alive')]) :- !.
+	      [connection('Keep-Alive')],
+              []) :- !.
 map_exception_to_http_status(http_reply(Reply),
 	      Reply,
-	      [connection(Close)]) :- !,
+	      [connection(Close)],
+              []) :- !,
 	(   keep_alive(Reply)
 	->  Close = 'Keep-Alive'
 	;   Close = close
 	).
 map_exception_to_http_status(http_reply(Reply, HdrExtra0),
 	      Reply,
-	      HdrExtra) :- !,
+	      HdrExtra,
+              Context) :- !,
+        map_exception_to_http_status(http_reply(Reply, HdrExtra0, []),
+                                     Reply,
+                                     HdrExtra,
+                                     Context).
+
+map_exception_to_http_status(http_reply(Reply, HdrExtra0, Context),
+	      Reply,
+	      HdrExtra,
+              Context):- !,
 	(   memberchk(close(_), HdrExtra0)
 	->  HdrExtra = HdrExtra0
 	;   HdrExtra = [close(Close)|HdrExtra0],
@@ -65,24 +77,30 @@ map_exception_to_http_status(http_reply(Reply, HdrExtra0),
 	).
 map_exception_to_http_status(error(existence_error(http_location, Location), _),
 	      not_found(Location),
-	      [connection(close)]) :- !.
+	      [connection(close)],
+              []) :- !.
 map_exception_to_http_status(error(permission_error(_, http_location, Location), _),
 	      forbidden(Location),
-	      [connection(close)]) :- !.
+	      [connection(close)],
+              []) :- !.
 map_exception_to_http_status(error(threads_in_pool(_Pool), _),
 	      busy,
-	      [connection(close)]) :- !.
+	      [connection(close)],
+              []) :- !.
 map_exception_to_http_status(E,
 	      resource_error(E),
-	      [connection(close)]) :-
+	      [connection(close)],
+              []) :-
 	resource_error(E), !.
 map_exception_to_http_status(E,
 	      bad_request(E),
-	      [connection(close)]) :-
+	      [connection(close)],
+              []) :-
 	bad_request_error(E), !.
 map_exception_to_http_status(E,
 	      server_error(E),
-	      [connection(close)]).
+	      [connection(close)],
+              []).
 
 resource_error(error(resource_error(_), _)).
 

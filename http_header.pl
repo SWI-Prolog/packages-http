@@ -36,8 +36,10 @@
 	    http_reply/2,		% +What, +Stream
 	    http_reply/3,		% +What, +Stream, +HdrExtra
 	    http_reply/4,		% +What, +Stream, +HdrExtra, -Code
+            http_reply/5,		% +What, +Stream, +HdrExtra, +Context, -Code
 	    http_reply_header/3,	% +Stream, +What, +HdrExtra
 	    http_status_reply/4,	% +Status, +Out, +HdrExtra, -Code
+            http_status_reply/5,	% +Status, +Out, +HdrExtra, +Context, -Code
 
 	    http_timestamp/2,		% +Time, -HTTP string
 
@@ -138,6 +140,7 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 %%	http_reply(+Data, +Out:stream) is det.
 %%	http_reply(+Data, +Out:stream, +HdrExtra) is det.
 %%	http_reply(+Data, +Out:stream, +HdrExtra, -Code) is det.
+%%	http_reply(+Data, +Out:stream, +HdrExtra, +Context, -Code) is det.
 %
 %	Compose  a  complete  HTTP  reply  from   the  term  Data  using
 %	additional headers from  HdrExtra  to   the  output  stream Out.
@@ -180,7 +183,10 @@ http_reply(What, Out) :-
 http_reply(Data, Out, HdrExtra) :-
 	http_reply(Data, Out, HdrExtra, _Code).
 
-http_reply(Data, Out, HdrExtra, Code) :-
+http_reply(Status, Out, HdrExtra, Code) :-
+	http_status_reply(Status, Out, HdrExtra, [], Code).
+
+http_reply(Data, Out, HdrExtra, _Context, Code) :-
 	byte_count(Out, C0),
 	catch(http_reply_data(Data, Out, HdrExtra, Code), E, true), !,
 	(   var(E)
@@ -191,11 +197,12 @@ http_reply(Data, Out, HdrExtra, Code) :-
 	    throw(error(http_write_short(Data, Sent), _))
 	;   E = error(timeout_error(write, _), _)
 	->  throw(E)
-	;   map_exception_to_http_status(E, Status, NewHdr),
-	    http_status_reply(Status, Out, NewHdr, Code)
+	;   map_exception_to_http_status(E, Status, NewHdr, NewContext),
+	    http_status_reply(Status, Out, NewHdr, NewContext, Code)
 	).
-http_reply(Status, Out, HdrExtra, Code) :-
-	http_status_reply(Status, Out, HdrExtra, Code).
+http_reply(Status, Out, HdrExtra, Context, Code) :-
+	http_status_reply(Status, Out, HdrExtra, Context, Code).
+
 
 
 %%	http_reply_data(+Data, +Out, +HdrExtra, -Code) is semidet.
@@ -257,26 +264,30 @@ copy_stream(Out, In, Header, From, To) :-
 
 
 %%	http_status_reply(+Status, +Out, +HdrExtra, -Code) is det.
+%%	http_status_reply(+Status, +Out, +HdrExtra, +Context, -Code) is det.
 %
 %	Emit HTML non-200 status reports. Such  requests are always sent
 %	as UTF-8 documents.
 
 http_status_reply(Status, Out, HdrExtra, Code) :-
+        http_status_reply(Status, Out, HdrExtra, [], Code).
+
+http_status_reply(Status, Out, HdrExtra, Context, Code) :-
 	setup_call_cleanup(
 	    set_stream(Out, encoding(utf8)),
-	    status_reply(Status, Out, HdrExtra, Code),
+	    status_reply(Status, Out, HdrExtra, Context, Code),
 	    set_stream(Out, encoding(octet))), !.
 
 
-status_reply(no_content, Out, HdrExtra, Code) :- !,
+status_reply(no_content, Out, HdrExtra, _Context, Code) :- !,
 	phrase(reply_header(status(no_content), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(switching_protocols(_,_), Out, HdrExtra, Code) :- !,
+status_reply(switching_protocols(_,_), Out, HdrExtra, _Context, Code) :- !,
 	phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(created(Location), Out, HdrExtra, Code) :- !,
+status_reply(created(Location), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('201 Created')
 		    ],
 		    [ h1('Created'),
@@ -289,7 +300,7 @@ status_reply(created(Location), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(created(Location, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(moved(To), Out, HdrExtra, Code) :- !,
+status_reply(moved(To), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('301 Moved Permanently')
 		    ],
 		    [ h1('Moved Permanently'),
@@ -302,7 +313,7 @@ status_reply(moved(To), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(moved(To, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(moved_temporary(To), Out, HdrExtra, Code) :- !,
+status_reply(moved_temporary(To), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('302 Moved Temporary')
 		    ],
 		    [ h1('Moved Temporary'),
@@ -316,7 +327,7 @@ status_reply(moved_temporary(To), Out, HdrExtra, Code) :- !,
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(see_other(To),Out,HdrExtra, Code) :- !,
+status_reply(see_other(To),Out,HdrExtra, _Context, Code) :- !,
        phrase(page([ title('303 See Other')
                     ],
                     [ h1('See Other'),
@@ -329,7 +340,7 @@ status_reply(see_other(To),Out,HdrExtra, Code) :- !,
         phrase(reply_header(see_other(To, HTML), HdrExtra, Code), Header),
         format(Out, '~s', [Header]),
         print_html(Out, HTML).
-status_reply(bad_request(ErrorTerm), Out, HdrExtra, Code) :- !,
+status_reply(bad_request(ErrorTerm), Out, HdrExtra, _Context, Code) :- !,
 	'$messages':translate_message(ErrorTerm, Lines, []),
 	phrase(page([ title('400 Bad Request')
 		    ],
@@ -342,7 +353,7 @@ status_reply(bad_request(ErrorTerm), Out, HdrExtra, Code) :- !,
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_found(URL), Out, HdrExtra, Code) :- !,
+status_reply(not_found(URL), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('404 Not Found')
 		    ],
 		    [ h1('Not Found'),
@@ -355,7 +366,7 @@ status_reply(not_found(URL), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(status(not_found, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(forbidden(URL), Out, HdrExtra, Code) :- !,
+status_reply(forbidden(URL), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('403 Forbidden')
 		    ],
 		    [ h1('Forbidden'),
@@ -368,29 +379,21 @@ status_reply(forbidden(URL), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(status(forbidden, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(authorise(Method, Realm), Out, HdrExtra, Code) :- !,
-	phrase(page([ title('401 Authorization Required')
-		    ],
-		    [ h1('Authorization Required'),
-		      p(['This server could not verify that you ',
-			 'are authorized to access the document ',
-			 'requested.  Either you supplied the wrong ',
-			 'credentials (e.g., bad password), or your ',
-			 'browser doesn\'t understand how to supply ',
-			 'the credentials required.'
-			]),
-		      \address
-		    ]),
-	       HTML),
-	phrase(reply_header(authorise(Method, Realm, HTML),
+status_reply(authorise(basic, ''), Out, HdrExtra, Context, Code) :- !,
+        status_reply(authorise(basic), Out, HdrExtra, Context, Code).
+status_reply(authorise(basic, Realm), Out, HdrExtra, Context, Code) :- !,
+        status_reply(authorise(basic(Realm)), Out, HdrExtra, Context, Code).
+status_reply(authorise(Method), Out, HdrExtra, Context, Code) :- !,
+        status_page_hook(401, Context, HTML),
+	phrase(reply_header(authorise(Method, HTML),
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_modified, Out, HdrExtra, Code) :- !,
+status_reply(not_modified, Out, HdrExtra, _Context, Code) :- !,
 	phrase(reply_header(status(not_modified), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(server_error(ErrorTerm), Out, HdrExtra, Code) :-
+status_reply(server_error(ErrorTerm), Out, HdrExtra, _Context, Code) :-
 	'$messages':translate_message(ErrorTerm, Lines, []),
 	phrase(page([ title('500 Internal server error')
 		    ],
@@ -403,7 +406,7 @@ status_reply(server_error(ErrorTerm), Out, HdrExtra, Code) :-
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_acceptable(WhyHTML), Out, HdrExtra, Code) :- !,
+status_reply(not_acceptable(WhyHTML), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('406 Not Acceptable')
 		    ],
 		    [ h1('Not Acceptable'),
@@ -414,7 +417,7 @@ status_reply(not_acceptable(WhyHTML), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(status(not_acceptable, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(unavailable(WhyHTML), Out, HdrExtra, Code) :- !,
+status_reply(unavailable(WhyHTML), Out, HdrExtra, _Context, Code) :- !,
 	phrase(page([ title('503 Service Unavailable')
 		    ],
 		    [ h1('Service Unavailable'),
@@ -425,14 +428,34 @@ status_reply(unavailable(WhyHTML), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(status(service_unavailable, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(resource_error(ErrorTerm), Out, HdrExtra, Code) :- !,
+status_reply(resource_error(ErrorTerm), Out, HdrExtra, Context, Code) :- !,
 	'$messages':translate_message(ErrorTerm, Lines, []),
 	status_reply(unavailable(p(\html_message_lines(Lines))),
-		     Out, HdrExtra, Code).
-status_reply(busy, Out, HdrExtra, Code) :- !,
+		     Out, HdrExtra, Context, Code).
+status_reply(busy, Out, HdrExtra, Context, Code) :- !,
 	HTML = p(['The server is temporarily out of resources, ',
 		  'please try again later']),
-	http_status_reply(unavailable(HTML), Out, HdrExtra, Code).
+	http_status_reply(unavailable(HTML), Out, HdrExtra, Context, Code).
+
+:-multifile(http:status_page/3).
+
+status_page_hook(Status, Context, HTML):-
+        http:status_page(Status, Context, HTML), !.
+
+status_page_hook(401, _, HTML):-
+        phrase(page([ title('401 Authorization Required')
+		    ],
+		    [ h1('Authorization Required'),
+		      p(['This server could not verify that you ',
+			 'are authorized to access the document ',
+			 'requested.  Either you supplied the wrong ',
+			 'credentials (e.g., bad password), or your ',
+			 'browser doesn\'t understand how to supply ',
+			 'the credentials required.'
+			]),
+		      \address
+		    ]),
+	       HTML).
 
 
 html_message_lines([]) -->
@@ -874,6 +897,7 @@ http_reply_header(Out, What, HdrExtra) :-
 %	  * status(+Status)
 %	  * status(+Status, +HTMLTokens)
 %	  * authorise(+Method, +Realm, +Tokens)
+%	  * authorise(+Method, +Tokens)
 %
 %	@see http_status_reply/4 formulates the not-200-ok HTTP replies.
 
@@ -975,10 +999,10 @@ reply_header(status(Status, Tokens), HdrExtra, Code) -->
 	content_length(html(Tokens), CLen),
 	content_type(text/html, utf8),
 	"\r\n".
-reply_header(authorise(Method, Realm, Tokens), HdrExtra, Code) -->
+reply_header(authorise(Method, Tokens), HdrExtra, Code) -->
 	vstatus(authorise, Code),
 	date(now),
-	authenticate(Method, Realm),
+	authenticate(Method),
 	header_fields(HdrExtra, CLen),
 	content_length(html(Tokens), CLen),
 	content_type(text/html, utf8),
@@ -1069,12 +1093,23 @@ status_comment(service_unavailable) -->
 status_comment(not_acceptable) -->
 	"Not Acceptable".
 
-authenticate(Method, '') --> !,
-	"WWW-Authenticate: ",
-	atom(Method).
-authenticate(Method, Realm) -->
-	authenticate(Method, ''),
-	" Realm=\"", atom(Realm), "\"\r\n".
+authenticate(negotiate(Data)) -->
+	"WWW-Authenticate: Negotiate ",
+        {base64(Data, DataBase64)},
+        DataBase64, "\r\n".
+authenticate(negotiate) -->
+	"WWW-Authenticate: Negotiate\r\n".
+
+authenticate(basic) --> !,
+	"WWW-Authenticate: Basic\r\n".
+authenticate(basic(Realm)) -->
+        "WWW-Authenticate: Basic Realm=\"", atom(Realm), "\"\r\n".
+
+authenticate(digest) --> !,
+	"WWW-Authenticate: Digest\r\n".
+authenticate(digest(Realm)) -->
+        "WWW-Authenticate: Digest Realm=\"", atom(Realm), "\"\r\n".
+
 
 date(Time) -->
 	"Date: ",

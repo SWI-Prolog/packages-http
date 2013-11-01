@@ -189,11 +189,13 @@ cgi_finish(CGI, Close, Bytes) :-
 %		find CPU usage, etc.
 
 send_error(Out, State0, Error, Close) :-
-	map_exception_to_http_status(Error, Reply, HdrExtra),
-	catch(http_reply(Reply, Out,
+	map_exception_to_http_status(Error, Reply, HdrExtra, Context),
+	catch(http_reply(Reply,
+                         Out,
 			 [ content_length(CLen)
 			 | HdrExtra
 			 ],
+                         Context,
 			 Code),
 	      E, true),
 	(   var(E)
