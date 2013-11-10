@@ -9,7 +9,7 @@ DOC=http
 include ../Makefile.defs
 include common.mk
 CFLAGS+= -I.
-LIBDIR=$(PLBASE)/library/http
+PKGPLLIBDIR=$(PLBASE)/library/http
 EXDIR=$(PKGEXDIR)/http
 
 SOLIB=@SOLIB@
@@ -32,13 +32,13 @@ install:	$(LIBPL) $(SOLIBS)
 		for f in $(SOLIBS); do \
                   $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
                 done
-		mkdir -p $(DESTDIR)$(LIBDIR)
-		mkdir -p $(DESTDIR)$(LIBDIR)/web/icons
-		mkdir -p $(DESTDIR)$(LIBDIR)/web/css
-		$(INSTALL_DATA) $(LIBPL) $(DESTDIR)$(LIBDIR)
-		$(INSTALL_DATA) README $(DESTDIR)$(LIBDIR)/README$(TXTEXT)
-		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(LIBDIR)/web/icons
-		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(LIBDIR)/web/css
+		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)
+		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/icons
+		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/css
+		$(INSTALL_DATA) $(LIBPL) $(DESTDIR)$(PKGPLLIBDIR)
+		$(INSTALL_DATA) README $(DESTDIR)$(PKGPLLIBDIR)/README$(TXTEXT)
+		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(PKGPLLIBDIR)/web/icons
+		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(PKGPLLIBDIR)/web/css
 		$(MKPKGINDEX)
 		$(MKINDEX)
 
@@ -61,7 +61,7 @@ install-examples::
 		(cd examples && $(INSTALL_PROGRAM) $(EXAMPLEEXE) $(DESTDIR)$(EXDIR))
 
 uninstall::
-		(cd $(LIBDIR) && rm -f $(LIBPL))
+		(cd $(PKGPLLIBDIR) && rm -f $(LIBPL))
 		$(PL) -f none -g make -t halt
 
 check::
