@@ -186,23 +186,27 @@ http_disconnect(all) :-
 	).
 
 address(_Parts, Host:Port, Protocol, Options) :-
+	is_list(Options),
 	(   memberchk(proxy(Host, Port, Protocol), Options)
 	->  true
 	;   memberchk(proxy(Host, Port), Options),
 	    Protocol = http
-	).
+	), !.
+address(_Parts, Host:Port, Protocol, Options) :-
+	option(proxy(Host:Port), Options), !,
+	Protocol = http.
 address(Parts, Host:Port, Protocol, _Options) :-
-	memberchk(host(Host), Parts),
+	option(host(Host), Parts),
 	port(Parts, Port),
 	protocol(Parts, Protocol).
 
 port(Parts, Port) :-
-	memberchk(port(Port), Parts), !.
+	option(port(Port), Parts), !.
 port(Parts, 80) :-
-	memberchk(protocol(http), Parts).
+	option(protocol(http), Parts).
 
 protocol(Parts, Protocol) :-
-	memberchk(protocol(Protocol), Parts), !.
+	option(protocol(Protocol), Parts), !.
 protocol(_, http).
 
 		 /*******************************
