@@ -176,7 +176,7 @@ http_client:post_data_hook(json(Term, Options), Out, HdrExtra) :-
 %	@error	domain_error(mimetype, Found) if the mimetype is
 %		not known (see json_type/1).
 %	@error	domain_error(method, Method) if the request is not
-%		a POST request.
+%		a =POST= or =PUT= request.
 
 http_read_json(Request, JSON) :-
 	http_read_json(Request, JSON, []).
@@ -189,9 +189,9 @@ http_read_json(Request, JSON, Options) :-
 	request_to_json(Request, JSON, Options).
 
 request_to_json(Request, JSON, Options) :-
-	memberchk(method(Method), Request),
-	memberchk(content_type(Type), Request),
-	(   Method == post
+	option(method(Method), Request),
+	option(content_type(Type), Request),
+	(   data_method(Method)
 	->  true
 	;   domain_error(method, Method)
 	),
@@ -200,6 +200,9 @@ request_to_json(Request, JSON, Options) :-
 	;   domain_error(mimetype, Type)
 	),
 	http_read_data(Request, JSON, Options).
+
+data_method('POST').
+data_method('PUT').
 
 
 %%	reply_json(+JSONTerm) is det.
