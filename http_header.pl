@@ -62,6 +62,7 @@
 :- use_module(library(settings)).
 :- use_module(library(error)).
 :- use_module(library(pairs)).
+:- use_module(library(socket)).
 :- use_module(library(dcg/basics)).
 :- use_module(html_write).
 :- use_module(http_exception).
