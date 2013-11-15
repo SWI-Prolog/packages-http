@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2007, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -201,8 +200,8 @@ request_to_json(Request, JSON, Options) :-
 	),
 	http_read_data(Request, JSON, Options).
 
-data_method('POST').
-data_method('PUT').
+data_method(post).
+data_method(put).
 
 
 %%	reply_json(+JSONTerm) is det.
