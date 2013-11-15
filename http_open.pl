@@ -184,8 +184,11 @@ user_agent('SWI-Prolog').
 %	  Provided if library(http/http_header) is also loaded.  Data is
 %	  handed to http_post_data/3.
 %
-%	  * proxy(+Host, +Port)
+%	  * proxy(+Host:Port)
 %	  Use an HTTP proxy to connect to the outside world.
+%
+%	  * proxy(+Host, +Port)
+%	  Synonym for proxy(+Host:Port).  Deprecated.
 %
 %	  * proxy_authorization(+Authorization)
 %	  Send authorization to the proxy.  Otherwise   the  same as the
@@ -228,7 +231,7 @@ user_agent('SWI-Prolog').
 
 http_open(URL, Stream, QOptions) :-
 	meta_options(is_meta, QOptions, Options),
-	(   atom(URL)
+	(   atomic(URL)
 	->  parse_url_ex(URL, Parts)
 	;   Parts = URL
 	),
@@ -243,7 +246,10 @@ is_meta(pem_password_hook).		% SSL plugin callbacks
 is_meta(cert_verify_hook).
 
 http_open_parts(Parts, Stream, Options0) :-
-	memberchk(proxy(Host, ProxyPort), Options0), !,
+	(   is_list(Options0),
+	    memberchk(proxy(Host, ProxyPort), Options0)
+	;   option(proxy(Host:ProxyPort), Options0)
+	), !,
 	parts_uri(Parts, RequestURI),
 	Options = [visited(Parts)|Options0],
 	open_socket(Host:ProxyPort, In, Out, Options),
@@ -254,7 +260,7 @@ http_open_parts(Parts, Stream, Options0) :-
 	send_rec_header(Out, In, Stream, HostPort, RequestURI, Parts, Options),
 	return_final_url(Options).
 http_open_parts(Parts, Stream, Options0) :-
-	memberchk(host(Host), Parts),
+	option(host(Host), Parts),
 	parts_scheme(Parts, Scheme),
 	default_port(Scheme, DefPort),
 	url_part(port(Port), Parts, DefPort),
@@ -518,14 +524,14 @@ open_socket(Address, In, Out, Options) :-
 	      )),
 	debug(http(open), '\tok ~p --> ~p', [In, Out]),
 	set_stream(In, record_position(false)),
-	(   memberchk(timeout(Timeout), Options)
+	(   option(timeout(Timeout), Options)
 	->  set_stream(In, timeout(Timeout))
 	;   true
 	).
 
 
 return_size(Options, Lines) :-
-	memberchk(size(Size), Options), !,
+	option(size(Size), Options), !,
 	content_length(Lines, Size).
 return_size(_, _).
 
@@ -547,9 +553,9 @@ return_fields([_|T], Lines) :-
 %	URL after redirections.
 
 return_final_url(Options) :-
-	memberchk(final_url(URL), Options),
+	option(final_url(URL), Options),
 	var(URL), !,
-	memberchk(visited(Parts), Options),
+	option(visited(Parts), Options),
 	parts_uri(Parts, URL).
 return_final_url(_).
 
@@ -774,7 +780,7 @@ add_authorization(_, Options, Options).
 parse_url_ex(URL, [uri(URL)|Parts]) :-
 	uri_components(URL, Components),
 	phrase(components(Components), Parts),
-	(   memberchk(host(_), Parts)
+	(   option(host(_), Parts)
 	->  true
 	;   domain_error(url, URL)
 	).
@@ -849,7 +855,7 @@ parts_authority(Parts, Auth) :-
 				 uri_authority(User, Password, Host, Port)).
 
 parts_request_uri(Parts, RequestURI) :-
-	memberchk(request_uri(RequestURI), Parts), !.
+	option(request_uri(RequestURI), Parts), !.
 parts_request_uri(Parts, RequestURI) :-
 	url_part(path(Path), Parts, /),
 	ignore(parts_search(Parts, Search)),
@@ -858,14 +864,14 @@ parts_request_uri(Parts, RequestURI) :-
 	uri_components(RequestURI, Data).
 
 parts_search(Parts, Search) :-
-	memberchk(query_string(Search), Parts), !.
+	option(query_string(Search), Parts), !.
 parts_search(Parts, Search) :-
-	memberchk(search(Fields), Parts), !,
+	option(search(Fields), Parts), !,
 	uri_query_components(Search, Fields).
 
 
 parts_uri(Parts, URI) :-
-	memberchk(uri(URI), Parts), !.
+	option(uri(URI), Parts), !.
 parts_uri(Parts, URI) :-
 	parts_scheme(Parts, Scheme),
 	ignore(parts_authority(Parts, Auth)),
@@ -878,13 +884,13 @@ parts_uri(Parts, URI) :-
 url_part(Part, Parts) :-
 	Part =.. [Name,Value],
 	Gen =.. [Name,RawValue],
-	memberchk(Gen, Parts), !,
+	option(Gen, Parts), !,
 	Value = RawValue.
 
 url_part(Part, Parts, Default) :-
 	Part =.. [Name,Value],
 	Gen =.. [Name,RawValue],
-	(   memberchk(Gen, Parts)
+	(   option(Gen, Parts)
 	->  Value = RawValue
 	;   Value = Default
 	).
@@ -924,7 +930,7 @@ update_cookies(Lines, Parts, Options) :-
 %		http:open_options/2.
 %
 %	    http:open_options(Parts, Options) :-
-%		memberchk(host(Host), Parts),
+%		option(host(Host), Parts),
 %		Host \== localhost,
 %		Options = [proxy('proxy.local', 3128)].
 %	    ==
