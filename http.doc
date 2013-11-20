@@ -754,7 +754,7 @@ If the first line of the request is tagged with
 input upto the first blank line. This header consists of
 \arg{Name}:\arg{Value} fields.  Each such field appears as a term
 \term{\arg{Name}}{Value} in the \arg{Request}, where \arg{Name} is
-canonised for use with Prolog.  Canonisation implies that the
+canonicalised for use with Prolog.  Canonisation implies that the
 \arg{Name} is converted to lower case and all occurrences of the
 \chr{-} are replaced by \chr{_}. The value for the
 \const{Content-length} fields is translated into an integer.
