@@ -448,18 +448,19 @@ read from a Unix/Apache compatible password file. This information, as
 well as the validation process is cached to achieve optimal performance.
 
 \begin{description}
-    \predicate{http_authenticate}{+Type, +Request, -User}
-True if Request contains the   information to continue according
-to Type. Type identifies the required authentication technique:
+    \predicate{http_authenticate}{3}{+Type, +Request, -User}
+True if \arg{Request} contains the information to continue according
+to \arg{Type}. \arg{Type} identifies the required authentication
+technique:
 
     \begin{description}
 	\termitem{basic}{+PasswordFile}
 	Use HTTP \const{Basic} authentication and verify the password
-	from PasswordFile. PasswordFile is a file holding
+	from \arg{PasswordFile}. \arg{PasswordFile} is a file holding
 	usernames and passwords in a format compatible to
 	Unix and Apache. Each line is record with \verb$:$
 	separated fields. The first field is the username and
-	the second the password _hash_.  Password hashes are
+	the second the password \jargon{hash}.  Password hashes are
 	validated using crypt/2.
     \end{description}
 
@@ -484,18 +485,24 @@ Alternatively \term{basic}{+PasswordFile} can be passed as an option to
 http_handler/3.
 \end{description}
 
-\subsection:{Custom Error Pages}
-It is possible to create arbitrary error pages for responses generated when a
-http_reply term is thrown. Currently this is only supported for status 403
-(authentication required). To do this, instead of throwing http_reply(authorise(Term))
-throw http_reply(authorise(Term), [], Key), where Key is an arbitrary term relating
-to the page you want to generate. You must then also define a clause of the multifile
-predicate http:status_page_hook:
+\subsection{Custom Error Pages}
+\label{sec:http-custom-error-page}
+
+It is possible to create arbitrary error pages for responses generated
+when a http_reply term is thrown. Currently this is only supported for
+status 403 (\textit{authentication required}). To do this, instead of
+throwing \term{http_reply}{authorise(Term)} throw
+\term{http_reply}{authorise(Term), [], Key}, where \arg{Key} is an
+arbitrary term relating to the page you want to generate. You must then
+also define a clause of the multifile predicate http:status_page_hook/3:
+
 \begin{description}
-    \predicate{http}{+StatusCode, +Key, -CustomHTML}
-StatusCode is the page status code (such as 401), Key is the third argument of the
-http_reply exception which was thrown, and CustomHTML is a list of HTML tokens. The
-default page for 401 is generated via this code:
+    \predicate{http:status_page_hook}{3}{+StatusCode, +Key, -CustomHTML}
+StatusCode is the page status code (such as 401), Key is the third
+argument of the http_reply exception which was thrown, and CustomHTML is
+a list of HTML tokens. The default page for 401 is generated via this
+code:
+
 \begin{code}
         phrase(page([ title('401 Authorization Required')
 		    ],
