@@ -30,7 +30,9 @@
 
 :- module(html_head,
 	  [ html_resource/2,		% +Resource, +Attributes
-	    html_requires//1		% +Resource
+	    html_requires//1,		% +Resource
+
+	    html_current_resource/1	% ?Resource
 	  ]).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/mimetype)).
@@ -159,6 +161,17 @@ clean_cache(_About, Properties) :-
 	(   memberchk(aggregate(_), Properties)
 	->  clean_aggregate_cache
 	;   true
+	).
+
+
+%%	html_current_resource(?About) is nondet.
+%
+%	True when About is a currently known resource.
+
+html_current_resource(About) :-
+	(   ground(About)
+	->  html_resource(About, _, _), !
+	;   html_resource(About, _, _)
 	).
 
 
