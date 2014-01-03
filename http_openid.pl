@@ -48,6 +48,7 @@
 
 	    openid_login_form//2,	% +ReturnTo, +Options, //
 
+	    openid_current_url/2,	% +Request, -URL
 	    openid_current_host/3	% +Request, -Host, -Port
 	  ]).
 :- use_module(library(http/http_open)).
@@ -262,7 +263,7 @@ openid_user(_Request, OpenID, _Options) :-
 openid_user(Request, _OpenID, Options) :-
 	http_link_to_id(openid_login_page, [], DefLoginPage),
 	option(login_url(LoginPage), Options, DefLoginPage),
-	current_url(Request, Here),
+	openid_current_url(Request, Here),
 	redirect_browser(LoginPage,
 			 [ 'openid.return_to' = Here
 			 ]).
@@ -430,11 +431,11 @@ openid_verify(Options, Request) :-
 			  stay(Stay, [optional(true), default(no)])
 			]),
 	(   option(return_to(ReturnTo1), Options)	% Option
-	->  current_url(Request, CurrentLocation),
+	->  openid_current_url(Request, CurrentLocation),
 	    global_url(ReturnTo1, CurrentLocation, ReturnTo)
 	;   nonvar(ReturnTo0)
 	->  ReturnTo = ReturnTo0			% Form-data
-	;   current_url(Request, CurrentLocation),
+	;   openid_current_url(Request, CurrentLocation),
 	    ReturnTo = CurrentLocation			% Current location
 	),
 	public_url(Request, /, CurrentRoot),
@@ -544,11 +545,13 @@ scheme_port(http, 80).
 scheme_port(https, 443).
 
 
-%%	current_url(+Request, -URL) is det.
+%%	openid_current_url(+Request, -URL) is det.
 %
-%	True when URL is an absolute URL for the current request.
+%	True when URL is  an  absolute   URL  for  the  current request.
+%	Typically, the login page should redirect   to this URL to avoid
+%	loosing the session.
 
-current_url(Request, URL) :-
+openid_current_url(Request, URL) :-
 	openid_current_host(Request, Host, Port),
 	setting(http:public_scheme, Scheme),
 	option(request_uri(RequestURI), Request),
