@@ -431,6 +431,19 @@ the referenced resource has not been modified since it was requested
 last time.
 \end{description}
 
+In addition, the normal \verb$"200 OK"$ reply status may be overruled by
+writing a CGI \const{Status} header prior to the remainder of the
+message. This is particularly useful for defining REST APIs. The
+following handler replies with a \verb$"201 Created"$ header:
+
+\begin{code}
+handle_request(Request) :-
+	process_data(Request, Id),	% application predicate
+	format('Status: 201~n'),
+	format('Content-type: text/plain~n~n'),
+	format('Created object as ~q~n', [Id]).
+\end{code}
+
 
 \input{httpdispatch.tex}
 \input{httpdirindex.tex}
