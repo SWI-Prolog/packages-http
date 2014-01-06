@@ -905,21 +905,21 @@ http_reply_header(Out, What, HdrExtra) :-
 reply_header(string(String), HdrExtra, Code) -->
 	reply_header(string(text/plain, String), HdrExtra, Code).
 reply_header(string(Type, String), HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	header_fields(HdrExtra, CLen),
 	content_length(codes(String, utf8), CLen),
 	content_type(Type, utf8),
 	"\r\n".
 reply_header(html(Tokens), HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	header_fields(HdrExtra, CLen),
 	content_length(html(Tokens), CLen),
 	content_type(text/html),
 	"\r\n".
 reply_header(file(Type, File), HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	modified(file(File)),
 	header_fields(HdrExtra, CLen),
@@ -927,7 +927,7 @@ reply_header(file(Type, File), HdrExtra, Code) -->
 	content_type(Type),
 	"\r\n".
 reply_header(file(Type, File, Range), HdrExtra, Code) -->
-	vstatus(partial_content, Code),
+	vstatus(partial_content, Code, HdrExtra),
 	date(now),
 	modified(file(File)),
 	header_fields(HdrExtra, CLen),
@@ -935,20 +935,20 @@ reply_header(file(Type, File, Range), HdrExtra, Code) -->
 	content_type(Type),
 	"\r\n".
 reply_header(tmp_file(Type, File), HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	header_fields(HdrExtra, CLen),
 	content_length(file(File), CLen),
 	content_type(Type),
 	"\r\n".
 reply_header(cgi_data(Size), HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	header_fields(HdrExtra, CLen),
 	content_length(Size, CLen),
 	"\r\n".
 reply_header(chunked_data, HdrExtra, Code) -->
-	vstatus(ok, Code),
+	vstatus(ok, Code, HdrExtra),
 	date(now),
 	header_fields(HdrExtra, _),
 	(   {memberchk(transfer_encoding(_), HdrExtra)}
@@ -957,7 +957,7 @@ reply_header(chunked_data, HdrExtra, Code) -->
 	),
 	"\r\n".
 reply_header(moved(To, Tokens), HdrExtra, Code) -->
-	vstatus(moved, Code),
+	vstatus(moved, Code, HdrExtra),
 	date(now),
 	header_field('Location', To),
 	header_fields(HdrExtra, CLen),
@@ -965,7 +965,7 @@ reply_header(moved(To, Tokens), HdrExtra, Code) -->
 	content_type(text/html, utf8),
 	"\r\n".
 reply_header(created(Location, Tokens), HdrExtra, Code) -->
-	vstatus(created, Code),
+	vstatus(created, Code, HdrExtra),
 	date(now),
 	header_field('Location', Location),
 	header_fields(HdrExtra, CLen),
@@ -973,7 +973,7 @@ reply_header(created(Location, Tokens), HdrExtra, Code) -->
 	content_type(text/html, utf8),
 	"\r\n".
 reply_header(moved_temporary(To, Tokens), HdrExtra, Code) -->
-	vstatus(moved_temporary, Code),
+	vstatus(moved_temporary, Code, HdrExtra),
 	date(now),
 	header_field('Location', To),
 	header_fields(HdrExtra, CLen),
@@ -981,7 +981,7 @@ reply_header(moved_temporary(To, Tokens), HdrExtra, Code) -->
 	content_type(text/html, utf8),
 	"\r\n".
 reply_header(see_other(To,Tokens),HdrExtra, Code) -->
-	vstatus(see_other, Code),
+	vstatus(see_other, Code, HdrExtra),
 	date(now),
 	header_field('Location',To),
 	header_fields(HdrExtra, CLen),
@@ -1009,6 +1009,22 @@ reply_header(authorise(Method, Tokens), HdrExtra, Code) -->
 	content_type(text/html, utf8),
 	"\r\n".
 
+%%	vstatus(+Status, -Code)// is det.
+%%	vstatus(+Status, -Code, +HdrExtra)// is det.
+%
+%	Emit the HTTP header for Status
+
+vstatus(_Status, Code, HdrExtra) -->
+	{ memberchk(status(Code), HdrExtra), !,
+	  (   status_number(NewStatus, Code)
+	  ->  true
+	  ;   domain_error(http_code, Code)
+	  )
+	},
+	vstatus(NewStatus, Code).
+vstatus(Status, Code, _) -->
+	vstatus(Status, Code).
+
 vstatus(Status, Code) -->
 	"HTTP/1.1 ",
 	status_number(Status, Code),
@@ -1030,6 +1046,11 @@ status_number(Status, Code) -->
 status_number(Status, Code) -->
 	{ status_number(Status, Code) },
 	integer(Code).
+
+%%	status_number(?Status, ?Code) is nondet.
+%
+%	Fact that relates a symbolic  HTTP   status  name to its integer
+%	Code. Each code also needs a rule for status_comment//1.
 
 status_number(continue,		   100).
 status_number(switching_protocols, 101).
@@ -1536,14 +1557,15 @@ quoted_text([H|T]) -->
 %	the argument of the content_length(Len)   term.  This allows for
 %	both sending and retrieving the content-length.
 
-header_fields([], _) -->
-	[].
+header_fields([], _) --> [].
 header_fields([content_length(CLen)|T], CLen) --> !,
 	(   { var(CLen) }
 	->  ""
 	;   header_field(content_length, CLen)
 	),
-	header_fields(T, CLen).		% Continue or return first only?
+	header_fields(T, CLen).		  % Continue or return first only?
+header_fields([status(_)|T], CLen) --> !, % handled by vstatus//3.
+	header_fields(T, CLen).
 header_fields([H|T], CLen) -->
 	{ H =.. [Name, Value] },
 	header_field(Name, Value),
