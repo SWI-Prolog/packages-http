@@ -208,19 +208,28 @@ data_method(put).
 %%	reply_json(+JSONTerm, +Options) is det.
 %
 %	Formulate a JSON  HTTP  reply.   See  json_write/2  for details.
-%	Options accepts content_type(+Type)  and   options  accepted  by
-%	json_write/3.
+%	The processed options are listed below.  Remaining options are
+%	forwarded to json_write/3.
 %
-%	The    default    =|Content-type|=     is    =|application/json;
-%	charset=UTF8|=. =|charset=UTF8|= should not  be required because
-%	JSON is defined to be UTF-8 encoded,  but some clients insist on
-%	it.
+%	    * content_type(+Type)
+%	    The default =|Content-type|= is =|application/json;
+%	    charset=UTF8|=. =|charset=UTF8|= should not be required
+%	    because JSON is defined to be UTF-8 encoded, but some
+%	    clients insist on it.
+%
+%	    * status(+Code)
+%	    The default status is 200.  REST API functions may use
+%	    other values from the 2XX range, such as 201 (created).
 
 reply_json(Term) :-
 	format('Content-type: application/json; charset=UTF-8~n~n'),
 	json_write(current_output, Term).
 
 reply_json(Term, Options) :-
-	select_option(content_type(Type), Options, Rest, 'application/json'),
+	select_option(content_type(Type), Options, Rest0, 'application/json'),
+	(   select_option(status(Code), Rest0, Rest)
+	->  format('Status: ~d~n', [Code])
+	;   Rest = Rest0
+	),
 	format('Content-type: ~w~n~n', [Type]),
 	json_write(current_output, Term, Rest).
