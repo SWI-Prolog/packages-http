@@ -429,8 +429,22 @@ location_by_id_raw(ID, Location, Priority) :-
 %
 %	HREF is a link on the local server to a handler with given ID,
 %	passing the given Parameters.
+%
+%	@arg Parameters is one of
+%
+%		- path_postfix(File) to pass a single value as the last
+%		  segment of the HTTP location (path). This way of
+%		  passing a parameter is commonly used in REST APIs.
+%		- A list of search parameters for a =GET= request.
 
+http_link_to_id(HandleID, path_postfix(File), HREF) :- !,
+	http_location_by_id(HandleID, HandlerLocation),
+	uri_encoded(path, File, EncFile),
+	directory_file_path(HandlerLocation, EncFile, Location),
+	uri_data(path, Components, Location),
+	uri_components(HREF, Components).
 http_link_to_id(HandleID, Parameters, HREF) :-
+	must_be(list, Parameters),
 	http_location_by_id(HandleID, Location),
 	uri_data(path, Components, Location),
 	uri_query_components(String, Parameters),
