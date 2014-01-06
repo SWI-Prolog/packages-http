@@ -261,8 +261,6 @@ call_handler(Goal, Id, Request0) :-
 %%	thread_cputime(-CPU) is det.
 %
 %	CPU is the CPU time used by the calling thread.
-%
-%	@tbd	This does not work on MacOS X!
 
 :- if(current_prolog_flag(threads, true)).
 thread_cputime(CPU) :-
