@@ -57,6 +57,7 @@
 		     ]).
 :- predicate_options(reply_json/2, 2,
 		     [ content_type(any),
+		       status(integer),
 		       pass_to(json:json_write/3, 3)
 		     ]).
 
