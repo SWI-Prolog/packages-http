@@ -313,12 +313,13 @@ cgi_hook(close, _).
 %%	redirect(+Header, -Action, -RestHeader) is semidet.
 %
 %	Detect the CGI =Location=  and   optional  =Status=  headers for
-%	formulating a HTTP redirect.
+%	formulating a HTTP redirect.  Redirection is only established if
+%	no =Status= is provided, or =Status= is 3XX.
 
 redirect(Header, Action, RestHeader) :-
 	selectchk(location(To), Header, Header1),
 	(   selectchk(status(Status), Header1, RestHeader)
-	->  true
+	->  between(300, 399, Status)
 	;   RestHeader = Header1,
 	    Status = 302
 	),
