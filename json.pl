@@ -134,16 +134,21 @@ terms.
 %%	atom_json_term(-Text, +JSONTerm, +Options) is det.
 %
 %	Convert between textual  representation  and   a  JSON  term. In
-%	_write_ mode, the option as(Type) defines the output type, which
-%	is one of =atom=, =string= or =codes=.
+%	_write_ mode, the option
+%
+%	    * as(Type)
+%	    defines the output type, which is one of =atom=,
+%	    =string= or =codes=.
 
 atom_json_term(Atom, Term, Options) :-
 	ground(Atom), !,
 	atom_to_memory_file(Atom, MF),
-	open_memory_file(MF, read, In),
-	call_cleanup(json_read(In, Term, Options),
-		     (	 close(In),
-			 free_memory_file(MF))).
+	setup_call_cleanup(
+	    ( atom_to_memory_file(Atom, MF),
+	      open_memory_file(MF, read, In, [free_on_close(true)])
+	    ),
+	    json_read(In, Term, Options),
+	    close(In)).
 atom_json_term(Result, Term, Options) :-
 	select_option(as(Type), Options, Options1),
 	(   type_term(Type, Result, Out)
