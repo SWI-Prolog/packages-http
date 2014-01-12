@@ -403,9 +403,24 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	Write a JSON term to Stream.  The   JSON  object  is of the same
 %	format as produced by json_read/2, though we allow for some more
 %	flexibility with regard to pairs in  objects. All of Name=Value,
-%	Name-Value and Name(Value) produce the  same output. In addition
-%	to  the  options  recognised  by  json_read/3,  we  process  the
-%	following options are recognised:
+%	Name-Value and Name(Value) produce the  same output.
+%
+%	The version 7 _dict_ type is supported as well. If the dicts has
+%	a _tag_, a property "type":"tag" is   added  to the object. This
+%	behaviour can be changed using the =tag= option (see below). For
+%	example:
+%
+%	  ==
+%	  ?- json_write(current_output, point{x:1,y:2}).
+%	  {
+%	    "type":"point",
+%	    "x":1,
+%	    "y":2
+%	  }
+%	  ==
+%
+%	In addition to the options recognised by json_read/3, we process
+%	the following options are recognised:
 %
 %	    * width(+Width)
 %	    Width in which we try to format the result.  Too long lines
@@ -420,11 +435,17 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	    * tab(+TabDistance)
 %	    Distance between tab-stops.  If equal to Step, layout
 %	    is generated with one tab per level.
+%
+%	    * tag(+Name)
+%	    When emitting a dict that has a tag, add a property
+%	    Name:Tag.  This property is omitted if Name is the
+%	    empty atom ('').  See above for dict support.
 
 :- record json_write_state(indent:nonneg = 0,
 			   step:positive_integer = 2,
 			   tab:positive_integer = 8,
-			   width:nonneg = 72).
+			   width:nonneg = 72,
+			   tag:atom = type).
 
 json_write(Stream, Term) :-
 	json_write(Stream, Term, []).
@@ -437,22 +458,19 @@ json_write_term(Var, _, _, _) :-
 	var(Var), !,
 	instantiation_error(Var).
 json_write_term(json(Pairs), Stream, State, Options) :- !,
-	space_if_not_at_left_margin(Stream, State),
-	write(Stream, '{'),
-	(   json_write_state_width(State, Width),
-	    (   Width == 0
-	    ->  true
-	    ;   json_write_state_indent(State, Indent),
-		json_print_length(json(Pairs), Options, Width, Indent, _)
-	    )
-	->  set_width_of_json_write_state(0, State, State2),
-	    write_pairs_hor(Pairs, Stream, State2, Options),
-	    write(Stream, '}')
-	;   step_indent(State, State2),
-	    write_pairs_ver(Pairs, Stream, State2, Options),
-	    indent(Stream, State),
-	    write(Stream, '}')
-	).
+	json_write_object(Pairs, Stream, State, Options).
+:- if(current_predicate(is_dict/1)).
+json_write_term(Dict, Stream, State, Options) :-
+	is_dict(Dict), !,
+	dict_pairs(Dict, Tag, Pairs0),
+	(   nonvar(Tag),
+	    json_write_state_tag(State, Name),
+	    Name \== ''
+	->  Pairs = [Name-Tag|Pairs0]
+	;   Pairs = Pairs0
+	),
+	json_write_object(Pairs, Stream, State, Options).
+:- endif.
 json_write_term(List, Stream, State, Options) :-
 	is_list(List), !,
 	space_if_not_at_left_margin(Stream, State),
@@ -485,6 +503,25 @@ json_write_term(Null, Stream, _State, Options) :-
 	write(Stream, null).
 json_write_term(String, Stream, _State, _Options) :-
 	json_write_string(Stream, String).
+
+json_write_object(Pairs, Stream, State, Options) :-
+	space_if_not_at_left_margin(Stream, State),
+	write(Stream, '{'),
+	(   json_write_state_width(State, Width),
+	    (   Width == 0
+	    ->  true
+	    ;   json_write_state_indent(State, Indent),
+		json_print_length(json(Pairs), Options, Width, Indent, _)
+	    )
+	->  set_width_of_json_write_state(0, State, State2),
+	    write_pairs_hor(Pairs, Stream, State2, Options),
+	    write(Stream, '}')
+	;   step_indent(State, State2),
+	    write_pairs_ver(Pairs, Stream, State2, Options),
+	    indent(Stream, State),
+	    write(Stream, '}')
+	).
+
 
 write_pairs_hor([], _, _, _).
 write_pairs_hor([H|T], Stream, State, Options) :-
