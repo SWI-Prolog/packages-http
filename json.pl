@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -30,6 +28,8 @@
     the GNU General Public License.
 */
 
+:- if(current_predicate(is_dict/1)).
+
 :- module(json,
 	  [ json_read/2,		% +Stream, -JSONTerm
 	    json_read/3,		% +Stream, -JSONTerm, +Options
@@ -37,8 +37,29 @@
 	    json_write/2,		% +Stream, +Term
 	    json_write/3,		% +Stream, +Term, +Options
 	    is_json_term/1,		% @Term
-	    is_json_term/2		% @Term, +Options
+	    is_json_term/2,		% @Term, +Options
+					% Version 7 dict support
+	    json_read_dict/2,		% +Stream, -Dict
+	    json_read_dict/3,		% +Stream, -Dict, +Options
+	    json_write_dict/2,		% +Stream, +Dict
+	    json_write_dict/3,		% +Stream, +Dict, +Options
+	    atom_json_dict/3		% ?Atom, ?JSONDict, +Options
 	  ]).
+
+:- else.
+
+:- module(json,
+	  [ json_read/2,		% +Stream, -JSONTerm
+	    json_read/3,		% +Stream, -JSONTerm, +Options
+	    atom_json_term/3,		% ?Atom, ?JSONTerm, +Options
+	    json_write/2,		% +Stream, +Term
+	    json_write/3,		% +Stream, +Term, +Options
+	    is_json_term/1,		% @Term
+	    is_json_term/2
+	  ]).
+
+:- endif.
+
 :- use_module(library(record)).
 :- use_module(library(memfile)).
 :- use_module(library(error)).
@@ -61,6 +82,14 @@
 		       true(ground),
 		       false(ground)
 		     ]).
+:- predicate_options(json_read_dict/3, 3,
+		     [ tag(atom),
+		       pass_to(json_read/3, 3)
+		     ]).
+:- predicate_options(json_write_dict/3, 3,
+		     [ tag(atom),
+		       pass_to(json_write/3, 3)
+		     ]).
 :- predicate_options(is_json_term/2, 2,
 		     [ null(ground),
 		       true(ground),
@@ -74,45 +103,19 @@
 
 /** <module> Reading and writing JSON serialization
 
-This module supports reading and writing JSON objects. The canonical
-Prolog representation for a JSON value is defined as:
+This module supports reading and  writing   JSON  objects.  This library
+supports two Prolog representations (the   _new_  representation is only
+supported in SWI-Prolog version 7 and later):
 
-    * A JSON object is mapped to a term json(NameValueList), where
-    NameValueList is a list of Name=Value. Name is an atom created from
-    the JSON string.
+  - The *classical* representation is provided by json_read/3 and
+    json_write/3.  This represents a JSON object as json(NameValueList),
+    a JSON string as an atom and the JSON constants =null=, =true= and
+    =false= as @(null), @(true) and @false.
 
-    * A JSON array is mapped to a Prolog list of JSON values.
-
-    * A JSON string is mapped to a Prolog atom
-
-    * A JSON number is mapped to a Prolog number
-
-    * The JSON constants =true= and =false= are mapped -like JPL- to
-    @(true) and @(false).
-
-    * The JSON constant =null= is mapped to the Prolog term @(null)
-
-Here is a complete example in JSON and its corresponding Prolog term.
-
-==
-{ "name":"Demo term",
-  "created": {
-    "day":null,
-    "month":"December",
-    "year":2007
-  },
-  "confirmed":true,
-  "members":[1,2,3]
-}
-==
-
-==
-json([ name='Demo term',
-       created=json([day= @null, month='December', year=2007]),
-       confirmed= @true,
-       members=[1, 2, 3]
-     ])
-==
+  - The *new* representation is provided by json_read_dict/3 and
+    json_write_dict/3. This represents a JSON object as a dict, a JSON
+    string as a Prolog string and the JSON constants using the Prolog
+    atoms =null=, =true= and =false=.
 
 @author Jan Wielemaker
 @see	http_json.pl links JSON to the HTTP client and server modules.
@@ -123,11 +126,15 @@ terms.
 :- record json_options(null:ground = @(null),
 		       true:ground = @(true),
 		       false:ground = @(false),
-		       value_string_as:oneof([atom,string]) = atom).
+		       value_string_as:oneof([atom,string]) = atom,
+		       tag:atom = '').
+
+default_json_dict_options(
+    json_options(null, true, false, string, '')).
 
 
 		 /*******************************
-		 *	       MAP		*
+		 *	 MAP TO/FROM TEXT	*
 		 *******************************/
 
 %%	atom_json_term(+Atom, -JSONTerm, +Options) is det.
@@ -142,7 +149,6 @@ terms.
 
 atom_json_term(Atom, Term, Options) :-
 	ground(Atom), !,
-	atom_to_memory_file(Atom, MF),
 	setup_call_cleanup(
 	    ( atom_to_memory_file(Atom, MF),
 	      open_memory_file(MF, read, In, [free_on_close(true)])
@@ -170,8 +176,49 @@ type_term(codes,  Result, codes(Result)).
 %%	json_read(+Stream, -Term) is det.
 %%	json_read(+Stream, -Term, +Options) is det.
 %
-%	Read next JSON value from Stream into a Prolog term. Options
-%	are:
+%	Read next JSON value from Stream into a Prolog term. The
+%	canonical representation for Term is:
+%
+%	  * A JSON object is mapped to a term json(NameValueList), where
+%	    NameValueList is a list of Name=Value. Name is an atom
+%	    created from the JSON string.
+%
+%	  * A JSON array is mapped to a Prolog list of JSON values.
+%
+%	  * A JSON string is mapped to a Prolog atom
+%
+%	  * A JSON number is mapped to a Prolog number
+%
+%	  * The JSON constants =true= and =false= are mapped -like JPL-
+%	    to @(true) and @(false).
+%
+%	  * The JSON constant =null= is mapped to the Prolog term
+%	    @(null)
+%
+%	Here is a complete example in  JSON and its corresponding Prolog
+%	term.
+%
+%	  ==
+%	  { "name":"Demo term",
+%	    "created": {
+%	      "day":null,
+%	      "month":"December",
+%	      "year":2007
+%	    },
+%	    "confirmed":true,
+%	    "members":[1,2,3]
+%	  }
+%	  ==
+%
+%	  ==
+%	  json([ name='Demo term',
+%	         created=json([day= @null, month='December', year=2007]),
+%	         confirmed= @true,
+%	         members=[1, 2, 3]
+%	       ])
+%	  ==
+%
+%	The following options are processed:
 %
 %		* null(NullTerm)
 %		Term used to represent JSON =null=.  Default @(null)
@@ -188,6 +235,9 @@ type_term(codes,  Result, codes(Result)).
 %
 %	If json_read/3 encounters end-of-file before any real data it
 %	binds Term to the term @(end_of_file).
+%
+%	@see	json_read_dict/3 to read a JSON term using the version 7
+%		extended data types.
 
 json_read(Stream, Term) :-
 	default_json_options(Options),
@@ -435,17 +485,11 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	    * tab(+TabDistance)
 %	    Distance between tab-stops.  If equal to Step, layout
 %	    is generated with one tab per level.
-%
-%	    * tag(+Name)
-%	    When emitting a dict that has a tag, add a property
-%	    Name:Tag.  This property is omitted if Name is the
-%	    empty atom ('').  See above for dict support.
 
 :- record json_write_state(indent:nonneg = 0,
 			   step:positive_integer = 2,
 			   tab:positive_integer = 8,
-			   width:nonneg = 72,
-			   tag:atom = type).
+			   width:nonneg = 72).
 
 json_write(Stream, Term) :-
 	json_write(Stream, Term, []).
@@ -464,7 +508,7 @@ json_write_term(Dict, Stream, State, Options) :-
 	is_dict(Dict), !,
 	dict_pairs(Dict, Tag, Pairs0),
 	(   nonvar(Tag),
-	    json_write_state_tag(State, Name),
+	    json_options_tag(State, Name),
 	    Name \== ''
 	->  Pairs = [Name-Tag|Pairs0]
 	;   Pairs = Pairs0
@@ -715,6 +759,122 @@ is_json_pair(Options, Name=Value) :-
 	atom(Name),
 	is_json_term2(Options, Value).
 
+:- if(current_predicate(is_dict/1)).
+
+		 /*******************************
+		 *	   DICT SUPPORT		*
+		 *******************************/
+
+%%	json_read_dict(+Stream, -Dict) is det.
+%%	json_read_dict(+Stream, -Dict, +Options) is det.
+%
+%	Read  a  JSON  object,  returning  objects    as  a  dicts.  The
+%	representation depends on the options, where the default is:
+%
+%	  * String values are mapped to Prolog strings
+%	  * JSON =true=, =false= and =null= are represented using these
+%	    Prolog atoms.
+%	  * JSON objects are mapped to dicts.
+%	  * By default, a =type= field in an object assigns a tag for
+%	    the dict.
+%
+%	On  addition  to  the   options    processed   by   json_read/3,
+%	json_read_dict/3 processes this additional option:
+%
+%	  * tag(+Name)
+%	    When converting to/from a dict, map the indicated JSON
+%	    attribute to the dict _tag_. No mapping is performed if Name
+%	    is the empty atom ('', default). See json_read_dict/2 and
+%	    json_write_dict/2.
+
+json_read_dict(Stream, Dict) :-
+	json_read_dict(Stream, Dict, []).
+
+json_read_dict(Stream, Dict, Options) :-
+	make_json_dict_options(Options, OptionTerm, _RestOptions),
+	json_value(Stream, Term, _, OptionTerm),
+	term_to_dict(Term, Dict, OptionTerm).
+
+term_to_dict(json(Pairs), Dict, Options) :- !,
+	(   json_options_tag(Options, TagName),
+	    Tag \== '',
+	    select(TagName = Tag0, Pairs, NVPairs),
+	    to_atom(Tag0, Tag)
+	->  json_dict_pairs(NVPairs, DictPairs, Options)
+	;   json_dict_pairs(Pairs, DictPairs, Options)
+	),
+	dict_create(Dict, Tag, DictPairs).
+term_to_dict(Value0, Value, _Options) :-
+	atomic(Value0), Value0 \== [], !,
+	Value = Value0.
+term_to_dict(List0, List, Options) :-
+	assertion(is_list(List0)),
+	terms_to_dicts(List0, List, Options).
+
+json_dict_pairs([], [], _).
+json_dict_pairs([Name=Value0|T0], [Name=Value|T], Options) :-
+	term_to_dict(Value0, Value, Options),
+	json_dict_pairs(T0, T, Options).
+
+terms_to_dicts([], [], _).
+terms_to_dicts([Value0|T0], [Value|T], Options) :-
+	term_to_dict(Value0, Value, Options),
+	terms_to_dicts(T0, T, Options).
+
+to_atom(Tag, Atom) :-
+	string(Tag), !,
+	atom_string(Atom, Tag).
+to_atom(Atom, Atom) :-
+	atom(Atom).
+
+%%	json_write_dict(+Stream, +Dict) is det.
+%%	json_write_dict(+Stream, +Dict, +Options) is det.
+%
+%	Write a JSON term, represented using dicts.  This is the same as
+%	json_write/3, but assuming the default   representation  of JSON
+%	objects as dicts.
+
+json_write_dict(Stream, Dict) :-
+	json_write_dict(Stream, Dict, []).
+
+json_write_dict(Stream, Dict, Options) :-
+	make_json_write_state(Options, State, Options1),
+	make_json_dict_options(Options1, OptionTerm, _RestOptions),
+	json_write_term(Dict, Stream, State, OptionTerm).
+
+
+make_json_dict_options(Options, Record, RestOptions) :-
+	default_json_dict_options(Record0),
+	set_json_options_fields(Options, Record0, Record, RestOptions).
+
+%%	atom_json_dict(+Atom, -JSONDict, +Options) is det.
+%%	atom_json_dict(-Text, +JSONDict, +Options) is det.
+%
+%	Convert  between  textual  representation  and    a   JSON  term
+%	represented as a dict. In _write_ mode, the option
+%
+%	    * as(Type)
+%	    defines the output type, which is one of =atom=,
+%	    =string= or =codes=.
+
+atom_json_dict(Atom, Term, Options) :-
+	ground(Atom), !,
+	setup_call_cleanup(
+	    ( atom_to_memory_file(Atom, MF),
+	      open_memory_file(MF, read, In, [free_on_close(true)])
+	    ),
+	    json_read_dict(In, Term, Options),
+	    close(In)).
+atom_json_dict(Result, Term, Options) :-
+	select_option(as(Type), Options, Options1),
+	(   type_term(Type, Result, Out)
+	->  true
+	;   must_be(oneof([atom,string,codes]), Type)
+	),
+	with_output_to(Out,
+		       json_write_dict(current_output, Term, Options1)).
+
+:- endif.
 
 		 /*******************************
 		 *	     MESSAGES		*
