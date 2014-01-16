@@ -1329,7 +1329,11 @@ to_codes(In, Codes) :-
 field_to_prolog(content_length, ValueChars, ContentLength) :- !,
 	number_codes(ContentLength, ValueChars).
 field_to_prolog(status, ValueChars, Code) :- !,
-	number_codes(Code, ValueChars).
+	(   phrase(" ", L, _),
+	    append(Pre, L, ValueChars)
+	->  number_codes(Code, Pre)
+	;   number_codes(Code, ValueChars)
+	).
 field_to_prolog(cookie, ValueChars, Cookies) :- !,
 	debug(cookie, 'Cookie: ~s', [ValueChars]),
 	phrase(cookies(Cookies), ValueChars).
