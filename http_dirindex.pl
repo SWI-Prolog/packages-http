@@ -82,15 +82,17 @@ http_reply_dirindex(DirSpec, Options, Request) :-
 dir_index(Dir, Options) :-
 	directory_members(Dir, SubDirs, Files),
 	option(title(Title), Options, Dir),
-	reply_html_page(title(Title),
-			[ \html_requires(http_dirindex),
-			  h1(Title),
-			  table(class(dirindex),
-				[ \dirindex_title,
-				  \back
-				| \dirmembers(SubDirs, Files)
-				])
-			]).
+	reply_html_page(
+	    dir_index(Dir, Title),
+	    title(Title),
+	    [ \html_requires(http_dirindex),
+	      h1(Title),
+	      table(class(dirindex),
+		    [ \dirindex_title,
+		      \back
+		    | \dirmembers(SubDirs, Files)
+		    ])
+	    ]).
 
 directory_members(Dir, Dirs, Files) :-
 	atom_concat(Dir, '/*', Pattern),
