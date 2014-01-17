@@ -1,9 +1,9 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2009-2011, VU University Amsterdam
+    Copyright (C): 2009-2014, VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -28,7 +28,8 @@
 */
 
 :- module(http_dirindex,
-	  [ http_reply_dirindex/3	% +PhysicalDir, +Options, +Request
+	  [ http_reply_dirindex/3,	% +PhysicalDir, +Options, +Request
+	    directory_index//2		% +PhysicalDir, +Options
 	  ]).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_path)).
@@ -85,19 +86,60 @@ dir_index(Dir, Options) :-
 	reply_html_page(
 	    dir_index(Dir, Title),
 	    title(Title),
-	    [ \html_requires(http_dirindex),
-	      h1(Title),
-	      table(class(dirindex),
-		    [ \dirindex_title,
-		      \back
-		    | \dirmembers(SubDirs, Files)
-		    ])
+	    [ h1(Title),
+	      \dirindex_table(SubDirs, Files, Options)
 	    ]).
 
 directory_members(Dir, Dirs, Files) :-
 	atom_concat(Dir, '/*', Pattern),
 	expand_file_name(Pattern, Matches),
 	partition(exists_directory, Matches, Dirs, Files).
+
+%%	directory_index(+Dir, +Options)// is det.
+%
+%	Show index for a directory.  Options processed:
+%
+%	  * order_by(+Field)
+%	  Sort the files in the directory listing by Field.  Field
+%	  is one of =name= (default), =size= or =time=.
+%	  * order(+AscentDescent)
+%	  Sorting order.  Default is =ascending=.  The altenative is
+%	  =descending=
+
+directory_index(Dir, Options) -->
+	{ directory_members(Dir, SubDirs, Files) },
+	dirindex_table(SubDirs, Files, Options).
+
+dirindex_table(SubDirs, Files, Options) -->
+	{ option(order_by(By), Options, name),
+	  sort_files(By, Files, SortedFiles0),
+	  asc_desc(SortedFiles0, SortedFiles, Options)
+	},
+	html_requires(http_dirindex),
+	html(table(class(dirindex),
+		   [ \dirindex_title,
+		     \back
+		   | \dirmembers(SubDirs, SortedFiles)
+		   ])).
+
+sort_files(name, Files, Files) :- !.
+sort_files(Order, Files, Sorted) :-
+	map_list_to_pairs(key_file(Order), Files, Pairs),
+	keysort(Pairs, SortedPairs),
+	pairs_values(SortedPairs, Sorted).
+
+key_file(name, File, Base) :-
+	file_base_name(File, Base).
+key_file(size, File, Size) :-
+	size_file(File, Size).
+key_file(time, File, Time) :-
+	time_file(File, Time).
+
+asc_desc(Files, Ordered, Options) :-
+	(   option(order(ascending), Options, ascending)
+	->  Ordered = Files
+	;   reverse(Files, Ordered)
+	).
 
 dirindex_title -->
 	html(tr(class(dirindex_header),
