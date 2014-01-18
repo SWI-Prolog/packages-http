@@ -656,21 +656,27 @@ json_print_length(json(Pairs), Options, Max, Len0, Len) :- !,
 	Len1 is Len0 + 2,
 	Len1 =< Max,
 	pairs_print_length(Pairs, Options, Max, Len1, Len).
+json_print_length(Dict, Options, Max, Len0, Len) :-
+	is_dict(Dict), !,
+	dict_pairs(Dict, _Tag, Pairs),
+	Len1 is Len0 + 2,
+	Len1 =< Max,
+	pairs_print_length(Pairs, Options, Max, Len1, Len).
 json_print_length(Array, Options, Max, Len0, Len) :-
 	is_list(Array), !,
 	Len1 is Len0 + 2,
 	Len1 =< Max,
 	array_print_length(Array, Options, Max, Len1, Len).
 json_print_length(Null, Options, Max, Len0, Len) :-
-  json_options_null(Options, Null), !,
+	json_options_null(Options, Null), !,
 	Len is Len0 + 4,
 	Len =< Max.
 json_print_length(False, Options, Max, Len0, Len) :-
-  json_options_false(Options, False), !,
+	json_options_false(Options, False), !,
 	Len is Len0 + 5,
 	Len =< Max.
 json_print_length(True, Options, Max, Len0, Len) :-
-  json_options_true(Options, True), !,
+	json_options_true(Options, True), !,
 	Len is Len0 + 4,
 	Len =< Max.
 json_print_length(Number, _Options, Max, Len0, Len) :-
@@ -696,11 +702,15 @@ pairs_print_length([H|T], Options, Max, Len0, Len) :-
 	    pairs_print_length(T, Options, Max, Len2, Len)
 	).
 
-pair_len(Name=Value, Options, Max, Len0, Len) :-
+pair_len(Pair, Options, Max, Len0, Len) :-
+	pair_nv(Pair, Name, Value),
 	string_len(Name, Len0, Len1),
 	Len2 is Len1+2,
 	Len2 =< Max,
 	json_print_length(Value, Options, Max, Len2, Len).
+
+pair_nv(Name=Value, Name, Value).
+pair_nv(Name-Value, Name, Value).
 
 array_print_length([], _, _, Len, Len).
 array_print_length([H|T], Options, Max, Len0, Len) :-
