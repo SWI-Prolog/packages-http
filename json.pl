@@ -508,7 +508,7 @@ json_write_term(Dict, Stream, State, Options) :-
 	is_dict(Dict), !,
 	dict_pairs(Dict, Tag, Pairs0),
 	(   nonvar(Tag),
-	    json_options_tag(State, Name),
+	    json_options_tag(Options, Name),
 	    Name \== ''
 	->  Pairs = [Name-Tag|Pairs0]
 	;   Pairs = Pairs0
