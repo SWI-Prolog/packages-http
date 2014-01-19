@@ -1,9 +1,7 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
     Copyright (C): 1985-2005, University of Amsterdam
 
@@ -42,6 +40,12 @@
 :- meta_predicate
 	http_server(:, ?),
 	http_server(:, ?, +).
+
+/** <module> Process HTTP requests using XPCE sockets
+
+@deprecated This was useful when multi-threading was poorly supported.
+	    New code should use library(http/thread_httpd).
+*/
 
 %	@http_servers: keep track of them and avoid the servers being
 %	garbage collected.

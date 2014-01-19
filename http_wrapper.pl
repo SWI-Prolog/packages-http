@@ -44,12 +44,29 @@
 :- use_module(library(lists)).
 :- use_module(library(debug)).
 :- use_module(library(broadcast)).
-:- use_module(library(dcg/basics)).
 
 :- meta_predicate
 	http_wrapper(0, +, +, -, +).
 :- multifile
 	http:request_expansion/2.
+
+/** <module> Server processing of an HTTP request
+
+This library provides  the  core  of   the  implementation  of  the HTTP
+protocol at the server side and is   mainly intended for *internal use*.
+It   is   used   by    library(thread_httpd)   and   library(inet_httpd)
+(deprecated).
+
+Still, it provides a few  predicates   that  are  occasinally useful for
+applications:
+
+  - http_current_request/1 finds the current request for occasional
+    usage in places where it is not avaialable otherwise.
+  - http_peer/2 finds the (IP4) peer address, getting the original
+    address if we are behind a proxy (=X-Forwarded-For=)
+  - http_relative_path/2 can be used to find a relative path from
+    the current request.
+*/
 
 %%	http_wrapper(:Goal, +In, +Out, -Close, +Options) is det.
 %
