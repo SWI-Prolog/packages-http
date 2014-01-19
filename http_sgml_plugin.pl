@@ -30,10 +30,8 @@
 */
 
 :- module(http_sgml_plugin, []).
-:- use_module(http_client).
-:- use_module(library(memfile)).
+:- use_module(http_client, []).			% library we extend
 :- use_module(library(sgml)).
-:- use_module(library(lists)).
 :- use_module(library(debug)).
 
 :- multifile
@@ -42,12 +40,18 @@
 :- multifile
 	markup_type/2.			% +MimeType, -ParseOptions
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> Parse of HTML and XML documents for the HTTP client libs
+
 This module provides a plugin for the   HTTP  client to handle xml, html
 and sgml files using  the   SWI-Prolog  sgml-parser  from library(sgml).
 Using this library avoids unnecessary copying of data as the sgml-parser
 reads directly from the stream that established the HTTP connection.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+This is a plugin for http_get/3 and http_post/4
+
+@see	http_open/3 is now the preferred interface for client side
+	processing of HTTP.
+*/
 
 http_client:http_convert_data(In, Fields, Data, Options) :-
 	memberchk(content_type(Type), Fields),

@@ -1,9 +1,7 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
     Copyright (C): 1985-2002, University of Amsterdam
 
@@ -29,7 +27,7 @@
     the GNU General Public License.
 */
 
-:- module(http_test,
+:- module(http_inetd,
 	  [ http_server/2		% :Goal, +Options
 	  ]).
 :- use_module(http_wrapper).
@@ -37,6 +35,15 @@
 :- meta_predicate
 	http_server(:, +),
 	server_loop(:, +).
+
+/** <module> Run Prolog HTTP server from Unix inetd
+
+This module implements handling a single request (or multiple as long as
+=Keep-Alive= is respected), talking to stardard input and output.
+
+@deprecated	This type of handling of HTTP requests should be
+		considered outdated.  See library(http/thread_httpd).
+*/
 
 %%	http_server(:Goal, +Options)
 %
