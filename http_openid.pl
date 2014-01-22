@@ -547,23 +547,18 @@ scheme_port(https, 443).
 
 %%	openid_current_url(+Request, -URL) is det.
 %
-%	True when URL is  an  absolute   URL  for  the  current request.
-%	Typically, the login page should redirect   to this URL to avoid
-%	loosing the session.
+%	@deprecated	New code should use http_public_url/2 with the
+%			same semantics.
 
 openid_current_url(Request, URL) :-
-	openid_current_host(Request, Host, Port),
-	setting(http:public_scheme, Scheme),
-	option(request_uri(RequestURI), Request),
-	(   scheme_port(Scheme, Port)
-	->  format(atom(URL), '~w://~w~w', [Scheme, Host, RequestURI])
-	;   format(atom(URL), '~w://~w:~w~w', [Scheme, Host, Port, RequestURI])
-	).
-
+	http_public_url(Request, URL).
 
 %%	openid_current_host(Request, Host, Port)
 %
 %	Find current location of the server.
+%
+%	@deprecated	New code should use http_current_host/4 with the
+%			option global(true).
 
 openid_current_host(Request, Host, Port) :-
 	http_current_host(Request, Host, Port,
