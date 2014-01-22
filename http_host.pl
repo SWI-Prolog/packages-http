@@ -1,9 +1,9 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007-2010, University of Amsterdam,
+    Copyright (C): 2007-2014, University of Amsterdam,
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -29,7 +29,11 @@
 */
 
 :- module(http_host,
-	  [ http_current_host/4		% +Request, -Host, -Port, +Options
+	  [ http_public_url/2,		% +Request, -PublicURL
+	    http_public_host_url/2,	% +Request, -HostURL
+	    http_public_host/4,		% +Request, -Host, -Port, +Options
+					% deprecated
+	    http_current_host/4		% +Request, -Host, -Port, +Options
 	  ]).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_wrapper)).
@@ -44,7 +48,9 @@
 :- setting(http:public_scheme, oneof([http,https]), http,
 	   'Default URL scheme to use').
 
-:- predicate_options(http_current_host/4, 4, [global(boolean)]).
+:- predicate_options(http_public_host/4, 4, [global(boolean)]).
+:- predicate_options(http_current_host/4, 4,
+		     [pass_to(http_public_host/4, 4)]).
 
 /** <module> Obtain public server location
 
@@ -58,8 +64,39 @@ The address is  established  from   the  settings  http:public_host  and
 http:public_port if provided. Otherwise it is deduced from the request.
 */
 
+%%	http_public_url(+Request, -URL) is det.
+%
+%	True when URL is  an  absolute   URL  for  the  current request.
+%	Typically, the login page should redirect   to this URL to avoid
+%	loosing the session.
 
-%%	http_current_host(?Request, -Hostname, -Port, +Options) is det.
+http_public_url(Request, URL) :-
+	http_public_host_url(Request, HostURL),
+	option(request_uri(RequestURI), Request),
+	atomic_list_concat([HostURL, RequestURI], URL).
+
+
+%%	http_public_host_url(+Request, -URL) is det.
+%
+%	True when URL is the public  URL   at  which  this server can be
+%	contacted.   This   value   is   not   easy   to   obtain.   See
+%	http_public_host/4 for the hardest  part:   find  the  host and
+%	port.
+
+http_public_host_url(Request, URL) :-
+	http_public_host(Request, Host, Port,
+			  [ global(true)
+			  ]),
+	setting(http:public_scheme, Scheme),
+	(   scheme_port(Scheme, Port)
+	->  format(atom(URL), '~w://~w', [Scheme, Host])
+	;   format(atom(URL), '~w://~w:~w', [Scheme, Host, Port])
+	).
+
+scheme_port(http, 80).
+scheme_port(https, 443).
+
+%%	http_public_host(?Request, -Hostname, -Port, +Options) is det.
 %
 %	Current global host and port of the HTTP server.  This is the
 %	basis to form absolute address, which we need for redirection
@@ -84,11 +121,11 @@ http:public_port if provided. Otherwise it is deduced from the request.
 %		and the request is needed, it is obtained with
 %		http_current_request/1.
 
-http_current_host(_Request, Host, Port, _) :-
+http_public_host(_Request, Host, Port, _) :-
 	setting(http:public_host, PublicHost), PublicHost \== '', !,
 	Host = PublicHost,
 	setting(http:public_port, Port).
-http_current_host(Request, Host, Port, Options) :-
+http_public_host(Request, Host, Port, Options) :-
 	(   var(Request)
 	->  http_current_request(Request)
 	;   true
@@ -103,10 +140,16 @@ http_current_host(Request, Host, Port, Options) :-
 	    ),
 	    option(port(Port), Request, 80)
 	), !.
-http_current_host(_Request, Host, Port, _Options) :-
+http_public_host(_Request, Host, Port, _Options) :-
 	gethostname(Host),
 	http_current_server(_:_Pred, Port).
 
+%%	http_current_host(?Request, -Hostname, -Port, +Options) is det.
+%
+%	@deprecated	Use http_public_host/4 (same semantics)
+
+http_current_host(Request, Hostname, Port, Options) :-
+	http_public_host(Request, Hostname, Port, Options).
 
 %%	primary_forwarded_host(+Spec, -Host) is det.
 %
