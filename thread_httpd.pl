@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2007, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -472,9 +471,15 @@ done_worker :-
 	->  thread_detach(Self),
 	    print_message(informational,
 			  httpd_restarted_worker(Self))
-	;   print_message(informational,
+	;   done_status_message_level(Status, Level),
+	    print_message(Level,
 			  httpd_stopped_worker(Self, Status))
 	).
+
+done_status_message_level(true, silent) :- !.
+done_status_message_level(exception('$aborted'), silent) :- !.
+done_status_message_level(_, informational).
+
 
 %%	recreate_worker(+Status, +Queue) is semidet.
 %
