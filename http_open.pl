@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2013, University of Amsterdam
+    Copyright (C): 2008-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -160,8 +160,10 @@ user_agent('SWI-Prolog').
 %	  used in combination with  the   header(Name,  Value) option to
 %	  access information on the resource   without actually fetching
 %	  the resource itself.  The  returned   stream  must  be  closed
-%	  immediately.   If   library(http/http_header)     is   loaded,
-%	  http_open/3 also supports =post=. See the post(Data) option.
+%	  immediately.
+%
+%	  If  library(http/http_header)  is  loaded,   http_open/3  also
+%	  supports =post= and =put=. See the post(Data) option.
 %
 %	  * size(-Size)
 %	  Size is unified with the   integer value of =|Content-Length|=
@@ -359,6 +361,8 @@ map_method(delete, 'DELETE').
 map_method(get,  'GET').
 map_method(head, 'HEAD').
 map_method(post, 'POST') :-
+	current_predicate(http_header:http_post_data/3).
+map_method(put, 'PUT') :-
 	current_predicate(http_header:http_post_data/3).
 
 
