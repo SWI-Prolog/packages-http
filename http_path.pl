@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2012, University of Amsterdam
+    Copyright (C): 2008-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -71,27 +71,27 @@ files that belong to the server infrastructure (e.g., http_dirindex/2).
 
     * root
     The root of the server.  Default is /, but this may be overruled
-    the the setting (see setting/2) =|http:prefix|=
+    using the setting (see setting/2) =|http:prefix|=
 
 Here is an example that binds =|/login|=  to login/1. The user can reuse
 this application while moving all locations  using   a  new rule for the
 admin location with the option =|[priority(10)]|=.
 
-==
-:- multifile http:location/3.
-:- dynamic   http:location/3.
+  ==
+  :- multifile http:location/3.
+  :- dynamic   http:location/3.
 
-http:location(admin, /, []).
+  http:location(admin, /, []).
 
-:- http_handler(admin(login), login, []).
+  :- http_handler(admin(login), login, []).
 
-login(Request) :-
-	...
-==
-
-@tbd	Make this module replace the http:prefix option.
-@tbd	Remove hard-wired support for prefix().
+  login(Request) :-
+	  ...
+  ==
 */
+
+:- setting(http:prefix, atom, '',
+           'Prefix for all locations of this server').
 
 %%	http:location(+Alias, -Expansion, -Options) is nondet.
 %
@@ -117,7 +117,7 @@ login(Request) :-
 	http:location/3.		% Alias, Expansion, Options
 
 http:location(root, Root, [priority(-100)]) :-
-	(   catch(setting(http:prefix, Prefix), _, fail),
+	(   setting(http:prefix, Prefix),
 	    Prefix \== ''
 	->  Root = Prefix
 	;   Root = (/)
