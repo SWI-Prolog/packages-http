@@ -561,7 +561,9 @@ create_rule(PairArgs, Module, M, Term, Body, Quality) :-
 	match_fields(PairArgs, Fields, Body0, Module, 0, Quality),
 	clean_body(Body0, Body).
 
-match_fields(_, [], true, _, Q, Q) :- !.
+match_fields(Ignored, [], true, _, Q0, Q) :- !,
+	length(Ignored, Len),
+	Q is Q0-2*Len.
 match_fields([Name=JSON|TP], [f(Name, Type, _, Prolog)|TF], (Goal,Body),
 	     M, Q0, Q) :- !,
 	match_field(Type, JSON, Prolog, M, Goal),
