@@ -656,12 +656,14 @@ json_print_length(json(Pairs), Options, Max, Len0, Len) :- !,
 	Len1 is Len0 + 2,
 	Len1 =< Max,
 	pairs_print_length(Pairs, Options, Max, Len1, Len).
+:- if(current_predicate(is_dict/1)).
 json_print_length(Dict, Options, Max, Len0, Len) :-
 	is_dict(Dict), !,
 	dict_pairs(Dict, _Tag, Pairs),
 	Len1 is Len0 + 2,
 	Len1 =< Max,
 	pairs_print_length(Pairs, Options, Max, Len1, Len).
+:- endif.
 json_print_length(Array, Options, Max, Len0, Len) :-
 	is_list(Array), !,
 	Len1 is Len0 + 2,
