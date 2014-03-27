@@ -191,12 +191,16 @@ type_term(codes,  Result, codes(Result)).
 
 json_read(Stream, Term) :-
 	default_json_options(Options),
-	json_value(Stream, Term, _, Options).
-
+	(   json_value(Stream, Term, _, Options)
+	->  true
+	;   syntax_error(illegal_json, Stream)
+	).
 json_read(Stream, Term, Options) :-
 	make_json_options(Options, OptionTerm, _RestOptions),
-	json_value(Stream, Term, _, OptionTerm).
-
+	(   json_value(Stream, Term, _, OptionTerm)
+	->  true
+	;   syntax_error(illegal_json, Stream)
+	).
 
 json_value(Stream, Term, Next, Options) :-
 	get_code(Stream, C0),
@@ -262,6 +266,7 @@ json_array(C0, Stream, [Value|Tail], Options) :-
 	    json_array(C1, Stream, Tail, Options)
 	;   Next == 0']
 	->  Tail = []
+	;   syntax_error(illegal_array, Stream)
 	).
 
 codes_to_type(atom, Codes, Atom) :-
@@ -284,6 +289,8 @@ json_string_codes(0'\\, Stream, [H|T]) :- !,
 	),
 	get_code(Stream, C1),
 	json_string_codes(C1, Stream, T).
+json_string_codes(-1, Stream, _) :- !,
+	syntax_error(eof_in_string, Stream).
 json_string_codes(C, Stream, [C|T]) :-
 	get_code(Stream, C1),
 	json_string_codes(C1, Stream, T).
