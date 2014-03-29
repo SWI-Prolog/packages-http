@@ -603,6 +603,7 @@ transfer_encoding(Encoding) -->
 
 read_header(In, Code, Comment, Lines) :-
 	read_line_to_codes(In, Line),
+	Line \== end_of_file,
 	phrase(first_line(Code, Comment), Line),
 	debug(http(open), '~w ~w', [Code, Comment]),
 	read_line_to_codes(In, Line2),
