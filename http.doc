@@ -1243,9 +1243,9 @@ unifies \arg{RelPath} to \arg{AbsPath}.
 
 \input{httplog}
 
-\subsection{Debugging Servers}				\label{sec:http-debug}
+\subsection{Debugging HTTP servers}			\label{sec:http-debug}
 
-The library \pllib{http/http_error.pl} defines a hook that decorates
+The library \pllib{http/http_error} defines a hook that decorates
 uncaught exceptions with a stack-trace. This will generate a \emph{500
 internal server error} document with a stack-trace. To enable this
 feature, simply load this library.  Please do note that providing
