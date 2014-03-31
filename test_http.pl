@@ -9,6 +9,8 @@
 :- asserta(user:file_search_path(library, '../plunit')).
 :- asserta(user:file_search_path(library, '../clib')).
 
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_stream)).
@@ -20,7 +22,8 @@
 
 test_http :-
 	run_tests([ http_open,
-		    http_get
+		    http_get,
+		    http_server
 		  ]).
 
 run_network_tests :-
@@ -58,6 +61,34 @@ test(chunked, true(Data == Ref)) :-
      chunked_data(Ref).
 
 :- end_tests(http_get).
+
+
+:- begin_tests(http_server).
+
+test(connection, Close == close) :-
+	setup_call_cleanup(
+	    http_server(http_dispatch, [port(localhost:Port)]),
+	    ( format(atom(URL), 'http://localhost:~w/reply-source', [Port]),
+	      setup_call_cleanup(
+		  open_null_stream(Out),
+		  setup_call_cleanup(
+		      http_open(URL, Stream,
+				[ header(connection, Close)
+				]),
+		      copy_stream_data(Stream, Out),
+		      close(Stream)),
+		  close(Out))
+	    ),
+	    http_stop_server(localhost:Port, [])).
+
+:- http_handler('/reply-source', reply_source, []).
+
+reply_source(Request):-
+	module_property(test_http, file(File)),
+	http_reply_file(File, [unsafe(true)], Request).
+
+:- end_tests(http_server).
+
 
 		 /*******************************
 		 *	       UTIL		*
