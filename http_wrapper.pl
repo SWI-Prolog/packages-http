@@ -104,13 +104,13 @@ http_wrapper(Goal, In, Out, Close, Options) :-
 	    cgi_property(CGI, id(Id)),
 	    debug(http(request), '[~D] ~w ~w ...', [Id, Method, Location]),
 	    handler_with_output_to(Goal, Id, Request1, CGI, Error),
-	    cgi_close(CGI, State0, Error, Close)
+	    cgi_close(CGI, Request1, State0, Error, Close)
 	;   Id = 0,
 	    (	debugging(http(request))
 	    ->	print_message(warning, ReqError)
 	    ;	true
 	    ),
-	    send_error(Out, State0, ReqError, Close),
+	    send_error(Out, [], State0, ReqError, Close),
 	    extend_request(Options, [], _)
 	).
 
@@ -135,7 +135,7 @@ http_wrap_spawned(Goal, Request, Close) :-
 	    Request = []
 	;   cgi_property(CGI, request(Request)),
 	    status(Id, State0),
-	    catch(cgi_close(CGI, State0, Error, Close),
+	    catch(cgi_close(CGI, Request, State0, Error, Close),
 		  _,
 		  Close = close)
 	).
@@ -153,7 +153,7 @@ http_spawned(ThreadId) :-
 	assert(spawned(ThreadId)).
 
 
-%%	cgi_close(+CGI, +State0, +Error, -Close) is det.
+%%	cgi_close(+CGI, +Request, +State0, +Error, -Close) is det.
 %
 %	The wrapper has completed. Finish the  CGI output. We have three
 %	cases:
@@ -166,29 +166,29 @@ http_spawned(ThreadId) :-
 %
 %	@error socket I/O errors.
 
-cgi_close(_, _, _, Close) :-
+cgi_close(_, _, _, _, Close) :-
 	retract(spawned(ThreadId)), !,
 	Close = spawned(ThreadId).
-cgi_close(CGI, State0, ok, Close) :- !,
+cgi_close(CGI, _, State0, ok, Close) :- !,
 	catch(cgi_finish(CGI, Close, Bytes), E, true),
 	(   var(E)
 	->  http_done(200, ok, Bytes, State0)
 	;   http_done(500, E, 0, State0),	% TBD: amount written?
 	    throw(E)
 	).
-cgi_close(CGI, Id, http_reply(Status), Close) :-
+cgi_close(CGI, Request, Id, http_reply(Status), Close) :-
 	cgi_property(CGI, header_codes(Text)),
 	Text \== [], !,
 	http_parse_header(Text, ExtraHdr),
 	cgi_property(CGI, client(Out)),
 	cgi_discard(CGI),
 	close(CGI),
-	send_error(Out, Id, http_reply(Status, ExtraHdr), Close).
-cgi_close(CGI, Id, Error, Close) :-
+	send_error(Out, Request, Id, http_reply(Status, ExtraHdr), Close).
+cgi_close(CGI, Request, Id, Error, Close) :-
 	cgi_property(CGI, client(Out)),
 	cgi_discard(CGI),
 	close(CGI),
-	send_error(Out, Id, Error, Close).
+	send_error(Out, Request, Id, Error, Close).
 
 cgi_finish(CGI, Close, Bytes) :-
 	flush_output(CGI),			% update the content-length
@@ -196,7 +196,7 @@ cgi_finish(CGI, Close, Bytes) :-
 	cgi_property(CGI, content_length(Bytes)),
 	close(CGI).
 
-%%	send_error(+Out, +State0, +Error, -Close)
+%%	send_error(+Out, +Request, +State0, +Error, -Close)
 %
 %	Send status replies and  reply   files.  The =current_output= no
 %	longer points to the CGI stream, but   simply to the socket that
@@ -205,8 +205,9 @@ cgi_finish(CGI, Close, Bytes) :-
 %	@param	State0 is start-status as returned by status/1.  Used to
 %		find CPU usage, etc.
 
-send_error(Out, State0, Error, Close) :-
-	map_exception_to_http_status(Error, Reply, HdrExtra, Context),
+send_error(Out, Request, State0, Error, Close) :-
+	map_exception_to_http_status(Error, Reply, HdrExtra0, Context),
+	update_keep_alive(HdrExtra0, HdrExtra, Request),
 	catch(http_reply(Reply,
                          Out,
 			 [ content_length(CLen)
@@ -226,6 +227,25 @@ send_error(Out, State0, Error, Close) :-
 	->  true
 	;   Close = close
 	).
+
+update_keep_alive(Header0, Header, Request) :-
+	memberchk(connection(C), Header0),
+	(   C == close
+	->  Header = Header0
+	;   client_wants_close(Request)
+	->  selectchk(connection(C),     Header0,
+		      connection(close), Header)
+	;   Header = Header0
+	).
+update_keep_alive(Header, Header, _).
+
+client_wants_close(Request) :-
+	memberchk(connection(C), Request), !,
+	C == close.
+client_wants_close(Request) :-
+	\+ ( memberchk(http_version(Major-_Minor), Request),
+	     Major >= 1
+	   ).
 
 
 %%	http_done(+Code, +Status, +BytesSent, +State0) is det.
