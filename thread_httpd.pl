@@ -51,7 +51,7 @@
 
 
 :- predicate_options(http_server/2, 2,
-		     [ port(integer),
+		     [ port(any),
 		       tcp_socket(any),
 		       workers(positive_integer),
 		       timeout(number),
@@ -99,14 +99,44 @@ for details.
 %	Create a server at Port that calls Goal for each parsed request.
 %	Options provide a list of options. Defined options are
 %
-%	| port(?Port)	     | -	| Port to listen to		      |
-%	| tcp_socket(+Socket)| -	| If provided, use this socket	      |
-%	| workers(N)	     | 5	| Define the number of worker threads |
-%	| timeout(S)	     | 60	| Max inactivity for reading request  |
-%	| keep_alive_timeout | 2	| Drop Keep-Alive connection timeout  |
-%	| local(KBytes)	     | <CommandLine> |				      |
-%	| global(KBytes)     | <CommandLine> |				      |
-%	| trail(KBytes)      | <CommandLine> | Stack-sizes of worker threads  |
+%	  * port(?Address)
+%	  Port to bind to.  Address is either a port or a term
+%	  Host:Port. The port may be a variable, causing the system
+%	  to select a free port.  See tcp_bind/2.
+%
+%	  * tcp_socket(+Socket)
+%	  If provided, use this socket instead of the creating one and
+%	  binding it to an address.  The socket must be bound to an
+%	  address.
+%
+%	  * workers(+Count)
+%	  Determine the number of worker threads.  Default is 5.  This
+%	  is fine for small scale usage.  Public servers typically need
+%	  a higher number.
+%
+%	  * timeout(+Seconds)
+%	  Max time of inactivity trying to read the request after a
+%	  connection has been opened.  Default is 60 seconds.  See
+%	  set_stream/1 using the _timeout_ option.
+%
+%	  * keep_alive_timeout(+Seconds)
+%	  Time to keep `Keep alive' connections alive.  Default is
+%	  2 seconds.
+%
+%	  * local(+Kbytes)
+%	  * global(+Kbytes)
+%	  * trail(+Kbytes)
+%	  Stack sizes to use for the workers.  Default come from the
+%	  command line options.  Applications that wish to do resource
+%	  management are adviced to use library(http/http_dispatch) and
+%	  the =spawn= option of http_handler/3.
+%
+%	A typical initialization of the server is
+%
+%	  ==
+%	  start_server(Port) :-
+%	      http_server(http_dispatch, [port(8080)]).
+%	  ==
 
 http_server(Goal, Options) :-
 	strip_module(Goal, Module, G),
@@ -212,7 +242,7 @@ server_property(start_time(Time), Port) :-
 %	(one) can be used to profile the worker using tprofile/1.
 
 http_workers(Port, Workers) :-
-	must_be(integer, Port),
+	must_be(ground, Port),
 	current_server(Port, _, _, Queue, _), !,
 	(   integer(Workers)
 	->  resize_pool(Queue, Workers)
