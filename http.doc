@@ -908,9 +908,11 @@ accepting new connection on \arg{Port} and dispatching these to a pool
 of workers.  Defined \arg{Options} are:
 
 \begin{description}
-    \termitem{port}{?Port}
-Port the server should listen to.  If unbound \arg{Port} is unified with
-the selected free port.
+    \termitem{port}{?Address}
+Address to bind to. \arg{Address} is either a port (integer) or a term
+\arg{Host}:\arg{Port}. The port may be a variable, causing the system to
+select a free port and unify the variable with the selected port. See
+also tcp_bind/2.
 
     \termitem{workers}{+N}
 Defines the number of worker threads in the pool. Default is to use
