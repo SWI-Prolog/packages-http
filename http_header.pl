@@ -1117,8 +1117,10 @@ status_comment(not_acceptable) -->
 
 authenticate(negotiate(Data)) -->
 	"WWW-Authenticate: Negotiate ",
-        {base64(Data, DataBase64)},
-        DataBase64, "\r\n".
+        { base64(Data, DataBase64),
+	  atom_codes(DataBase64, Codes)
+	},
+	string(Codes), "\r\n".
 authenticate(negotiate) -->
 	"WWW-Authenticate: Negotiate\r\n".
 
