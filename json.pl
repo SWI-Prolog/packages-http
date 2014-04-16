@@ -142,7 +142,6 @@ terms.
 
 atom_json_term(Atom, Term, Options) :-
 	ground(Atom), !,
-	atom_to_memory_file(Atom, MF),
 	setup_call_cleanup(
 	    ( atom_to_memory_file(Atom, MF),
 	      open_memory_file(MF, read, In, [free_on_close(true)])
