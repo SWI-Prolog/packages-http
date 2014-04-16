@@ -85,12 +85,19 @@ events:
   Run _after_ starting the HTTP server.
 
 @tbd	Make it work with SSL
+@tbd	Cleanup issues wrt. loading and initialization of xpce.
 @see	The file <swi-home>/doc/packages/examples/http/debian-init-script
 	provides a /etc/init.d script for controlling a server as a normal
 	Unix service.
 */
 
 :- debug(daemon).
+
+% Do not run xpce in a thread. This disables forking. The problem here
+% is that loading library(pce) starts the event dispatching thread. This
+% should be handled lazily.
+
+:- set_prolog_flag(xpce_threaded, false).
 
 %%	http_daemon
 %
@@ -278,6 +285,19 @@ bind_socket(Socket, Address) :-
 disable_development_system :-
 	set_prolog_flag(editor, '/bin/false').
 
+%%	enable_development_system
+%
+%	Enable some development stuff.  Currently reenables xpce if this
+%	was loaded, but not initialised.
+
+enable_development_system :-
+	set_prolog_flag(xpce_threaded, true),
+	(   current_prolog_flag(xpce_version, _)
+	->  call(pce_dispatch([]))
+	;   true
+	).
+
+
 %%	setup_syslog(+Options) is det.
 %
 %	Setup syslog interaction.
@@ -370,7 +390,8 @@ quit(Signal) :-
 %	from quit/0.
 
 wait(Options) :-
-	option(interactive(true), Options, false), !.
+	option(interactive(true), Options, false), !,
+	enable_development_system.
 wait(_) :-
 	repeat,
 	thread_get_message(Msg),
