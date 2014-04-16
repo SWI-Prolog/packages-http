@@ -363,13 +363,18 @@ switch_user(_).
 %	Initialse debug/3 topics. The  =|--debug|=   option  may be used
 %	multiple times.
 
-setup_debug([]).
-setup_debug([debug(Topic)|T]) :- !,
+setup_debug(Options) :-
+	nodebug(_),
+	debug(daemon),
+	enable_debug(Options).
+
+enable_debug([]).
+enable_debug([debug(Topic)|T]) :- !,
 	atom_to_term(Topic, Term, _),
 	debug(Term),
-	setup_debug(T).
-setup_debug([_|T]) :-
-	setup_debug(T).
+	enable_debug(T).
+enable_debug([_|T]) :-
+	enable_debug(T).
 
 %%	setup_signals
 %
