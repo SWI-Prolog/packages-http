@@ -430,6 +430,6 @@ prolog:message(http_daemon(help)) -->
 	  '  --fork=bool        Do/do not fork'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
-	  '  --workers=count    Numer of HTTP worker threads'-[], nl, nl,
+	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
 	  'Boolean options may be writte without value (true) or as --no-name (false)'-[]
 	].
