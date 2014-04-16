@@ -98,6 +98,7 @@ events:
 % should be handled lazily.
 
 :- set_prolog_flag(xpce_threaded, false).
+:- set_prolog_flag(message_ide,   false). % cause xpce to trap messages
 
 %%	http_daemon
 %
@@ -292,6 +293,7 @@ disable_development_system :-
 
 enable_development_system :-
 	set_prolog_flag(xpce_threaded, true),
+	set_prolog_flag(message_ide, true),
 	(   current_prolog_flag(xpce_version, _)
 	->  call(pce_dispatch([]))
 	;   true
