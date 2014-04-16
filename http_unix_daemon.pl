@@ -135,6 +135,10 @@ events:
 %	  If given as =|--no-fork|= or =|--fork=false|=, the process
 %	  runs in the foreground.
 %
+%	  $ --interactive[=Bool] :
+%	  If =true= (default =false=) implies =|--no-fork|= and presents
+%	  the Prolog toplevel after starting the server.
+%
 %	  $ --gtrace=[Bool] :
 %	  Use the debugger to trace http_daemon/1.
 %
@@ -198,13 +202,18 @@ argv_options([H|T0], [H|R], T) :-
 %	options that are processed.
 
 http_daemon(Options) :-
+	option(help(true), Options), !,
+	print_message(information, http_daemon(help)),
+	halt.
+http_daemon(Options) :-
 	setup_debug(Options),
 	option(port(Port), Options, 80),
 	merge_options([port(Port)], Options, Options1),
 	make_socket(Options1, Socket),
 	debug(daemon(socket),
 	      'Created socket ~q, listening to port ~q', [Socket, Port]),
-	(   option(fork(true), Options1, true)
+	(   option(fork(true), Options1, true),
+	    option(interactive(false), Options, false)
 	->  fork(Who),
 	    (   Who \== child
 	    ->  halt
@@ -215,11 +224,12 @@ http_daemon(Options) :-
 	        switch_user(Options1),
 		setup_signals,
 		start_server([tcp_socket(Socket)|Options1]),
-		wait
+		wait(Options1)
 	    )
 	;   write_pid(Options1),
 	    switch_user(Options1),
-	    start_server([tcp_socket(Socket)|Options1])
+	    start_server([tcp_socket(Socket)|Options1]),
+	    wait(Options1)
 	).
 
 %%	start_server(+Options) is det.
@@ -254,6 +264,9 @@ make_socket(Options, Socket) :-
 	;   Address = Port
 	),
 	tcp_socket(Socket),
+	bind_socket(Socket, Address).
+
+bind_socket(Socket, Address) :-
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Address),
 	tcp_listen(Socket, 5).
@@ -351,12 +364,14 @@ quit(Signal) :-
 	debug(daemon, 'Dying on signal ~w', [Signal]),
 	thread_send_message(main, quit).
 
-%%	wait
+%%	wait(+Options)
 %
 %	This predicate runs in the main   thread,  waiting for a message
 %	from quit/0.
 
-wait :-
+wait(Options) :-
+	option(interactive(true), Options, false), !.
+wait(_) :-
 	repeat,
 	thread_get_message(Msg),
 	Msg == quit,
@@ -371,3 +386,29 @@ wait :-
 %	Hook that is called to start the  HTTP server. This hook must be
 %	compatible to http_server(Handler,  Options).   The  default  is
 %	provided by start_server/1.
+
+
+		 /*******************************
+		 *	     MESSAGES		*
+		 *******************************/
+
+:- multifile
+	prolog:message//1.
+
+prolog:message(http_daemon(help)) -->
+	[ 'Usage: <program> option ...'-[], nl,
+	  'Options:'-[], nl, nl,
+	  '  --port=port        HTTP port to listen to'-[], nl,
+	  '  --ip=IP            Only listen to this ip (--ip=localhost)'-[], nl,
+	  '  --debug=topic      Print debug message for topic'-[], nl,
+	  '  --syslog=ident     Send output to syslog daemon as ident'-[], nl,
+	  '  --user=user        Run server under this user'-[], nl,
+	  '  --group=group      Run server under this group'-[], nl,
+	  '  --pidfile=path     Write PID to path'-[], nl,
+	  '  --output=file      Send output to file (instead of syslog)'-[], nl,
+	  '  --fork=bool        Do/do not fork'-[], nl,
+	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
+	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
+	  '  --workers=count    Numer of HTTP worker threads'-[], nl, nl,
+	  'Boolean options may be writte without value (true) or as --no-name (false)'-[]
+	].
