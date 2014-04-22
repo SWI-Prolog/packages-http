@@ -885,7 +885,7 @@ atom_json_dict(Atom, Term, Options) :-
 	    json_read_dict(In, Term, Options),
 	    close(In)).
 atom_json_dict(Result, Term, Options) :-
-	select_option(as(Type), Options, Options1),
+	select_option(as(Type), Options, Options1, atom),
 	(   type_term(Type, Result, Out)
 	->  true
 	;   must_be(oneof([atom,string,codes]), Type)
