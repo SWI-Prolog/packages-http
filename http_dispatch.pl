@@ -149,7 +149,9 @@ write_index(Request) :-
 %
 %		* time_limit(+Spec)
 %		One of =infinite=, =default= or a positive number
-%		(seconds)
+%		(seconds).  If =default=, the value from the setting
+%		=http:time_limit= is taken. The default of this
+%		setting is 300 (5 minutes).  See setting/2.
 %
 %	Note that http_handler/3 is normally invoked  as a directive and
 %	processed using term-expansion.  Using   term-expansion  ensures
