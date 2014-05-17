@@ -1277,7 +1277,7 @@ prolog_colour:goal_colours(Goal, Colours) :-
 	html_meta_head(Goal, _Module, Head),
 	html_meta_colours(Head, Goal, Colours).
 prolog_colour:goal_colours(html_meta(_),
-			   built_in-[meta_declarations]).
+			   built_in-[meta_declarations([html])]).
 
 					% TBD: Check with do_expand!
 html_colours(Var, classify) :-
