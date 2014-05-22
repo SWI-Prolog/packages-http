@@ -1335,7 +1335,7 @@ from a Prolog exception term (see print_message/2).
 
 Producing output for the web in the form of an HTML document is a
 requirement for many Prolog programs. Just using format/2 is
-satisfactory as it leads to poorly readable programs generating poor
+not satisfactory as it leads to poorly readable programs generating poor
 HTML. This library is based on using DCG rules.
 
 The \pllib{http/html_write} structures the generation of HTML from a
