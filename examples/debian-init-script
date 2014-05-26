@@ -11,6 +11,7 @@
 
 # Installation
 #
+#   0. On Redhat/CentOS: yum install redhat-lsb
 #   1. Copy this file to /etc/init.d/<server>
 #   2. Edit the Configuration section below
 #   3. Run
@@ -22,7 +23,7 @@
 SWIPL=/usr/bin/swipl
 DIR=/srv/swipl-httpd
 SCRIPT=daemon.pl
-USER=www
+USER=www-data
 PORT=80
 DAEMONARGS=
 
@@ -79,43 +80,47 @@ waitserver()
 }
 
 case $1 in
-        start)
-	  log_daemon_msg "Starting web server" "$HTTPID"
-	  if (cd $DIR && $SWIPL -q -s $SCRIPT -- $DAEMONARGS); then
-	    log_end_msg 0
-	  else
-	    log_end_msg 1
-	  fi
-        ;;
-	stop)
-	  log_daemon_msg "Stopping web server" "$HTTPID"
-	  PID=$(pidofserver)
-	  kill $PID
-	  if waitserver $PID; then
-	    log_end_msg 0
-	  else
-	    kill -9 $PID
-	    waitserver $PID
-	  fi
-	;;
-	restart)
-	  $0 stop && $0 start
-	;;
-	status)
-	  PID=$(pidofserver)
-	  if running "$PID"; then
-	    echo "SWI-Prolog HTTP server is running (pid $PID)."
-	    exit 0
-	  else
-	    echo "SWI-Prolog HTTP server is NOT running."
-	    if [ -e $PIDFILE ]; then
-	      exit 1
-	    else
-	      exit 3
-	    fi
-	  fi
-	;;
-	*)
-	log_success_msg "Usage: /etc/init.d/swipl-httpd {start|stop|restart|status}"
-	exit 1
+  start)
+    MESSAGE="Starting web server $HTTPID"
+    if (cd $DIR && $SWIPL -q -s $SCRIPT -- $DAEMONARGS); then
+      log_success_msg $MESSAGE
+    else
+      log_failure_msg $MESSAGE
+    fi
+  ;;
+  stop)
+    MESSAGE="Stopping web server $HTTPID"
+    PID=$(pidofserver)
+    kill $PID
+    if waitserver $PID; then
+      log_success_msg $MESSAGE
+    else
+      kill -9 $PID
+      if waitserver $PID; then
+        log_success_msg $MESSAGE
+      else
+        log_failure_msg $MESSAGE
+      fi
+    fi
+  ;;
+  restart)
+    $0 stop && $0 start
+  ;;
+  status)
+    PID=$(pidofserver)
+    if running "$PID"; then
+      echo "SWI-Prolog HTTP server is running (pid $PID)."
+      exit 0
+    else
+      echo "SWI-Prolog HTTP server is NOT running."
+      if [ -e $PIDFILE ]; then
+        exit 1
+      else
+        exit 3
+      fi
+    fi
+  ;;
+  *)
+  log_success_msg "Usage: /etc/init.d/swipl-httpd {start|stop|restart|status}"
+  exit 1
 esac
