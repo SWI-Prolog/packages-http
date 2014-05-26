@@ -86,7 +86,7 @@ events:
 
 @tbd	Make it work with SSL
 @tbd	Cleanup issues wrt. loading and initialization of xpce.
-@see	The file <swi-home>/doc/packages/examples/http/debian-init-script
+@see	The file <swi-home>/doc/packages/examples/http/linux-init-script
 	provides a /etc/init.d script for controlling a server as a normal
 	Unix service.
 */

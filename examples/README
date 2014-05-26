@@ -26,9 +26,9 @@ body and the three documented server instantiations.
 	Demo script to run the SWI-Prolog HTTP server as a Unix
 	service.
 
-	$ debian-init-script :
-	/etc/init.d script for Debian based Unix system. Must be
-	configured.
+	$ linux-init-script :
+	/etc/init.d script for Debian and Redhat based Unix systems.
+	Must be configured.
 
 ---+ Session management demo:
 
