@@ -1288,8 +1288,8 @@ html_colours(\List, built_in-[built_in-Colours]) :-
 html_colours(\_, built_in-[dcg]) :- !.
 html_colours(_:Term, built_in-[classify,Colours]) :- !,
 	html_colours(Term, Colours).
-html_colours(&(Entity), built_in-[entity(Entity)]) :- !.
-html_colours(List, built_in-ListColours) :-
+html_colours(&(Entity), functor-[entity(Entity)]) :- !.
+html_colours(List, list-ListColours) :-
 	List = [_|_], !,
 	list_colours(List, ListColours).
 html_colours(Term, TermColours) :-
