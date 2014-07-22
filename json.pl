@@ -80,7 +80,8 @@
 		       width(nonneg),
 		       null(ground),
 		       true(ground),
-		       false(ground)
+		       false(ground),
+		       serialize_unknown(boolean)
 		     ]).
 :- predicate_options(json_read_dict/3, 3,
 		     [ tag(atom),
@@ -492,11 +493,20 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	    * tab(+TabDistance)
 %	    Distance between tab-stops.  If equal to Step, layout
 %	    is generated with one tab per level.
+%
+%	    * serialize_unknown(+Boolean)
+%	    If =true= (default =false=), serialize unknown terms and
+%	    print them as a JSON string.  The default raises a type
+%	    error.  Note that this option only makes sense if you can
+%	    guarantee that the passed value is not an otherwise valid
+%	    Prolog reporesentation of a Prolog term.
 
 :- record json_write_state(indent:nonneg = 0,
 			   step:positive_integer = 2,
 			   tab:positive_integer = 8,
-			   width:nonneg = 72).
+			   width:nonneg = 72,
+			   serialize_unknown:boolean = false
+			  ).
 
 json_write(Stream, Term) :-
 	json_write(Stream, Term, []).
@@ -553,7 +563,17 @@ json_write_term(Null, Stream, _State, Options) :-
 	json_options_null(Options, Null), !,
 	write(Stream, null).
 json_write_term(String, Stream, _State, _Options) :-
+	atom(String), !,
 	json_write_string(Stream, String).
+json_write_term(String, Stream, _State, _Options) :-
+	string(String), !,
+	json_write_string(Stream, String).
+json_write_term(AnyTerm, Stream, State, _Options) :-
+	(   json_write_state_serialize_unknown(State, true)
+	->  term_string(AnyTerm, String),
+	    json_write_string(Stream, String)
+	;   type_error(json_term, AnyTerm)
+	).
 
 json_write_object(Pairs, Stream, State, Options) :-
 	space_if_not_at_left_margin(Stream, State),
@@ -693,12 +713,17 @@ json_print_length(Number, _Options, Max, Len0, Len) :-
 	write_length(Number, AL, []),
 	Len is Len0 + AL,
 	Len =< Max.
-json_print_length(@(Id), _Options, Max, Len0, Len) :- !,
+json_print_length(@(Id), _Options, Max, Len0, Len) :-
+	atom(Id), !,
 	atom_length(Id, IdLen),
 	Len is Len0+IdLen,
 	Len =< Max.
 json_print_length(String, _Options, Max, Len0, Len) :-
-	string_len(String, Len0, Len),
+	string_len(String, Len0, Len), !,
+	Len =< Max.
+json_print_length(AnyTerm, _Options, Max, Len0, Len) :-
+	write_length(AnyTerm, AL, []),		% will be serialized
+	Len is Len0 + AL+2,
 	Len =< Max.
 
 pairs_print_length([], _, _, Len, Len).
@@ -732,7 +757,12 @@ array_print_length([H|T], Options, Max, Len0, Len) :-
 	).
 
 string_len(String, Len0, Len) :-
+	atom(String), !,
 	atom_length(String, AL),
+	Len is Len0 + AL + 2.
+string_len(String, Len0, Len) :-
+	string(String), !,
+	string_length(String, AL),
 	Len is Len0 + AL + 2.
 
 
