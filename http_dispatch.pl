@@ -794,7 +794,7 @@ http_404(_Options, Request) :-
 %	@throws	http_reply(switch_protocol(Goal, Options))
 
 http_switch_protocol(Goal, Options) :-
-	throw(http_reply(switch_protocol(Goal, Options))).
+	throw(http_reply(switching_protocols(Goal, Options))).
 
 
 		 /*******************************
