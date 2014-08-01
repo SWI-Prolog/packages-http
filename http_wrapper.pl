@@ -229,7 +229,7 @@ send_error(Out, Request, State0, Error, Close) :-
 	).
 
 update_keep_alive(Header0, Header, Request) :-
-	memberchk(connection(C), Header0),
+	memberchk(connection(C), Header0), !,
 	(   C == close
 	->  Header = Header0
 	;   client_wants_close(Request)
