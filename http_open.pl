@@ -106,9 +106,11 @@ resource. See also parse_time/2.
 		     [ authorization(compound),
 		       final_url(-atom),
 		       header(+atom, -atom),
+		       connection(+atom),
 		       method(oneof([delete,get,head,post])),
 		       size(-integer),
 		       status_code(-integer),
+		       output(-stream),
 		       timeout(number),
 		       post(any),		    % library(http/http_header)
 		       proxy(atom, integer),
@@ -175,6 +177,10 @@ user_agent('SWI-Prolog').
 %	  exception. Instead, http_open/3 behaves as if 200 (success) is
 %	  returned, providing the application to read the error document
 %	  from the returned stream.
+%
+%	  * output(-Out)
+%	  Unify the output stream with Out and do not close it. This can
+%	  be used to upgrade a connection.
 %
 %	  * timeout(+Timeout)
 %	  If provided, set a timeout on   the stream using set_stream/2.
@@ -299,7 +305,10 @@ send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
 					  Host, RequestURI, Parts, Options),
 		  E, true)
 	->  (   var(E)
-	    ->	close(Out)
+	    ->	(   option(output(Out), Options)
+		->  true
+		;   close(Out)
+		)
 	    ;	force_close(In, Out),
 		throw(E)
 	    )
@@ -311,12 +320,13 @@ guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
 	user_agent(Agent, Options),
 	method(Options, MNAME),
 	http_version(Version),
+	option(connection(Connection), Options, close),
 	format(Out,
 	       '~w ~w HTTP/~w\r\n\c
 	       Host: ~w\r\n\c
 	       User-Agent: ~w\r\n\c
-	       Connection: close\r\n',
-	       [MNAME, RequestURI, Version, Host, Agent]),
+	       Connection: ~w\r\n',
+	       [MNAME, RequestURI, Version, Host, Agent, Connection]),
 	x_headers(Options, Out),
 	write_cookies(Out, Parts, Options),
         (   option(post(PostData), Options)
