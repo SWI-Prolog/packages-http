@@ -77,17 +77,37 @@ user:file_search_path(js,    library('http/web/js')).
 %	file_search_path/2. Note that multiple  clauses   for  the  same
 %	file_search_path alias can be used to merge files from different
 %	physical locations onto the same HTTP   directory. Note that the
-%	handler must be declared as =prefix=. Here is an example:
+%	handler must be declared  as  =prefix=.   Below  is  an  example
+%	serving images from  http://<host>/img/...   from  the directory
+%	=http/web/icons=.
 %
 %	    ==
+%	    http:location(img, root(img), []).
 %	    user:file_search_path(icons, library('http/web/icons')).
 %
-%	    :- http_handler(icons(.), serve_files_in_directory(icons), [prefix]).
+%	    :- http_handler(img(.), serve_files_in_directory(icons), [prefix]).
 %	    ==
+%
+%	This predicate calls http_404/2 if the   physical file cannot be
+%	located. If the requested  path-name   is  unsafe  (i.e., points
+%	outside  the  hierarchy  defines    by   the  file_search_path/2
+%	declaration), this handlers returns a _403 Forbidden_ page.
 %
 %	@see http_reply_file/3
 
 serve_files_in_directory(Alias, Request) :-
 	memberchk(path_info(PathInfo), Request),
 	Term =.. [Alias,PathInfo],
-	http_reply_file(Term, [], Request).
+	(   catch(http_safe_file(Term, []),
+		  error(permission_error(read, file, _), _),
+		  fail)
+	->  (   absolute_file_name(Term, Path,
+				   [ access(read),
+				     file_errors(fail)
+				   ])
+	    ->  http_reply_file(Path, [unsafe(true)], Request)
+	    ;   http_404([], Request)
+	    )
+	;   memberchk(path(Path), Request),
+	    throw(http_reply(forbidden(Path)))
+	).
