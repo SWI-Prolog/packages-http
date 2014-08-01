@@ -55,6 +55,7 @@
 	  ]).
 :- use_module(library(readutil)).
 :- use_module(library(debug)).
+:- use_module(library(option)).
 :- use_module(library(lists)).
 :- use_module(library(url)).
 :- use_module(library(uri)).
@@ -284,7 +285,10 @@ status_reply(no_content, Out, HdrExtra, _Context, Code) :- !,
 	phrase(reply_header(status(no_content), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
-status_reply(switching_protocols(_,_), Out, HdrExtra, _Context, Code) :- !,
+status_reply(switching_protocols(_Goal,Options), Out,
+	     HdrExtra0, _Context, Code) :- !,
+	option(header(Extra1), Options, []),
+	append(HdrExtra0, Extra1, HdrExtra),
 	phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
