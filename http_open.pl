@@ -289,6 +289,7 @@ http_open_parts(Parts, Stream, Options0) :-
 http:http_protocol_hook(http, _, In, Out, In, Out, _).
 
 default_port(https, 443) :- !.
+default_port(wss,   443) :- !.
 default_port(_,	    80).
 
 host_and_port(Host, DefPort, DefPort, Host) :- !.
