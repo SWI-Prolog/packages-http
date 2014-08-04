@@ -697,6 +697,7 @@ ws_start_message(term_t WsStream, term_t OpCode, term_t RSV)
     ctx->payload_written = 0;
     switch(opcode)
     { case WS_OP_BINARY:
+      case WS_OP_CLOSE:			/* first two bytes for the code */
 	Ssetenc(ctx->ws_stream, ENC_OCTET, NULL);
         break;
       default:
@@ -841,6 +842,7 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
 
   switch(ctx->opcode)
   { case WS_OP_BINARY:
+    case WS_OP_CLOSE:
       Ssetenc(ctx->ws_stream, ENC_OCTET, NULL);
       break;
     default:

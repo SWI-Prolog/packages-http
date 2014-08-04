@@ -25,16 +25,16 @@ test_websocket :-
 :- begin_tests(serialization).
 
 test(text, Reply == [ websocket{opcode:text,  data:"Hello world"},
-		      websocket{opcode:close, data:""}
+		      websocket{opcode:close, code:1000, data:""}
 		    ]) :-
 	ws_loop([text("Hello world"), close], Reply, []).
 test(unicode, Reply == [ websocket{opcode:text,  data:Data},
-			 websocket{opcode:close, data:""}
+			 websocket{opcode:close, code:1000, data:""}
 		       ]) :-
 	unicode_data(Data),
 	ws_loop([text(Data), close], Reply, []).
 test(split, Reply == [ websocket{opcode:text,  data:"0123456789"},
-		       websocket{opcode:close, data:""}
+		       websocket{opcode:close, code:1000, data:""}
 		     ]) :-
 	ws_loop([text("0123456789"), close], Reply,
 	        [ buffer_size(5)
@@ -46,7 +46,7 @@ test(split, Reply == [ websocket{opcode:text,  data:"0123456789"},
 
 test(echo, Reply == [ websocket{opcode:text,  data:"Hello world"},
 		      websocket{opcode:text,  data:Unicode},
-		      websocket{opcode:close, data:"Ciao"}
+		      websocket{opcode:close, code:1005, data:"Ciao"}
 		    ]) :-
 	Address = localhost:Port,
 	unicode_data(Unicode),
@@ -55,7 +55,7 @@ test(echo, Reply == [ websocket{opcode:text,  data:"Hello world"},
 	    client(Port,
 		   [ text("Hello world"),
 		     text(Unicode),
-		     close("Ciao")
+		     close(1005, "Ciao")
 		   ],
 		   Reply),
 	    http_stop_server(Address, [])).
@@ -130,7 +130,11 @@ ws_receive_all(WsStream, Messages) :-
 		 *	       HTTP		*
 		 *******************************/
 
-:- http_handler(root(echo), http_upgrade_to_websocket(echo, []), [spawn([])]).
+:- http_handler(root(echo),
+		http_upgrade_to_websocket(echo,
+					  [ subprotocols([echo])
+					  ]),
+		[spawn([])]).
 
 server(Port) :-
         http_server(http_dispatch, [port(Port)]).
@@ -149,5 +153,5 @@ client(Port, Messages, Reply) :-
 	http_open_websocket(URL, WebSocket, []),
 	maplist(ws_send(WebSocket), Messages),
 	ws_receive_all(WebSocket, Reply),
-	ws_close(WebSocket, "bye").
+	ws_close(WebSocket, 1000, "bye").
 

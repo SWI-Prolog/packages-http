@@ -32,7 +32,7 @@
 	    http_upgrade_to_websocket/3, % :Goal, +Options, +Request
 	    ws_send/2,			% +WebSocket, +Message
 	    ws_receive/2,		% +WebSocket, -Message
-	    ws_close/2,			% +WebSocket
+	    ws_close/3,			% +WebSocket, +Code, +Message
 					% Low level interface
 	    ws_open/3,			% +Stream, -WebSocket, +Options
 	    ws_property/2		% +WebSocket, ?Property
@@ -44,6 +44,7 @@
 :- use_module(library(option)).
 :- use_module(library(lists)).
 :- use_module(library(error)).
+:- use_module(library(debug)).
 
 :- meta_predicate
 	http_upgrade_to_websocket(1, +, +).
@@ -206,7 +207,7 @@ http_upgrade_to_websocket(Goal, Options, Request) :-
 	http_switch_protocol(
 	    open_websocket(Goal, SubProtocol, Options),
 	    [ header([ 'Upgrade'(websocket),
-		       'Connection'('Upgrade'),
+		       'Connection'('Keep-alive, Upgrade'),
 		       'Sec-WebSocket-Accept'(AcceptKey)
 		     | ExtraHeaders
 		     ])
@@ -235,12 +236,13 @@ open_websocket(Goal, SubProtocol, Options, HTTPIn, HTTPOut) :-
 guard_websocket_server(Goal, WebSocket) :-
 	(   catch(call(Goal, WebSocket), E, true)
 	->  (   var(E)
-	    ->  Msg = bye
-	    ;	message_to_string(E, Msg)
+	    ->  Msg = bye, Code = 1000
+	    ;	message_to_string(E, Msg),
+		Code = 1011
 	    )
-	;   Msg = "goal failed"
+	;   Msg = "goal failed", Code = 1011
 	),
-	catch(ws_close(WebSocket, Msg), Error,
+	catch(ws_close(WebSocket, Code, Msg), Error,
 	      print_message(error, Error)).
 
 
@@ -319,7 +321,9 @@ message_opcode(Message, OpCode) :-
 
 write_message_data(Stream, Message) :-
 	is_dict(Message), !,
-	(   Data = Message.get(data)
+	(   _{code:Code, data:Data} :< Message
+	->  write_message_data(Stream, close(Code, Data))
+	;   _{data:Data} :< Message
 	->  format(Stream, '~w', Data)
 	;   true
 	).
@@ -329,6 +333,14 @@ write_message_data(Stream, Message) :-
 	format(Stream, '~w', [Text]).
 write_message_data(_, Message) :-
 	atom(Message), !.
+write_message_data(Stream, close(Code, Data)) :- !,
+	High is (Code >> 8) /\ 0xff,
+	Low  is Code /\ 0xff,
+	put_byte(Stream, High),
+	put_byte(Stream, Low),
+	stream_pair(Stream, _, Out),
+	set_stream(Out, encoding(utf8)),
+	format(Stream, '~w', [Data]).
 write_message_data(_, Message) :-
 	type_error(websocket_message, Message).
 
@@ -356,22 +368,40 @@ write_message_data(_, Message) :-
 
 ws_receive(WsStream, Message) :-
 	ws_read_header(WsStream, Code, RSV),
+	debug(websocket, 'ws_receive(~p): OpCode=~w, RSV=~w',
+	      [WsStream, Code, RSV]),
 	(   Code == end_of_file
 	->  Message = websocket{opcode:close, data:end_of_file}
 	;   (   ws_opcode(OpCode, Code)
 	    ->  true
 	    ;   OpCode = Code
 	    ),
-	    read_string(WsStream, _Len, Data),
+	    read_data(OpCode, WsStream, Data),
 	    (	OpCode == ping,
-		reply_pong(WsStream, Data)
+		reply_pong(WsStream, Data.data)
 	    ->  ws_receive(WsStream, Message)
 	    ;   (   RSV == 0
-		->  Message = websocket{opcode:OpCode, data:Data}
-		;   Message = websocket{opcode:OpCode, data:Data, rsv:RSV}
+		->  Message = Data
+		;   Message = Data.put(rsv, RSV)
 		)
 	    )
+	),
+	debug(websocket, 'ws_receive(~p) --> ~p', [WsStream, Message]).
+
+read_data(close, WsStream, websocket{opcode:close, code:Code, data:Data}) :- !,
+	get_byte(WsStream, High),
+	(   High == -1
+	->  Code = 1000,
+	    Data = ""
+	;   get_byte(WsStream, Low),
+	    Code is High<<8 \/ Low,
+	    stream_pair(WsStream, In, _),
+	    set_stream(In, encoding(utf8)),
+	    read_string(WsStream, _Len, Data)
 	).
+read_data(OpCode, WsStream, websocket{opcode:OpCode, data:Data}) :-
+	read_string(WsStream, _Len, Data).
+
 
 reply_pong(WebSocket, Data) :-
 	stream_pair(WebSocket, _In, Out),
@@ -379,7 +409,7 @@ reply_pong(WebSocket, Data) :-
 	ws_send(Out, pong(Data)).
 
 
-%%	ws_close(+WebSocket:stream_pair, +Data) is det.
+%%	ws_close(+WebSocket:stream_pair, +Code, +Data) is det.
 %
 %	Close a WebSocket connection by sending a =close= message if
 %	this was not already sent and wait for the close reply.
@@ -387,23 +417,30 @@ reply_pong(WebSocket, Data) :-
 %	@error	websocket_error(unexpected_message, Reply) if
 %		the other side did not send a close message in reply.
 
-ws_close(WebSocket, Data) :-
+ws_close(WebSocket, Code, Data) :-
 	setup_call_cleanup(
 	    true,
-	    ws_close_(WebSocket, Data),
+	    ws_close_(WebSocket, Code, Data),
 	    close(WebSocket)).
 
-ws_close_(WebSocket, Data) :-
+ws_close_(WebSocket, Code, Data) :-
 	stream_pair(WebSocket, In, Out),
-	(   ws_property(Out, status, closed)
-	->  true
-	;   ws_send(WebSocket, close(Data)),
+	(   (   var(Out)
+	    ;	ws_property(Out, status, closed)
+	    )
+	->  debug(websocket(close),
+		  'Output stream of ~p already closed', [WebSocket])
+	;   ws_send(WebSocket, close(Code, Data)),
 	    close(Out),
-	    (	ws_property(In, status, closed)
-	    ->	true
+	    debug(websocket(close), '~p: closed output', [WebSocket]),
+	    (	(   var(In)
+		;   ws_property(In, status, closed)
+		)
+	    ->	debug(websocket(close),
+		      'Input stream of ~p already closed', [WebSocket])
 	    ;	ws_receive(WebSocket, Reply),
 		(   Reply.opcode == close
-		->  true
+		->  debug(websocket(close), '~p: close confirmed', [WebSocket])
 		;   throw(error(websocket_error(unexpected_message, Reply), _))
 		)
 	    )
