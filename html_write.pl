@@ -1294,7 +1294,7 @@ html_colours(List, list-ListColours) :-
 	list_colours(List, ListColours).
 html_colours(Term, TermColours) :-
 	compound(Term), !,
-	Term =.. [Name|Args],
+	compound_name_arguments(Term, Name, Args),
 	(   Args = [One]
 	->  TermColours = html(Name)-ArgColours,
 	    (   layout(Name, _, empty)
@@ -1327,12 +1327,15 @@ attr_colours(Term, list-Elements) :-
 	attr_list_colours(Term, Elements).
 attr_colours(Name=Value, built_in-[html_attribute(Name), VColour]) :- !,
 	attr_value_colour(Value, VColour).
-attr_colours(NS:Term, built_in-[html_xmlns(NS), html_attribute(Name)-[classify]]) :-
+attr_colours(NS:Term, built_in-[ html_xmlns(NS),
+				 html_attribute(Name)-[classify]
+			       ]) :-
 	compound(Term),
-	Term =.. [Name,_], !.
+	compound_name_arity(Term, Name, 1), !.
 attr_colours(Term, html_attribute(Name)-[VColour]) :-
 	compound(Term),
-	Term =.. [Name,Value], !,
+	compound_name_arity(Term, Name, 1), !,
+	Term =.. [Name,Value],
 	attr_value_colour(Value, VColour).
 attr_colours(Name, html_attribute(Name)) :-
 	atom(Name), !.
