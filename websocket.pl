@@ -256,21 +256,18 @@ request_websocket_info(Request, Info) :-
 	option(sec_websocket_key(ClientKey), Request),
 	option(sec_websocket_version(Version), Request),
 	Info0 = _{key:ClientKey, version:Version},
-	add_option(origin(Origin),
-		   Request, origin,     Info0, Info1),
-	add_option(sec_websocket_protocol(Origin),
-		   Request, subprotocols,  Info1, Info2),
-	add_option(sec_websocket_extensions(Origin),
-		   Request, extensions, Info2, Info).
+	add_option(origin,		     Request, origin,       Info0, Info1),
+	add_option(sec_websocket_protocol,   Request, subprotocols, Info1, Info2),
+	add_option(sec_websocket_extensions, Request, extensions,   Info2, Info).
 
 connection_contains_upgrade(Connection) :-
 	split_string(Connection, ",", " ", Tokens),
 	member(Token, Tokens),
 	string_lower(Token, "upgrade"), !.
 
-add_option(Option, Request, Key, Dict0, Dict) :-
+add_option(OptionName, Request, Key, Dict0, Dict) :-
+	Option =.. [OptionName,Value],
 	option(Option, Request), !,
-	arg(1, Option, Value),
 	Dict = Dict0.put(Key,Value).
 add_option(_, _, _, Dict, Dict).
 
