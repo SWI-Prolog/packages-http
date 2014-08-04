@@ -288,7 +288,7 @@ status_reply(no_content, Out, HdrExtra, _Context, Code) :- !,
 status_reply(switching_protocols(_Goal,Options), Out,
 	     HdrExtra0, _Context, Code) :- !,
 	option(header(Extra1), Options, []),
-	append(HdrExtra0, Extra1, HdrExtra),
+	http_join_headers(HdrExtra0, Extra1, HdrExtra),
 	phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	flush_output(Out).
