@@ -311,7 +311,7 @@ ws_random(void)
        PL_get_int64(t0, &i64) )
     i = (int)i64;
   else
-    i = random()^(random()<<15);
+    i = rand()^(rand()<<15);
 
   PL_discard_foreign_frame(fid);
 
