@@ -202,13 +202,15 @@ add_subprotocols(Options, Options).
 
 http_upgrade_to_websocket(Goal, Options, Request) :-
 	request_websocket_info(Request, Info),
+	debug(websocket(open), 'Websocket request: ~p', [Info]),
 	sec_websocket_accept(Info, AcceptKey),
 	choose_subprotocol(Info, Options, SubProtocol, ExtraHeaders),
+	debug(websocket(open), 'Subprotocol: ~p', [SubProtocol]),
 	http_switch_protocol(
 	    open_websocket(Goal, SubProtocol, Options),
-	    [ header([ 'Upgrade'(websocket),
-		       'Connection'('Keep-alive, Upgrade'),
-		       'Sec-WebSocket-Accept'(AcceptKey)
+	    [ header([ upgrade(websocket),
+		       connection('Upgrade'),
+		       sec_websocket_accept(AcceptKey)
 		     | ExtraHeaders
 		     ])
 	    ]).
