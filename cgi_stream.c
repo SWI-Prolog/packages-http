@@ -320,6 +320,7 @@ cgi_property(term_t cgi, term_t prop)
       case CGI_DATA:      state = ATOM_data; break;
       case CGI_DISCARDED: state = ATOM_discarded; break;
       default:
+	state = ATOM_nil;			/* silence compiler */
 	assert(0);
     }
 
