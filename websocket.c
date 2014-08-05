@@ -705,7 +705,8 @@ ws_start_message(term_t WsStream, term_t OpCode, term_t RSV)
     }
   }
 
-  PL_release_stream(ws);
+					/* stream not released; this is done */
+					/* in ws_send/1 */
   return rc;
 }
 
@@ -754,6 +755,8 @@ ws_send(term_t WsStream)
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_OUTPUT) )
     return FALSE;
+  PL_release_stream(ws);		/* release from ws_start_message/3 */
+
   if ( ctx->state != WS_MSG_STARTED )
   { rc = PL_permission_error("send", "ws_stream", WsStream);
     goto out;

@@ -303,6 +303,10 @@ sec_websocket_accept(Info, AcceptKey) :-
 %	    - data:Term
 %	      If this key is present, the message content is the Prolog
 %	      serialization of Term based on write/1.
+%
+%	Note that ws_start_message/3 does not unlock the stream. This is
+%	done by ws_send/1. This implies that   multiple  threads can use
+%	ws_send/2 and the messages are properly serialized.
 
 ws_send(WsStream, Message) :-
 	message_opcode(Message, OpCode),
