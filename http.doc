@@ -1786,7 +1786,10 @@ on another stream.  See online documentation at
 \url{http://www.swi-prolog.org/} for details.
 \end{description}
 
+\input{websocket.tex}
+
 \input{json.tex}
+
 
 \section{MIME support}
 \label{sec:http-mime}

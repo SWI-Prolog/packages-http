@@ -80,7 +80,8 @@ check::
 TEXEXTRA=	post.tex json.tex httplog.tex httppath.tex htmlhead.tex \
 		httpsession.tex httpdispatch.tex httpdirindex.tex httppwp.tex \
 		httpopen.tex httphost.tex httpopenid.tex jswrite.tex \
-		httpfiles.tex httpcors.tex mimepack.tex httpunixdaemon.tex
+		httpfiles.tex httpcors.tex mimepack.tex httpunixdaemon.tex \
+		websocket.tex
 $(TEX):		$(TEXEXTRA)
 
 json.tex:	json.pl json_convert.pl http_json.pl
@@ -123,6 +124,9 @@ httppwp.tex:	http_pwp.pl
 
 httpunixdaemon.tex:	http_unix_daemon.pl
 		$(PLTOTEX) --subsubsection 'library(http/http_unix_daemon)'
+
+websocket.tex:	websocket.pl
+		$(PLTOTEX) --section 'library(http/websocket)'
 
 jswrite.tex:	js_write.pl
 		$(PLTOTEX) --subsection 'library(http/js_write)'

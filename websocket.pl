@@ -297,7 +297,7 @@ sec_websocket_accept(Info, AcceptKey) :-
 %	    As text(+Text), but all character codes produced by Content
 %	    must be in the range [0..255].  Typically, Content will be
 %	    an atom or string holding binary data.
-%	  - _{opcode: OpCode}
+%	  - Dict
 %	    A dict that minimally contains an =opcode= key.  Other keys
 %	    used are:
 %	    - data:Term
