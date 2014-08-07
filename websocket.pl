@@ -110,7 +110,7 @@ objects.
 %	     http_open_websocket(URL, WS, []),
 %	     ws_send(WS, text('Hello World!')),
 %	     ws_receive(WS, Reply),
-%	     ws_close(WS, "Goodbye").
+%	     ws_close(WS, 1000, "Goodbye").
 %	  URL = 'ws://html5rocks.websocket.org/echo',
 %	  WS = <stream>(0xe4a440,0xe4a610),
 %	  Reply = websocket{data:"Hello World!", opcode:text}.
@@ -417,6 +417,11 @@ reply_pong(WebSocket, Data) :-
 %	Close a WebSocket connection by sending a =close= message if
 %	this was not already sent and wait for the close reply.
 %
+%	@arg	Code is the numerical code indicating the close status.
+%		This is 16-bit integer.  The codes are defined in
+%		section _|7.4.1. Defined Status Codes|_ of RFC6455.
+%		Notably, 1000 indicates a normal closure.
+%	@arg	Data is currently interpreted as text.
 %	@error	websocket_error(unexpected_message, Reply) if
 %		the other side did not send a close message in reply.
 
