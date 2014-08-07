@@ -96,7 +96,7 @@ user:file_search_path(js,    library('http/web/js')).
 %	@see http_reply_file/3
 
 serve_files_in_directory(Alias, Request) :-
-	memberchk(path_info(PathInfo), Request),
+	memberchk(path_info(PathInfo), Request), !,
 	Term =.. [Alias,PathInfo],
 	(   catch(http_safe_file(Term, []),
 		  error(permission_error(read, file, _), _),
@@ -111,3 +111,6 @@ serve_files_in_directory(Alias, Request) :-
 	;   memberchk(path(Path), Request),
 	    throw(http_reply(forbidden(Path)))
 	).
+serve_files_in_directory(_Alias, Request) :-
+	memberchk(path(Path), Request),
+	throw(http_reply(forbidden(Path))).
