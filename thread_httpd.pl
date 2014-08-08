@@ -139,11 +139,12 @@ for details.
 %	  ==
 
 http_server(Goal, Options) :-
-	strip_module(Goal, Module, G),
 	select_option(port(Port), Options, Options1), !,
 	make_socket(Port, Options1, Options2),
 	create_workers(Options2),
-	create_server(Module:G, Port, Options2).
+	create_server(Goal, Port, Options2),
+	print_message(informational,
+		      httpd_started_server(Port)).
 http_server(_Goal, _Options) :-
 	throw(error(existence_error(option, port), _)).
 
