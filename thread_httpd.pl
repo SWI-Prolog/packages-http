@@ -48,6 +48,7 @@
 :- use_module(library(thread_pool)).
 :- use_module(http_wrapper).
 :- use_module(http_stream).
+:- use_module(http_path).
 
 
 :- predicate_options(http_server/2, 2,
@@ -698,6 +699,9 @@ create_pool(Pool) :-
 :- multifile
 	prolog:message/3.
 
+prolog:message(httpd_started_server(Port)) -->
+	[ 'Started server at '-[] ],
+	http_root(Port).
 prolog:message(httpd_stopped_worker(Self, Status)) -->
 	[ 'Stopped worker ~p: ~p'-[Self, Status] ].
 prolog:message(httpd_restarted_worker(Self)) -->
@@ -708,3 +712,8 @@ prolog:message(httpd(created_pool(Pool))) -->
 	  'http:create_pool/1 to avoid this message and create a ', nl,
 	  'pool that fits the usage-profile.'
 	].
+
+http_root(Port) -->
+	{ http_absolute_location(root(.), URI, []) },
+	[ 'http://localhost:~w~w'-[Port, URI] ].
+
