@@ -438,5 +438,5 @@ prolog:message(http_daemon(help)) -->
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
-	  'Boolean options may be writte without value (true) or as --no-name (false)'-[]
+	  'Boolean options may be written without value (true) or as --no-name (false)'-[]
 	].
