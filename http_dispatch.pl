@@ -429,8 +429,33 @@ location_by_id_raw(ID, Location, Priority) :-
 
 %%	http_link_to_id(+HandleID, +Parameters, -HREF)
 %
-%	HREF is a link on the local server to a handler with given ID,
-%	passing the given Parameters.
+%	HREF is a link on the local server   to a handler with given ID,
+%	passing the given Parameters. This   predicate is typically used
+%	to formulate a HREF that resolves   to  a handler implementing a
+%	particular predicate. The code below provides a typical example.
+%	The predicate user_details/1 returns a page with details about a
+%	user from a given id. This predicate is registered as a handler.
+%	The DCG user_link//1 renders a link   to  a user, displaying the
+%	name and calling user_details/1  when   clicked.  Note  that the
+%	location (root(user_details)) is irrelevant in this equation and
+%	HTTP locations can thus be moved   freely  without breaking this
+%	code fragment.
+%
+%	  ==
+%	  :- http_handler(root(user_details), user_details, []).
+%
+%	  user_details(Request) :-
+%	      http_parameters(Request,
+%			      [ user_id(ID)
+%			      ]),
+%	      ...
+%
+%	  user_link(ID) -->
+%	      { user_name(ID, Name),
+%	        http_link_to_id(user_details, [id(ID)], HREF)
+%	      },
+%	      html(a([class(user), href(HREF)], Name)).
+%	  ==
 %
 %	@arg Parameters is one of
 %
@@ -438,6 +463,9 @@ location_by_id_raw(ID, Location, Priority) :-
 %		  segment of the HTTP location (path). This way of
 %		  passing a parameter is commonly used in REST APIs.
 %		- A list of search parameters for a =GET= request.
+%
+%	@see	http_location_by_id/2 and http_handler/3 for defining and
+%		specifying handler IDs.
 
 http_link_to_id(HandleID, path_postfix(File), HREF) :- !,
 	http_location_by_id(HandleID, HandlerLocation),
