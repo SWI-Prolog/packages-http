@@ -38,6 +38,7 @@
 :- asserta(user:file_search_path(library, '../plunit')).
 :- asserta(user:file_search_path(library, '../clib')).
 :- asserta(user:file_search_path(library, '../sgml')).
+:- asserta(user:file_search_path(library, '..')).
 
 :- use_module(library(plunit)).
 :- use_module(json).
