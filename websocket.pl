@@ -32,6 +32,7 @@
 	    http_upgrade_to_websocket/3, % :Goal, +Options, +Request
 	    ws_send/2,			% +WebSocket, +Message
 	    ws_receive/2,		% +WebSocket, -Message
+	    ws_receive/3,		% +WebSocket, -Message, +Options
 	    ws_close/3,			% +WebSocket, +Code, +Message
 					% Low level interface
 	    ws_open/3,			% +Stream, -WebSocket, +Options
@@ -39,6 +40,7 @@
 	  ]).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_open)).
+:- use_module(library(http/json)).
 :- use_module(library(sha)).
 :- use_module(library(base64)).
 :- use_module(library(option)).
@@ -297,16 +299,36 @@ sec_websocket_accept(Info, AcceptKey) :-
 %	    As text(+Text), but all character codes produced by Content
 %	    must be in the range [0..255].  Typically, Content will be
 %	    an atom or string holding binary data.
+%	  - prolog(+Term)
+%	    Send a Prolog term as a text message. Text is serialized
+%	    using write_canonical/1.
+%	  - json(+JSON)
+%	    Send the Prolog representation of a JSON term using
+%	    json_write_dict/2.
+%	  - string(+Text)
+%	    Same as text(+Text), provided for consistency.
+%	  - close(+Code, +Text)
+%	    Send a close message.  Code is 1000 for normal close.  See
+%	    websocket documentation for other values.
 %	  - Dict
 %	    A dict that minimally contains an =opcode= key.  Other keys
 %	    used are:
+%
+%	    - format:Format
+%	      Serialization format used for Message.data. Format is
+%	      one of =string=, =prolog= or =json=.  See ws_receive/3.
+%
 %	    - data:Term
-%	      If this key is present, the message content is the Prolog
-%	      serialization of Term based on write/1.
+%	      If this key is present, it is serialized according
+%	      to Message.format.  Otherwise it is serialized using
+%	      write/1, which implies that string and atoms are just
+%	      sent verbatim.
 %
 %	Note that ws_start_message/3 does not unlock the stream. This is
 %	done by ws_send/1. This implies that   multiple  threads can use
 %	ws_send/2 and the messages are properly serialized.
+%
+%	@tbd	Provide serialization details using options.
 
 ws_send(WsStream, Message) :-
 	message_opcode(Message, OpCode),
@@ -320,20 +342,34 @@ message_opcode(Message, OpCode) :-
 	to_opcode(Message.opcode, OpCode).
 message_opcode(Message, OpCode) :-
 	functor(Message, Name, _),
-	to_opcode(Name, OpCode).
+	(   text_functor(Name)
+	->  to_opcode(text, OpCode)
+	;   to_opcode(Name, OpCode)
+	).
+
+text_functor(json).
+text_functor(string).
+text_functor(prolog).
 
 write_message_data(Stream, Message) :-
 	is_dict(Message), !,
 	(   _{code:Code, data:Data} :< Message
 	->  write_message_data(Stream, close(Code, Data))
+	;   _{format:prolog, data:Data} :< Message
+	->  format(Stream, '~k .~n', [Data])
+	;   _{format:json, data:Data} :< Message
+	->  json_write_dict(Stream, Data)
 	;   _{data:Data} :< Message
 	->  format(Stream, '~w', Data)
 	;   true
 	).
 write_message_data(Stream, Message) :-
-	functor(Message, _, 1), !,
-	arg(1, Message, Text),
-	format(Stream, '~w', [Text]).
+	functor(Message, Format, 1), !,
+	arg(1, Message, Data),
+	(   text_functor(Format)
+	->  write_text_message(Format, Stream, Data)
+	;   format(Stream, '~w', [Data])
+	).
 write_message_data(_, Message) :-
 	atom(Message), !.
 write_message_data(Stream, close(Code, Data)) :- !,
@@ -347,7 +383,17 @@ write_message_data(Stream, close(Code, Data)) :- !,
 write_message_data(_, Message) :-
 	type_error(websocket_message, Message).
 
+write_text_message(json, Stream, Data) :- !,
+	json_write_dict(Stream, Data).
+write_text_message(prolog, Stream, Data) :- !,
+	format(Stream, '~k .', [Data]).
+write_text_message(_, Stream, Data) :-
+	format(Stream, '~w', [Data]).
+
+
+
 %%	ws_receive(+WebSocket, -Message:dict) is det.
+%%	ws_receive(+WebSocket, -Message:dict, +Options) is det.
 %
 %	Receive the next message  from  WebSocket.   Message  is  a dict
 %	containing the following keys:
@@ -368,8 +414,26 @@ write_message_data(_, Message) :-
 %	If =ping= message is received and   WebSocket  is a stream pair,
 %	ws_receive/1 replies with a  =pong=  and   waits  for  the  next
 %	message.
+%
+%	The predicate ws_receive/3 processes the following options:
+%
+%	  - format(+Format)
+%	  Defines how _text_ messages are parsed.  Format is one of
+%	    - string
+%	    Data is returned as a Prolog string (default)
+%	    - json
+%	    Data is parsed using json_read_dict/3, which also receives
+%	    Options.
+%	    - prolog
+%	    Data is parsed using read_term/3, which also receives
+%	    Options.
+%
+%	@tbd	Add a hook to allow for more data formats?
 
 ws_receive(WsStream, Message) :-
+	ws_receive(WsStream, Message, []).
+
+ws_receive(WsStream, Message, Options) :-
 	ws_read_header(WsStream, Code, RSV),
 	debug(websocket, 'ws_receive(~p): OpCode=~w, RSV=~w',
 	      [WsStream, Code, RSV]),
@@ -379,7 +443,7 @@ ws_receive(WsStream, Message) :-
 	    ->  true
 	    ;   OpCode = Code
 	    ),
-	    read_data(OpCode, WsStream, Data),
+	    read_data(OpCode, WsStream, Data, Options),
 	    (	OpCode == ping,
 		reply_pong(WsStream, Data.data)
 	    ->  ws_receive(WsStream, Message)
@@ -391,7 +455,8 @@ ws_receive(WsStream, Message) :-
 	),
 	debug(websocket, 'ws_receive(~p) --> ~p', [WsStream, Message]).
 
-read_data(close, WsStream, websocket{opcode:close, code:Code, data:Data}) :- !,
+read_data(close, WsStream,
+	  websocket{opcode:close, code:Code, format:string, data:Data}, _Options) :- !,
 	get_byte(WsStream, High),
 	(   High == -1
 	->  Code = 1000,
@@ -402,9 +467,28 @@ read_data(close, WsStream, websocket{opcode:close, code:Code, data:Data}) :- !,
 	    set_stream(In, encoding(utf8)),
 	    read_string(WsStream, _Len, Data)
 	).
-read_data(OpCode, WsStream, websocket{opcode:OpCode, data:Data}) :-
+read_data(text, WsStream, Data, Options) :- !,
+	option(format(Format), Options, string),
+	read_text_data(Format, WsStream, Data, Options).
+read_data(OpCode, WsStream, websocket{opcode:OpCode, format:string, data:Data}, _Options) :-
 	read_string(WsStream, _Len, Data).
 
+%%	read_text_data(+Format, +WsStream, -Dict, +Options) is det.
+%
+%	Read a websocket message into   a  dict websocket{opcode:OpCode,
+%	data:Data}, where Data is parsed according to Format.
+
+read_text_data(string, WsStream,
+	  websocket{opcode:text, format:string, data:Data}, _Options) :- !,
+	read_string(WsStream, _Len, Data).
+read_text_data(json, WsStream,
+	  websocket{opcode:text, format:json,   data:Data}, Options) :- !,
+	json_read_dict(WsStream, Data, Options).
+read_text_data(prolog, WsStream,
+	  websocket{opcode:text, format:prolog, data:Data}, Options) :- !,
+	read_term(WsStream, Data, Options).
+read_text_data(Format, _, _, _) :-
+	domain_error(format, Format).
 
 reply_pong(WebSocket, Data) :-
 	stream_pair(WebSocket, _In, Out),
