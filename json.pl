@@ -900,7 +900,8 @@ make_json_dict_options(Options, Record, RestOptions) :-
 %%	atom_json_dict(-Text, +JSONDict, +Options) is det.
 %
 %	Convert  between  textual  representation  and    a   JSON  term
-%	represented as a dict. In _write_ mode, the option
+%	represented as a dict. Options are as for json_read/3.
+%	In _write_ mode, the addtional option
 %
 %	    * as(Type)
 %	    defines the output type, which is one of =atom=,
