@@ -537,6 +537,17 @@ ws_control(void *handle, int op, void *data)
   switch(op)
   { case SIO_FLUSHOUTPUT:
       return ws_flush(ctx);
+    case SIO_GETPENDING:
+    { size_t *sp = data;
+      IOSTREAM *s = ctx->stream;
+
+      if ( s->bufp < s->limitp )
+	*sp = s->limitp - s->bufp;
+      else
+	*sp = 0;
+
+      return 0;
+    }
     default:
       if ( ctx->stream->functions->control )
 	return (*ctx->stream->functions->control)(ctx->stream->handle, op, data);
