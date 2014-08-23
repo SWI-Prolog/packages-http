@@ -414,7 +414,8 @@ ws(0'/, Stream, C) :- !,
 	get_code(Stream, Cmt1), !,
 	expect(Cmt1, 0'/, Stream),
 	skip(Stream, 0'\n),
-	get_code(Stream, C).
+	get_code(Stream, C0),
+	ws(C0, Stream, C).
 ws(C, _, C).
 
 ws(0' ).
