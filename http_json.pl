@@ -32,6 +32,8 @@
 :- module(http_json,
 	  [ reply_json/1,		% +JSON
 	    reply_json/2,		% +JSON, Options
+	    reply_json_dict/1,		% +JSON
+	    reply_json_dict/2,		% +JSON, Options
 	    http_read_json/2,		% +Request, -JSON
 	    http_read_json/3,		% +Request, -JSON, +Options
 	    http_read_json_dict/2,	% +Request, -Dict
@@ -282,6 +284,7 @@ request_to_json(Request, JSON, Options) :-
 
 data_method(post).
 data_method(put).
+data_method(patch).
 
 :- if(current_predicate(is_dict/1)).
 
@@ -325,8 +328,7 @@ http_read_json_dict(Request, Dict, Options) :-
 :- if(current_predicate(is_dict/1)).
 reply_json(Dict) :-
 	is_dict(Dict), !,
-	format('Content-type: application/json; charset=UTF-8~n~n'),
-	json_write_dict(current_output, Dict).
+	reply_json_dict(Dict).
 :- endif.
 reply_json(Term) :-
 	format('Content-type: application/json; charset=UTF-8~n~n'),
@@ -335,11 +337,30 @@ reply_json(Term) :-
 :- if(current_predicate(is_dict/1)).
 reply_json(Dict, Options) :-
 	is_dict(Dict), !,
-	merge_options([json_object(dict)], Options, Options1),
-	reply_json2(Dict, Options1).
+	reply_json_dict(Dict, Options).
 :- endif.
 reply_json(Term, Options) :-
 	reply_json2(Term, Options).
+
+%%	reply_json_dict(+JSONTerm) is det.
+%%	reply_json_dict(+JSONTerm, +Options) is det.
+%
+%	As reply_json/1 and reply_json/2, but assumes the new dict based
+%	data representation. Note that this is  the default if the outer
+%	object is a dict. This predicate is   needed to serialize a list
+%	of   objects   correctly   and     provides   consistency   with
+%	http_read_json_dict/2 and friends.
+
+:- if(current_predicate(is_dict/1)).
+reply_json_dict(Dict) :-
+	format('Content-type: application/json; charset=UTF-8~n~n'),
+	json_write_dict(current_output, Dict).
+
+reply_json_dict(Dict, Options) :-
+	merge_options([json_object(dict)], Options, Options1),
+	reply_json2(Dict, Options1).
+:- endif.
+
 
 reply_json2(Term, Options) :-
 	select_option(content_type(Type), Options, Rest0, 'application/json'),
