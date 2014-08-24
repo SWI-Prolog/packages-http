@@ -5,7 +5,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -1714,6 +1714,7 @@ method(put)     --> "PUT", !.
 method(head)    --> "HEAD", !.
 method(post)    --> "POST", !.
 method(delete)  --> "DELETE", !.
+method(patch)   --> "PATCH", !.
 method(options) --> "OPTIONS", !.
 method(trace)   --> "TRACE", !.
 
