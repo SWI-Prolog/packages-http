@@ -1596,6 +1596,9 @@ header_fields([H|T], CLen) -->
 %                      | "{" | "}" | SP | HT
 %	==
 
+:- public
+	field_name//1.
+
 field_name(Name) -->
 	{ var(Name) }, !,
 	rd_field_chars(Chars),
