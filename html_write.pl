@@ -934,7 +934,9 @@ sorted_html(List) -->
 %	a better solution.
 
 head_html(List) -->
-	{ html_expand_head(List, NewList) },
+	{ list_to_set(List, Unique),
+	  html_expand_head(Unique, NewList)
+	},
 	html(NewList).
 
 :- multifile
