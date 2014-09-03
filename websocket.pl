@@ -175,6 +175,9 @@ add_subprotocols(Options, Options).
 %	  * subprotocols(+List)
 %	  List of acceptable subprotocols.
 %
+%	  * timeout(+TimeOut)
+%	  Timeout to apply to the input stream.  Default is =infinite=.
+%
 %	Note that the Request argument is  the last for cooperation with
 %	http_handler/3. A simple _echo_ server that   can be accessed at
 %	=/ws/= can be implemented as:
@@ -228,6 +231,8 @@ choose_subprotocol(Info, Options, SubProtocol, ExtraHeaders) :-
 choose_subprotocol(_, _, null, []).
 
 open_websocket(Goal, SubProtocol, Options, HTTPIn, HTTPOut) :-
+	option(timeout(TimeOut), Options, infinite),
+	set_stream(HTTPIn, timeout(TimeOut)),
 	WsOptions = [mode(server), subprotocol(SubProtocol)],
 	ws_open(HTTPIn, WsIn, WsOptions),
 	ws_open(HTTPOut, WsOut, WsOptions),
