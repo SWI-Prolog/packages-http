@@ -81,13 +81,16 @@ TEXEXTRA=	post.tex json.tex httplog.tex httppath.tex htmlhead.tex \
 		httpsession.tex httpdispatch.tex httpdirindex.tex httppwp.tex \
 		httpopen.tex httphost.tex httpopenid.tex jswrite.tex \
 		httpfiles.tex httpcors.tex mimepack.tex httpunixdaemon.tex \
-		websocket.tex
+		websocket.tex httpauthenticate.tex
 $(TEX):		$(TEXEXTRA)
 
 json.tex:	json.pl json_convert.pl http_json.pl
 
 httplog.tex:	http_log.pl
 		$(PLTOTEX) --subsection 'library(http/http_log)'
+
+httpauthenticate.tex:	http_authenticate.pl
+		$(PLTOTEX) --subsection 'library(http/http_authenticate)'
 
 httphost.tex:	http_host.pl
 		$(PLTOTEX) --subsection 'library(http/http_host)'
