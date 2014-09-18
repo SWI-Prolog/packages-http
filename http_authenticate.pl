@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007-2012, University of Amsterdam
+    Copyright (C): 2007-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -32,22 +32,28 @@
 :- module(authenticate,
 	  [ http_authenticate/3,	% +Check, +Header, -User
 	    http_authorization_data/2,	% +AuthorizationText, -Data
-	    http_current_user/3		% +File, ?User, ?Fields
+	    http_current_user/3,	% +File, ?User, ?Fields
+
+	    http_read_passwd_file/2,	% +File, -Data
+	    http_write_passwd_file/2	% +File, +Data
 	  ]).
 :- use_module(library(base64)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(readutil)).
+:- use_module(library(lists)).
 :- use_module(library(crypt)).
 :- use_module(library(debug)).
+:- use_module(library(error)).
+:- use_module(library(apply)).
 
 /**	<module> Authenticate HTTP connections using 401 headers
 
 This module provides the basics  to   validate  an  HTTP =Authorization=
-error. User and  password  information  are   read  from  a  Unix/Apache
-compatible password file. This information, as   well  as the validation
-process is cached to achieve optimal performance.
+header. User and password  information  are   read  from  a  Unix/Apache
+compatible password file.
 
-@author	Jan Wielemaker
+This  library  provides,  in  addition    to  the  HTTP  authentication,
+predicates to read and write password files.
 */
 
 %%	http_authenticate(+Type, +Request, -Fields)
@@ -200,22 +206,41 @@ update_passwd(File, Path) :-
 reload_passwd_file(Path, Stamp) :-
 	last_modified(Path, Stamp), !.	% another thread did the work
 reload_passwd_file(Path, Stamp) :-
+	http_read_passwd_file(Path, Data),
 	retractall(last_modified(Path, _)),
 	retractall(passwd(_, Path, _, _)),
-	open(Path, read, Fd),
-	read_line_to_codes(Fd, Line),
-	read_passwd_file(Line, Fd, Path),
-	close(Fd),
+	forall(member(passwd(User, Hash, Fields), Data),
+	       assertz(passwd(User, Path, Hash, Fields))),
 	assert(last_modified(Path, Stamp)).
 
-read_passwd_file(end_of_file, _, _) :- !.
-read_passwd_file(Line, Fd, Path) :-
+%%	http_read_passwd_file(+Path, -Data) is det.
+%
+%	Read a password file. Data is  a   list  of  terms of the format
+%	below, where User is an atom  identifying   the  user, Hash is a
+%	string containing the salted password   hash  and Fields contain
+%	additional fields. The string value of   each field is converted
+%	using name/2 to either a number or an atom.
+%
+%	  ==
+%	  passwd(User, Hash, Fields)
+%	  ==
+
+http_read_passwd_file(Path, Data) :-
+	setup_call_cleanup(
+	    open(Path, read, Fd),
+	    ( read_line_to_codes(Fd, Line),
+	      read_passwd_file(Line, Fd, Path, Data)
+	    ),
+	    close(Fd)).
+
+read_passwd_file(end_of_file, _, _, []) :- !.
+read_passwd_file(Line, Fd, Path, Data) :-
 	(   phrase(password_line(User, Hash, Fields), Line, _)
-	->  assert(passwd(User, Path, Hash, Fields))
-	;   true			% TBD: warning
+	->  Data = [passwd(User, Hash, Fields)|Tail]
+	;   Tail = Data			% TBD: warning
 	),
 	read_line_to_codes(Fd, Line2),
-	read_passwd_file(Line2, Fd, Path).
+	read_passwd_file(Line2, Fd, Path, Tail).
 
 
 password_line(User, Hash, Fields) -->
@@ -225,7 +250,7 @@ password_line(User, Hash, Fields) -->
 	peek_eof, !,
 	fields(Fields),
 	{ atom_codes(User, UserCodes),
-	  atom_codes(Hash, HashCodes)
+	  string_codes(Hash, HashCodes)
 	}.
 
 fields([Field|Fields]) -->
@@ -237,10 +262,52 @@ field(Value) -->
 	":", !,
 	string(Codes),
 	peek_eof, !,
-	{ atom_codes(Value, Codes) }.
+	{ name(Value, Codes)
+	}.
 
 peek_eof, ":" --> ":".
 peek_eof --> eos.
+
+
+%%	http_write_passwd_file(+File, +Data:list) is det.
+%
+%	Write password data Data to File. Data   is a list of entries as
+%	below. See http_read_passwd_file/2 for details.
+%
+%	  ==
+%	  passwd(User, Hash, Fields)
+%	  ==
+%
+%	@tbd	Write to a new file and atomically replace the old one.
+
+http_write_passwd_file(File, Data) :-
+	must_be(list, Data),
+	maplist(valid_data, Data),
+	setup_call_cleanup(
+	    open(File, write, Out, [encoding(utf8)]),
+	    maplist(write_data(Out), Data),
+	    close(Out)).
+
+valid_data(passwd(User, Hash, Fields)) :- !,
+	valid_field(User),
+	valid_field(Hash),
+	must_be(list, Fields),
+	maplist(valid_field, Fields).
+valid_data(Data) :-
+	type_error(passwd_entry, Data).
+
+valid_field(Field) :-
+	must_be(atomic, Field),
+	(   number(Field)
+	->  true
+	;   sub_string(Field, _, _, _, ":")
+	->  representation_error(passwd_field)
+	;   true
+	).
+
+write_data(Out, passwd(User, Hash, Fields)) :-
+	atomics_to_string([User, Hash|Fields], ":", String),
+	format(Out, '~s~n', [String]).
 
 
 		 /*******************************
