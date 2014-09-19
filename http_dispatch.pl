@@ -847,13 +847,16 @@ path_tree(Tree) :-
 	current_generation(G),
 	nb_current(http_dispatch_tree, G-Tree), !. % Avoid existence error
 path_tree(Tree) :-
+	path_tree_nocache(Tree),
+	current_generation(G),
+	nb_setval(http_dispatch_tree, G-Tree).
+
+path_tree_nocache(Tree) :-
 	findall(Prefix, prefix_handler(Prefix, _, _), Prefixes0),
 	sort(Prefixes0, Prefixes),
 	prefix_tree(Prefixes, [], PTree),
 	prefix_options(PTree, [], OPTree),
-	add_paths_tree(OPTree, Tree),
-	current_generation(G),
-	nb_setval(http_dispatch_tree, G-Tree).
+	add_paths_tree(OPTree, Tree).
 
 prefix_handler(Prefix, Action, Options) :-
 	handler(Spec, Action, true, Options),
@@ -887,7 +890,8 @@ prefix_options([P-C|T0], DefOptions,
 	       [node(prefix(P), Action, Options, Children)|T]) :-
 	once(prefix_handler(P, Action, Options0)),
 	merge_options(Options0, DefOptions, Options),
-	prefix_options(C, Options, Children),
+	delete(Options, id(_), InheritOpts),
+	prefix_options(C, InheritOpts, Children),
 	prefix_options(T0, DefOptions, T).
 
 
@@ -931,7 +935,8 @@ add_path_tree(Path, Action, Options, _,
 	      [node(prefix(Prefix), PA, DefOptions, Children0)|RestTree],
 	      [node(prefix(Prefix), PA, DefOptions, Children)|RestTree]) :-
 	sub_atom(Path, 0, _, _, Prefix), !,
-	add_path_tree(Path, Action, Options, DefOptions, Children0, Children).
+	delete(DefOptions, id(_), InheritOpts),
+	add_path_tree(Path, Action, Options, InheritOpts, Children0, Children).
 add_path_tree(Path, Action, Options1, DefOptions, [H0|T], [H|T]) :-
 	H0 = node(Path, _, Options2, _),
 	option(priority(P1), Options1, 0),
