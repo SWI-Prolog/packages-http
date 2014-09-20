@@ -375,7 +375,7 @@ print_request([H|T]) :-
 
 The infrastructure recognises the header fields described below. Other
 header lines are passed verbatim to the client. Typical examples are
-\texttt{Set-Cookie} and authentication headers (see \secref{auth}).
+\texttt{Set-Cookie} and authentication headers (see \secref{httpauthenticate}).
 
 \begin{description}
     \item[Content-type:~\arg{Type}]
@@ -1741,7 +1741,7 @@ on another stream.  See online documentation at
 \end{description}
 
 \input{websocket.tex}
-
+\input{hub.tex}
 \input{json.tex}
 
 
