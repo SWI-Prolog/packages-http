@@ -206,7 +206,7 @@ test(traditional,
 	close(CGI),
 	close(Out),
 	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(ok, _)).
+	assert_header(Header, status(_, ok, _)).
 
 test(unicode,
      [ forall(Name=unicode),
@@ -221,7 +221,7 @@ test(unicode,
 	close(CGI),
 	close(Out),
 	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(ok, _)).
+	assert_header(Header, status(_, ok, _)).
 
 :- end_tests(cgi_stream).
 
@@ -243,7 +243,7 @@ test(chunked,
 	close(CGI),
 	close(Out),
 	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(ok, _)),
+	assert_header(Header, status(_, ok, _)),
 	assert_header(Header, transfer_encoding(chunked)).
 
 :- end_tests(cgi_chunked).

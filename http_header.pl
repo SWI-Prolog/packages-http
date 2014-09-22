@@ -55,6 +55,7 @@
 	  ]).
 :- use_module(library(readutil)).
 :- use_module(library(debug)).
+:- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
 :- use_module(library(url)).
@@ -1019,13 +1020,8 @@ reply_header(authorise(Method, Tokens), HdrExtra, Code) -->
 %	Emit the HTTP header for Status
 
 vstatus(_Status, Code, HdrExtra) -->
-	{ memberchk(status(Code), HdrExtra), !,
-	  (   status_number(NewStatus, Code)
-	  ->  true
-	  ;   domain_error(http_code, Code)
-	  )
-	},
-	vstatus(NewStatus, Code).
+	{memberchk(status(Code), HdrExtra)}, !,
+	vstatus(_NewStatus, Code).
 vstatus(Status, Code, _) -->
 	vstatus(Status, Code).
 
@@ -1051,29 +1047,79 @@ status_number(Status, Code) -->
 	{ status_number(Status, Code) },
 	integer(Code).
 
-%%	status_number(?Status, ?Code) is nondet.
+%!	status_number(+Status:atom, -Code:nonneg) is det.
+%!	status_number(-Status:atom, +Code:nonneg) is det.
 %
-%	Fact that relates a symbolic  HTTP   status  name to its integer
-%	Code. Each code also needs a rule for status_comment//1.
+%	Relates a symbolic  HTTP   status  names to their integer Code.
+%	Each code also needs a rule for status_comment//1.
+%
+%	@throws type_error    If Code is instantiated with something other than
+%	                      an integer.
+%	@throws domain_error  If Code is instantiated with an integer
+%	                      outside of the range [100-599] of defined
+%	                      HTTP status codes.
 
-status_number(continue,		   100).
-status_number(switching_protocols, 101).
-status_number(ok,		   200).
-status_number(created,		   201).
-status_number(accepted,		   202).
-status_number(no_content,	   204).
-status_number(partial_content,	   206).
-status_number(moved,		   301).
-status_number(moved_temporary,	   302).
-status_number(see_other,	   303).
-status_number(not_modified,	   304).
-status_number(bad_request,	   400).
-status_number(authorise,	   401).
-status_number(forbidden,	   403).
-status_number(not_found,	   404).
-status_number(not_acceptable,      406).
-status_number(server_error,	   500).
-status_number(service_unavailable, 503).
+% Unrecognized status codes that are within a defined code class.
+% RFC 7231 states:
+%   "[...] a client MUST understand the class of any status code,
+%    as indicated by the first digit, and treat an unrecognized status code
+%    as being equivalent to the `x00` status code of that class [...]
+%   "
+% @see http://tools.ietf.org/html/rfc7231#section-6
+
+status_number(Status, Code):-
+	nonvar(Status), !,
+	status_number_fact(Status, Code).
+status_number(Status, Code):-
+	nonvar(Code), !,
+	(   between(100, 599, Code)
+	->  (   status_number_fact(Status, Code)
+	    ->  true
+	    ;	ClassCode is Code // 100 * 100,
+	        status_number_fact(Status, ClassCode)
+	    )
+	;   domain_error(http_code, Code)
+	).
+
+status_number_fact(continue,		       100).
+status_number_fact(switching_protocols,	       101).
+status_number_fact(ok,			       200).
+status_number_fact(created,		       201).
+status_number_fact(accepted,		       202).
+status_number_fact(non_authoritative_info,     203).
+status_number_fact(no_content,		       204).
+status_number_fact(reset_content,	       205).
+status_number_fact(partial_content,	       206).
+status_number_fact(multiple_choices,	       300).
+status_number_fact(moved,		       301).
+status_number_fact(moved_temporary,	       302).
+status_number_fact(see_other,		       303).
+status_number_fact(not_modified,	       304).
+status_number_fact(use_proxy,		       305).
+status_number_fact(unused,		       306).
+status_number_fact(temporary_redirect,	       307).
+status_number_fact(bad_request,		       400).
+status_number_fact(authorise,		       401).
+status_number_fact(payment_required,	       402).
+status_number_fact(forbidden,		       403).
+status_number_fact(not_found,		       404).
+status_number_fact(method_not_allowed,	       405).
+status_number_fact(not_acceptable,	       406).
+status_number_fact(request_timeout,	       408).
+status_number_fact(conflict,		       409).
+status_number_fact(gone,		       410).
+status_number_fact(length_required,	       411).
+status_number_fact(payload_too_large,	       413).
+status_number_fact(uri_too_long,	       414).
+status_number_fact(unsupported_media_type,     415).
+status_number_fact(expectation_failed,	       417).
+status_number_fact(upgrade_required,	       426).
+status_number_fact(server_error,	       500).
+status_number_fact(not_implemented,	       501).
+status_number_fact(bad_gateway,		       502).
+status_number_fact(service_unavailable,	       503).
+status_number_fact(gateway_timeout,	       504).
+status_number_fact(http_version_not_supported, 505).
 
 
 %%	status_comment(+Code:atom)// is det.
@@ -1090,12 +1136,18 @@ status_comment(created) -->
 	"Created".
 status_comment(accepted) -->
 	"Accepted".
+status_comment(non_authoritative_info) -->
+	"Non-Authoritative Information".
 status_comment(no_content) -->
 	"No Content".
+status_comment(reset_content) -->
+	"Reset Content".
 status_comment(created) -->
 	"Created".
 status_comment(partial_content) -->
 	"Partial content".
+status_comment(multiple_choices) -->
+	"Multiple Choices".
 status_comment(moved) -->
 	"Moved Permanently".
 status_comment(moved_temporary) -->
@@ -1104,20 +1156,56 @@ status_comment(see_other) -->
 	"See Other".
 status_comment(not_modified) -->
 	"Not Modified".
+status_comment(use_proxy) -->
+	"Use Proxy".
+status_comment(unused) -->
+	"Unused".
+status_comment(temporary_redirect) -->
+	"Temporary Redirect".
 status_comment(bad_request) -->
 	"Bad Request".
-status_comment(not_found) -->
-	"Not Found".
-status_comment(forbidden) -->
-	"Forbidden".
 status_comment(authorise) -->
 	"Authorization Required".
-status_comment(server_error) -->
-	"Internal Server Error".
-status_comment(service_unavailable) -->
-	"Service Unavailable".
+status_comment(payment_required) -->
+	"Payment Required".
+status_comment(forbidden) -->
+	"Forbidden".
+status_comment(not_found) -->
+	"Not Found".
+status_comment(method_not_allowed) -->
+	"Method Not Allowed".
 status_comment(not_acceptable) -->
 	"Not Acceptable".
+status_comment(request_timeout) -->
+	"Request Timeout".
+status_comment(conflict) -->
+	"Conflict".
+status_comment(gone) -->
+	"Gone".
+status_comment(length_required) -->
+	"Length Required".
+status_comment(payload_too_large) -->
+	"Payload Too Large".
+status_comment(uri_too_long) -->
+	"URI Too Long".
+status_comment(unsupported_media_type) -->
+	"Unsupported Media Type".
+status_comment(expectation_failed) -->
+	"Expectation Failed".
+status_comment(upgrade_required) -->
+	"Upgrade Required".
+status_comment(server_error) -->
+	"Internal Server Error".
+status_comment(not_implemented) -->
+	"Not Implemented".
+status_comment(bad_gateway) -->
+	"Bad Gateway".
+status_comment(service_unavailable) -->
+	"Service Unavailable".
+status_comment(gateway_timeout) -->
+	"Gateway Timeout".
+status_comment(http_version_not_supported) -->
+	"HTTP Version Not Supported".
 
 authenticate(negotiate(Data)) -->
 	"WWW-Authenticate: Negotiate ",
@@ -1914,14 +2002,17 @@ range(bytes(From, To)) -->
 %	fields produced by http_read_header/2.
 %
 %	    * http_version(Major-Minor)
-%	    * status(StatusCode, Comment)
-%
-%	StatusCode is one of the values provided by status_number//2.
+%	    * status(Code, Status, Comment)
+%	      `Code` is an integer between 100 and 599.
+%	      `Status` is a Prolog internal name.
+%	      `Comment` is the comment following the code
+%	      as it appears in the reply's HTTP status line.
+%	      @see status_number//2.
 
-reply(Fd, [http_version(HttpVersion), status(Status, Comment)|Header]) -->
+reply(Fd, [http_version(HttpVersion), status(Code, Status, Comment)|Header]) -->
 	http_version(HttpVersion),
 	blanks,
-	(   status_number(Status, _Code)
+	(   status_number(Status, Code)
 	->  []
 	;   integer(Status)
 	),

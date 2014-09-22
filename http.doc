@@ -126,6 +126,13 @@ Use an HTTP proxy to connect to the outside world.
 Send authorization to the proxy.  Otherwise the same as the
 \const{authorization} option.
 
+	\termitem{status_code}{-Code}
+If this option is present and \arg{Code} unifies with the HTTP status
+code, do \emph{not} translate errors (4xx, 5xx) into an exception.
+Instead, http_get/3 behaves as if 200 (success) is returned,
+providing the application to read the error document from the returned
+stream.
+
 	\termitem{timeout}{+Timeout}
 If provided, set a timeout on the stream using set_stream/2. With this
 option if no new data arrives within \arg{Timeout} seconds the stream

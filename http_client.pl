@@ -275,11 +275,19 @@ http_do_get(Parts, _Data, _Options) :-
 http_read_reply(In, Data, Options) :-
 	between(0, 1, _),
 	    http_read_reply_header(In, Fields),
-	\+ memberchk(status(continue, _), Fields), !,
+
+	% Allow the integer status code to be retrieved as an option.
+	(   option(status_code(Code0), Options)
+	->  memberchk(status(Code, _, _), Fields),
+	    Code0 = Code
+	;   true
+	),
+
+	\+ memberchk(status(_, continue, _), Fields), !,
 	(   memberchk(location(Location), Fields),
-	    (   memberchk(status(moved, _), Fields)
-	    ;	memberchk(status(moved_temporary, _), Fields)
-	    ;	memberchk(status(see_other, _), Fields)
+	    (   memberchk(status(_, moved, _), Fields)
+	    ;	memberchk(status(_, moved_temporary, _), Fields)
+	    ;	memberchk(status(_, see_other, _), Fields)
 	    )
 	->  Data = redirect(Location)
 	;   (   select(reply_header(Fields), Options, ReadOptions)
