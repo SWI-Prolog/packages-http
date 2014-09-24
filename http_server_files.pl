@@ -105,7 +105,10 @@ serve_files_in_directory(Alias, Request) :-
 				   [ access(read),
 				     file_errors(fail)
 				   ])
-	    ->  http_reply_file(Path, [unsafe(true)], Request)
+	    ->  http_reply_file(Path,
+				[ unsafe(true),
+				  static_gzip(true)
+				], Request)
 	    ;   http_404([], Request)
 	    )
 	;   memberchk(path(Path), Request),
@@ -114,3 +117,4 @@ serve_files_in_directory(Alias, Request) :-
 serve_files_in_directory(_Alias, Request) :-
 	memberchk(path(Path), Request),
 	throw(http_reply(forbidden(Path))).
+
