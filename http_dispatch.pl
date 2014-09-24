@@ -785,13 +785,15 @@ http_redirect(How, To, Request) :-
 
 http_404(Options, Request) :-
 	option(index(Index), Options),
-	\+ ( memberchk(path_info(PathInfo), Request),
+	\+ ( option(path_info(PathInfo), Request),
 	     PathInfo \== ''
 	   ), !,
 	http_redirect(moved, Index, Request).
 http_404(_Options, Request) :-
-	memberchk(path(Path), Request),
+	option(path(Path), Request), !,
 	throw(http_reply(not_found(Path))).
+http_404(_Options, Request) :-
+	domain_error(http_request, Request).
 
 
 %%	http_switch_protocol(:Goal, +Options)
