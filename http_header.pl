@@ -222,6 +222,9 @@ http_reply_data(html(HTML), Out, HdrExtra, Code) :- !,
 http_reply_data(file(Type, File), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(file(Type, File), HdrExtra, Code), Header),
 	reply_file(Out, File, Header).
+http_reply_data(gzip_file(Type, File), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(gzip_file(Type, File), HdrExtra, Code), Header),
+	reply_file(Out, File, Header).
 http_reply_data(file(Type, File, Range), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(file(Type, File, Range), HdrExtra, Code), Header),
 	reply_file_range(Out, File, Header, Range).
@@ -931,6 +934,15 @@ reply_header(file(Type, File), HdrExtra, Code) -->
 	content_length(file(File), CLen),
 	content_type(Type),
 	"\r\n".
+reply_header(gzip_file(Type, File), HdrExtra, Code) -->
+	vstatus(ok, Code, HdrExtra),
+	date(now),
+	modified(file(File)),
+	header_fields(HdrExtra, CLen),
+	content_length(file(File), CLen),
+	content_type(Type),
+	content_encoding(gzip),
+	"\r\n".
 reply_header(file(Type, File, Range), HdrExtra, Code) -->
 	vstatus(partial_content, Code, HdrExtra),
 	date(now),
@@ -1309,6 +1321,9 @@ content_range(Unit, From, RangeEnd, Size) -->
 	"Content-Range: ", atom(Unit), " ",
 	integer(From), "-", integer(RangeEnd), "/", integer(Size),
 	"\r\n".
+
+content_encoding(Encoding) -->
+	"Content-Encoding: ", atom(Encoding), "\r\n".
 
 transfer_encoding(Encoding) -->
 	"Transfer-Encoding: ", atom(Encoding), "\r\n".
