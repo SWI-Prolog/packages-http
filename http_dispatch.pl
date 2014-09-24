@@ -57,6 +57,7 @@
 :- predicate_options(http_reply_file/3, 2,
 		     [ cache(boolean),
 		       mime_type(any),
+		       static_gzip(boolean),
 		       pass_to(http_safe_file/2, 2)
 		     ]).
 :- predicate_options(http_safe_file/2, 2, [unsafe(boolean)]).
@@ -662,13 +663,19 @@ extend(G0, Extra, G) :-
 %		Overrule mime-type guessing from the filename as
 %		provided by file_mime_type/2.
 %
+%		* static_gzip(+Boolean)
+%		If true (default =false=) and, in addition to the plain
+%		file, there is a =.gz= file that is not older than the
+%		plain file and the client acceps =gzip= encoding, send
+%		the compressed file with =|Transfer-encoding: gzip|=.
+%
 %		* unsafe(+Boolean)
 %		If =false= (default), validate that FileSpec does not
 %		contain references to parent directories.  E.g.,
 %		specifications such as =|www('../../etc/passwd')|= are
 %		not allowed.
 %
-%	If caching is not disabled,  it   processed  the request headers
+%	If caching is not disabled,  it   processes  the request headers
 %	=|If-modified-since|= and =Range=.
 %
 %	@throws	http_reply(not_modified)
@@ -688,6 +695,14 @@ http_reply_file(File, Options, Request) :-
 	    ),
 	    (	memberchk(range(Range), Request)
 	    ->	Reply = file(Type, Path, Range)
+	    ;	option(static_gzip(true), Options),
+		accepts_encoding(Request, gzip),
+		file_name_extension(Path, gz, PathGZ),
+		access_file(PathGZ, read),
+		time_file(PathGZ, TimeGZ),
+		time_file(Path, Time),
+		TimeGZ >= Time
+	    ->	Reply = gzip_file(Type, PathGZ)
 	    ;	Reply = file(Type, Path)
 	    )
 	;   Reply = tmp_file(Type, Path)
@@ -699,6 +714,14 @@ http_reply_file(File, Options, Request) :-
 	;   Type = text/plain		% fallback type
 	),
 	throw(http_reply(Reply)).
+
+accepts_encoding(Request, Enc) :-
+	memberchk(accept_encoding(Accept), Request),
+	split_string(Accept, ",", " ", Parts),
+	member(Part, Parts),
+	split_string(Part, ";", " ", [EncS|_]),
+	atom_string(Enc, EncS).
+
 
 %%	http_safe_file(+FileSpec, +Options) is det.
 %
