@@ -464,6 +464,10 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	flexibility with regard to pairs in  objects. All of Name=Value,
 %	Name-Value and Name(Value) produce the  same output.
 %
+%	Values can be of the form  #(Term),   which  causes `Term` to be
+%	_stringified_ if it is not an atom or string. Stringification is
+%	based on term_string/2.
+%
 %	The version 7 _dict_ type is supported as well. If the dicts has
 %	a _tag_, a property "type":"tag" is   added  to the object. This
 %	behaviour can be changed using the =tag= option (see below). For
@@ -563,6 +567,14 @@ json_write_term(False, Stream, _State, Options) :-
 json_write_term(Null, Stream, _State, Options) :-
 	json_options_null(Options, Null), !,
 	write(Stream, null).
+json_write_term(#(Text), Stream, _State, _Options) :- !,
+	(   (   atom(Text)
+	    ;	string(Text)
+	    )
+	->  json_write_string(Stream, Text)
+	;   term_string(Text, String),
+	    json_write_string(Stream, String)
+	).
 json_write_term(String, Stream, _State, _Options) :-
 	atom(String), !,
 	json_write_string(Stream, String).
