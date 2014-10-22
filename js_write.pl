@@ -287,6 +287,12 @@ js_arg(json(Term)) -->
 	  debug(json_arg, '~w~n', String)
 	},
 	[ String ].
+js_arg(Dict) -->
+	{ is_dict(Dict), !,
+	  with_output_to(string(String),
+			 json_write_dict(current_output, Dict, [width(0)]))
+	},
+	[ String ].
 js_arg(H) -->
 	{ is_list(H) }, !,
 	html([ '[', \js_args(H), ']' ]).
