@@ -246,6 +246,8 @@ js_args([H|T]) -->
 %	    syntax.  This may be useful if the object appears literally
 %	    in the source-code, but is generally less friendlyto produce
 %	    as a result from a computation.
+%	    $ Dict :
+%	    Emit a dict as a JSON object using json_write_dict/3.
 %	    $ json(Term) :
 %	    Emits a term using json_write/3.
 %	    $ @(Atom) :
