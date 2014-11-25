@@ -29,7 +29,7 @@
 #define TRYPUTC(c, s) if ( Sputcode(c, s) < 0 ) { return -1; }
 
 static int
-json_put_code(IOSTREAM *out, int c)
+json_put_code(IOSTREAM *out, int pc, int c)
 { static char escape[128];
   static int escape_initialized = FALSE;
 
@@ -55,6 +55,10 @@ json_put_code(IOSTREAM *out, int c)
     { TRYPUTC('\\', out);
       if ( Sfprintf(out, "u%04x", c) < 0 )
 	return -1;
+    } else if ( pc == '<' && c == '/' )	/* Emit </ inside a string as <\/ to */
+                                        /* allow safe embedding in html */
+    { TRYPUTC('\\', out);
+      TRYPUTC('/', out);
     } else
     { TRYPUTC(c, out);
     }
@@ -82,27 +86,31 @@ json_write_string(term_t stream, term_t text)
   if ( PL_get_nchars(text, &len, &a, CVT_ATOM|CVT_STRING|CVT_LIST) )
   { const char *ap;
     size_t todo;
+    int pc = 0;
 
     TRYPUTC('"', out);
     for(todo=len, ap=a; todo-- > 0; ap++)
     { int c = *ap&0xff;
 
-      if ( json_put_code(out, c) < 0 )
+      if ( json_put_code(out, pc, c) < 0 )
       { rc = FALSE; goto out;
       }
+      pc = c;
     }
     TRYPUTC('"', out);
   } else if ( PL_get_wchars(text, &len, &w, CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
   { const pl_wchar_t *wp;
     size_t todo;
+    int pc = 0;
 
     TRYPUTC('"', out);
     for(todo=len, wp=w; todo-- > 0; wp++)
     { int c = *wp;
 
-      if ( json_put_code(out, c) < 0 )
+      if ( json_put_code(out, pc, c) < 0 )
       { rc = FALSE; goto out;
       }
+      pc = c;
     }
     TRYPUTC('"', out);
   } else

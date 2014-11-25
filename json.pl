@@ -505,6 +505,11 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %	    error.  Note that this option only makes sense if you can
 %	    guarantee that the passed value is not an otherwise valid
 %	    Prolog reporesentation of a Prolog term.
+%
+%	If a string is  emitted,  the   sequence  =|</|=  is  emitted as
+%	=|<\/|=. This is valid  JSON  syntax   which  ensures  that JSON
+%	objects  can  be  safely  embedded  into  an  HTML  =|<script>|=
+%	element.
 
 :- record json_write_state(indent:nonneg = 0,
 			   step:positive_integer = 2,

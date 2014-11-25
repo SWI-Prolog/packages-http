@@ -364,6 +364,9 @@ js_quote_codes([]) -->
 js_quote_codes([0'\r,0'\n|T]) --> !,
 	"\\n",
 	js_quote_codes(T).
+js_quote_codes([0'<,0'/|T]) --> !,	% Avoid XSS scripting hacks
+	"<\\/",
+	js_quote_codes(T).
 js_quote_codes([H|T]) -->
 	js_quote_code(H),
 	js_quote_codes(T).
