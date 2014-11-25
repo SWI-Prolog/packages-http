@@ -351,6 +351,10 @@ html(Spec) -->
 	{ strip_module(Spec, M, T) },
 	qhtml(T, M).
 
+qhtml(Var, _) -->
+	{ var(Var), !,
+	  instantiation_error(Var)
+	}.
 qhtml([], _) --> !,
 	[].
 qhtml([H|T], M) --> !,
@@ -359,8 +363,10 @@ qhtml([H|T], M) --> !,
 qhtml(X, M) -->
 	html_expand(X, M).
 
-html_expand(M:Term, _) --> !,
-	qhtml(Term, M).
+html_expand(Var, _) -->
+	{ var(Var), !,
+	  instantiation_error(Var)
+	}.
 html_expand(Term, Module) -->
 	do_expand(Term, Module), !.
 html_expand(Term, _Module) -->
@@ -381,11 +387,6 @@ do_expand(\Term, Module, In, Rest) :- !,
 	call(Module:Term, In, Rest).
 do_expand(Module:Term, _) --> !,
 	qhtml(Term, Module).
-do_expand(script(Content), _) --> !,	% general CDATA declared content elements?
-	html_begin(script),
-	[ Content
-	],
-	html_end(script).
 do_expand(&(Entity), _) --> !,
 	{   integer(Entity)
 	->  format(string(String), '&#~d;', [Entity])
@@ -402,7 +403,7 @@ do_expand(element(Env, Attributes, Contents), M) --> !,
 	    }
 	->  xhtml_empty(Env, Attributes)
 	;   html_begin(Env, Attributes),
-	    qhtml(Contents, M),
+	    qhtml(Env, Contents, M),
 	    html_end(Env)
 	).
 do_expand(Term, M) -->
@@ -416,7 +417,7 @@ do_expand(Term, M) -->
 		}
 	    ->  xhtml_empty(Env, [])
 	    ;	html_begin(Env),
-		qhtml(Contents, M),
+		qhtml(Env, Contents, M),
 		html_end(Env)
 	    )
 	).
@@ -429,9 +430,18 @@ do_expand(Term, M) -->
 	    }
 	->  xhtml_empty(Env, Attributes)
 	;   html_begin(Env, Attributes),
-	    qhtml(Contents, M),
+	    qhtml(Env, Contents, M),
 	    html_end(Env)
 	).
+
+qhtml(Env, Contents, M) -->
+	{ cdata_element(Env),
+	  phrase(cdata(Contents, M), Tokens)
+	}, !,
+	[ cdata(Env, Tokens) ].
+qhtml(_, Contents, M) -->
+	qhtml(Contents, M).
+
 
 check_non_empty([], _, _) :- !.
 check_non_empty(_, Tag, Term) :-
@@ -440,7 +450,13 @@ check_non_empty(_, Tag, Term) :-
 		      format('Using empty element with content: ~p', [Term])).
 check_non_empty(_, _, _).
 
-%%	raw(+List, +Modules)// is det.
+cdata(List, M) -->
+	{ is_list(List) }, !,
+	raw(List, M).
+cdata(One, M) -->
+	raw_element(One, M).
+
+%%	raw(+List, +Module)// is det.
 %
 %	Emit unquoted (raw) output used for scripts, etc.
 
@@ -454,8 +470,14 @@ raw_element(Var, _) -->
 	{ var(Var), !,
 	  instantiation_error(Var)
 	}.
+raw_element(\List, Module) -->
+	{ is_list(List)
+	}, !,
+	raw(List, Module).
 raw_element(\Term, Module, In, Rest) :- !,
 	call(Module:Term, In, Rest).
+raw_element(Module:Term, _) --> !,
+	raw_element(Term, Module).
 raw_element(Fmt-Args, _) --> !,
 	{ format(string(S), Fmt, Args) },
 	[S].
@@ -737,6 +759,14 @@ html_quoted_attribute(Text) -->
 	{ xml_quote_attribute(Text, Quoted, utf8) },
 	[ Quoted ].
 
+%%	cdata_element(?Element)
+%
+%	True when Element contains declared CDATA   and thus only =|</|=
+%	needs to be escaped.
+
+cdata_element(script).
+cdata_element(style).
+
 
 		 /*******************************
 		 *	REPOSITIONING HTML	*
@@ -1015,6 +1045,7 @@ layout(frameset,   2-1,	1-2).
 layout(head,	   1-1,	1-1).
 layout(body,	   1-1,	1-1).
 layout(script,	   1-1,	1-1).
+layout(style,	   1-1,	1-1).
 layout(select,	   1-1,	1-1).
 layout(map,	   1-1,	1-1).
 layout(html,	   1-1,	1-1).
@@ -1100,6 +1131,11 @@ write_html([mailbox(_, Box)|T], Out) :- !,
 	;   true
 	),
 	write_html(T, Out).
+write_html([cdata(Env, Tokens)|T], Out) :- !,
+	with_output_to(string(CDATA), write_html(Tokens, current_output)),
+	valid_cdata(Env, CDATA),
+	write(Out, CDATA),
+	write_html(T, Out).
 write_html([H|T], Out) :-
 	write(Out, H),
 	write_html(T, Out).
@@ -1114,6 +1150,24 @@ write_nl(N, Out) :-
 	nl(Out),
 	N1 is N - 1,
 	write_nl(N1, Out).
+
+%%	valid_cdata(+Env, +String) is det.
+%
+%	True when String is valid content for   a  CDATA element such as
+%	=|<script>|=. This implies  it   cannot  contain  =|</script/|=.
+%	There is no escape for this and  the script generator must use a
+%	work-around using features of the  script language. For example,
+%	when  using  JavaScript,  "</script>"   can    be   written   as
+%	"<\/script>".
+%
+%	@see write_json/2, js_arg//1.
+%	@error domain_error(cdata, String)
+
+valid_cdata(Env, String) :-
+	atomics_to_string(['</', Env, '>'], End),
+	sub_atom_icasechk(String, _, End), !,
+	domain_error(cdata, String).
+valid_cdata(_, _).
 
 %%	html_print_length(+List, -Len) is det.
 %
@@ -1149,6 +1203,9 @@ html_print_length([mailbox(_, Box)|T], L0, L) :- !,
 	->  html_print_length(Accepted, L0, L1)
 	;   L1 = L0
 	),
+	html_print_length(T, L1, L).
+html_print_length([cdata(_, CDATA)|T], L0, L) :- !,
+	html_print_length(CDATA, L0, L1),
 	html_print_length(T, L1, L).
 html_print_length([H|T], L0, L) :-
 	atom_length(H, Hlen),
