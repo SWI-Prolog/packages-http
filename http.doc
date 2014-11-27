@@ -945,7 +945,7 @@ Time-stamp when the server was created.  See format_time/3 for
 creating a human-readable representation.
 \end{description}
 
-    \predicate{http_workers}{2}{:Port, ?Workers}
+    \predicate{http_workers}{2}{+Port, ?Workers}
 Query or manipulate the number of workers of the server identified by
 \arg{Port}.  If \arg{Workers} is unbound it is unified with the number
 of running servers.  If it is an integer greater than the current size
@@ -958,6 +958,17 @@ in the queue, discarding the excess workers as they finish their jobs
 This can be used to tune the number of workers for performance.  Another
 possible application is to reduce the pool to one worker to facilitate
 easier debugging.
+
+    \predicate{http_add_worker}{2}{+Port, +Options}
+Add a new worker to the HTTP server for port \arg{Port}. \arg{Options}
+overrule the default queue options. The following additional options are
+processed:
+
+\begin{description}
+    \termitem{max_idle_time}{+Seconds}
+The created worker will automatically terminate if there is no new work
+within Seconds.
+\end{description}
 
     \predicate{http_stop_server}{2}{+Port, +Options}
 Stop the HTTP server at Port. Halting a server is done

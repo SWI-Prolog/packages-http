@@ -33,6 +33,7 @@
 	    http_server_property/2,	% ?Port, ?Property
 	    http_server/2,		% :Goal, +Options
 	    http_workers/2,		% +Port, ?WorkerCount
+	    http_add_worker/2,		% +Port, +Options
 	    http_current_worker/2,	% ?Port, ?ThreadID
 	    http_stop_server/2,		% +Port, +Options
 	    http_spawn/2,		% :Goal, +Options
@@ -43,11 +44,10 @@
 :- use_module(library(debug)).
 :- use_module(library(error)).
 :- use_module(library(option)).
-:- use_module(library(lists)).
 :- use_module(library(socket)).
 :- use_module(library(thread_pool)).
+:- use_module(library(gensym)).
 :- use_module(http_wrapper).
-:- use_module(http_stream).
 :- use_module(http_path).
 
 
@@ -63,6 +63,12 @@
 		     [ pool(atom),
 		       pass_to(system:thread_create/3, 3),
 		       pass_to(thread_pool:thread_create_in_pool/4, 4)
+		     ]).
+:- predicate_options(http_add_worker/2, 2,
+		     [ timeout(number),
+		       keep_alive_timeout(number),
+		       max_idle_time(number),
+		       pass_to(system:thread_create/3, 3)
 		     ]).
 
 /** <module> Threaded HTTP server
@@ -93,7 +99,8 @@ for details.
 	accept_hook/2,
 	close_hook/1,
 	open_client_hook/5,
-	http:create_pool/1.
+	http:create_pool/1,
+	http:schedule_workers/1.
 
 %%	http_server(:Goal, +Options) is det.
 %
@@ -255,6 +262,27 @@ http_workers(Port, _) :-
 	existence_error(http_server, Port).
 
 
+%%	http_add_worker(+Port, +Options) is det.
+%
+%	Add a new worker to  the  HTTP   server  for  port Port. Options
+%	overrule the default queue  options.   The  following additional
+%	options are processed:
+%
+%	  - max_idle_time(+Seconds)
+%	  The created worker will automatically terminate if there is
+%	  no new work within Seconds.
+
+http_add_worker(Port, Options) :-
+	must_be(ground, Port),
+	current_server(Port, _, _, Queue, _), !,
+	queue_options(Queue, QueueOptions),
+	merge_options(Options, QueueOptions, WorkerOptions),
+	atom_concat(Queue, '_', AliasBase),
+	create_workers(1, 1, Queue, AliasBase, WorkerOptions).
+http_add_worker(Port, _) :-
+	existence_error(http_server, Port).
+
+
 %%	http_current_worker(?Port, ?ThreadID) is nondet.
 %
 %	True if ThreadID is the identifier   of  a Prolog thread serving
@@ -287,6 +315,7 @@ accept_server2(Goal, Options) :-
 	  (   catch(tcp_accept(Socket, Client, Peer), E, true)
 	  ->  (   var(E)
 	      ->  debug(http(connection), 'New HTTP connection from ~p', [Peer]),
+		  enough_workers(Queue, accept, Peer),
 		  thread_send_message(Queue, tcp_client(Client, Goal, Peer)),
 		  fail
 	      ;   accept_rethrow_error(E)
@@ -333,6 +362,49 @@ connect(Address) :-
         tcp_connect(Socket, Address),
 	tcp_close_socket(Socket).
 
+%%	enough_workers(+Queue, +Why, +Peer) is det.
+%
+%	Check that we have enough workers in our queue.
+
+enough_workers(Queue, Why, Peer) :-
+	message_queue_property(Queue, size(Size)),
+	(   Size == 0
+	->  true
+	;   current_server(Port, _, _, Queue, _),
+	    catch(http:schedule_workers(_{port:Port,
+					  reason:Why,
+					  peer:Peer,
+					  waiting:Size}),
+		  Error,
+		  print_message(error, Error))
+	->  true
+	;   true
+	).
+
+%%	http:schedule_workers(+Data:dict) is semidet.
+%
+%	Hook called if a  new  connection   or  a  keep-alive connection
+%	cannot be scheduled _immediately_ to a worker. Dict contains the
+%	following keys:
+%
+%	  - port:Port
+%	  Port number that identifies the server.
+%	  - reason:Reason
+%	  One of =accept= for a new connection or =keep_alive= if a
+%	  worker tries to reschedule itself.
+%	  - peer:Peer
+%	  Identify the other end of the connection
+%	  - waiting:Size
+%	  Number of messages waiting in the queue.
+%
+%	Note that, when called with `reason:accept`,   we  are called in
+%	the time critical main accept loop.   An  implementation of this
+%	hook shall typically send  the  event   to  thread  dedicated to
+%	dynamic worker-pool management.
+%
+%	@see	http_add_worker/2 may be used to create (temporary) extra
+%		workers.
+
 
 		 /*******************************
 		 *    WORKER QUEUE OPERATIONS	*
@@ -359,7 +431,7 @@ create_workers(I, N, Queue, AliasBase, Options) :-
 		      [ alias(Alias)
 		      | Options
 		      ]),
-	assert(queue_worker(Queue, Id)),
+	assertz(queue_worker(Queue, Id)),
 	I2 is I + 1,
 	create_workers(I2, N, Queue, AliasBase, Options).
 
@@ -398,16 +470,25 @@ resize_pool(Queue, Size) :-
 http_worker(Options) :-
 	thread_at_exit(done_worker),
 	option(queue(Queue), Options),
+	option(max_idle_time(MaxIdle), Options, infinite),
 	repeat,
 	  garbage_collect,
 	  debug(http(worker), 'Waiting for a job ...', []),
-	  thread_get_message(Queue, Message),
+	  (   MaxIdle == infinite
+	  ->  thread_get_message(Queue, Message)
+	  ;   thread_get_message(Queue, Message, [timeout(MaxIdle)])
+	  ->  true
+	  ;   Message = quit(idle)
+	  ),
 	  debug(http(worker), 'Got job ~p', [Message]),
 	  (   Message = quit(Sender)
 	  ->  !,
 	      thread_self(Self),
 	      thread_detach(Self),
-	      thread_send_message(Sender, quitted(Self))
+	      (	  Sender == idle
+	      ->  true
+	      ;	  thread_send_message(Sender, quitted(Self))
+	      )
 	  ;   open_client(Message, Queue, Goal, In, Out,
 			  Options, ClientOptions),
 	      (	  catch(http_process(Goal, In, Out, ClientOptions),
@@ -558,6 +639,8 @@ current_message_level(Term, Level) :-
 http_requeue(Header) :-
 	requeue_header(Header, ClientOptions),
 	memberchk(pool(client(Queue, Goal, In, Out)), ClientOptions),
+	memberchk(peer(Peer), ClientOptions),
+	enough_workers(Queue, keep_alive, Peer),
 	thread_send_message(Queue, requeue(In, Out, Goal, ClientOptions)), !.
 http_requeue(Header) :-
 	debug(http(error), 'Re-queue failed: ~p', [Header]),
