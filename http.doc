@@ -513,11 +513,19 @@ The predicate is passes the \arg{Request} as provided to the handler
 goal by http_wrapper/5 as well as a partially instantiated lists
 describing the requested parameters and their types. Each parameter
 specification in \arg{Parameters} is a term of the format
-\mbox{\arg{Name}(\arg{-Value}, \arg{+Options})}. \arg{Options} is
-a list of option terms describing the type, default, etc. If no options
-are specified the parameter must be present and its value is returned in
-\arg{Value} as an atom. If a parameter is missing the exception
-\term{error}{\term{existence_error}{form_data, Name}, _} is thrown.
+\mbox{\arg{Name}(\arg{-Value}, \arg{+Options})}. \arg{Options} is a list
+of option terms describing the type, default, etc. If no options are
+specified the parameter must be present and its value is returned in
+\arg{Value} as an atom.
+
+If a parameter is missing the exception
+\term{error}{\term{existence_error}{http_parameter, Name}, _} is thrown
+which. If the argument cannot be converted to the requested type, a
+\term{error}{\term{existence_error}{Type, Value}, _} is raised, where
+the error context indicates the HTTP parameter. If not caught, the
+server translates both errors into a \texttt{400 Bad request} HTTP
+message.
+
 Options fall into three categories: those that handle presence of
 the parameter, those that guide conversion and restrict types and
 those that support automatic generation of documention.  First,
