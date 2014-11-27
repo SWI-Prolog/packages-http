@@ -368,7 +368,7 @@ connect(Address) :-
 
 enough_workers(Queue, Why, Peer) :-
 	message_queue_property(Queue, size(Size)),
-	(   Size == 0
+	(   enough(Size, Why)
 	->  true
 	;   current_server(Port, _, _, Queue, _),
 	    catch(http:schedule_workers(_{port:Port,
@@ -380,6 +380,10 @@ enough_workers(Queue, Why, Peer) :-
 	->  true
 	;   true
 	).
+
+enough(0, _).
+enough(1, keep_alive).			% I will be ready myself
+
 
 %%	http:schedule_workers(+Data:dict) is semidet.
 %
