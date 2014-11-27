@@ -159,9 +159,10 @@ posted_form(Request, Data) :-
 	debug(post, 'POST Data: ~p', [Data]).
 
 wipe_posted_data :-
+	debug(post, 'Wiping posted data', []),
 	nb_delete(http_post_data).
 
-:- listen(broadcast(http(request_finished(_Id, _Code, _Status, _CPU, _Bytes))),
+:- listen(http(request_finished(_Id, _Code, _Status, _CPU, _Bytes)),
 	  wipe_posted_data).
 
 
@@ -269,7 +270,7 @@ check_type3(between(Low, High), Atom, Value) :- !,
 	->  Value is float(Number)
 	;   Value = Number
 	),
-	must_be(between(Low, High), Value).
+	is_of_type(between(Low, High), Value).
 check_type3(boolean, Atom, Bool) :- !,
 	truth(Atom, Bool).
 check_type3(Type, Atom, Atom) :-
@@ -279,7 +280,7 @@ to_number(In, Number) :-
 	number(In), !, Number = In.
 to_number(In, Number) :-
 	atom(In),
-	catch(atom_number(In, Number), _, fail).
+	atom_number(In, Number).
 
 %%	check_type2(+Type, +ValueIn) is semidet.
 %
@@ -375,4 +376,38 @@ prolog:error_message(existence_error(http_parameter, Name)) -->
 	[ 'Missing value for parameter "~w".'-[Name] ].
 prolog:message(error(type_error(Type, Term), context(_, http_parameter(Param)))) -->
 	{ atom(Param) },
-	[ 'Parameter "~w" must be of type "~w".  Found "~w".'-[Param, Type, Term] ].
+	[ 'Parameter "~w" must be '-[Param] ],
+	param_type(Type),
+	['.  Found "~w".'-[Term] ].
+
+param_type(length>N) --> !,
+	['longer than ~D characters'-[N]].
+param_type(length>=N) --> !,
+	['at least ~D characters'-[N]].
+param_type(length<N) --> !,
+	['shorter than ~D characters'-[N]].
+param_type(length=<N) --> !,
+	['at most ~D characters'-[N]].
+param_type(between(Low,High)) --> !,
+	(   {float(Low);float(High)}
+	->  ['a number between ~w and ~w'-[Low,High]]
+	;   ['an integer between ~w and ~w'-[Low,High]]
+	).
+param_type(oneof([Only])) --> !,
+	['"~w"'-[Only]].
+param_type(oneof(List)) --> !,
+	['one of '-[]], oneof(List).
+param_type(T) -->
+	['of type ~p'-[T]].
+
+
+oneof([]) --> [].
+oneof([H|T]) -->
+	['"~w"'-[H]],
+	(   {T == []}
+	->  []
+	;   {T = [Last]}
+	->  [' or "~w"'-[Last] ]
+	;   [', '-[]],
+	    oneof(T)
+	).
