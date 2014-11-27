@@ -39,8 +39,8 @@
 :- use_module(http_hook).
 :- use_module(library(debug)).
 :- use_module(library(option)).
-:- use_module(library(lists)).
 :- use_module(library(error)).
+:- use_module(library(broadcast)).
 
 :- predicate_options(http_parameters/3, 3,
 		     [ form_data(-list),
@@ -127,8 +127,7 @@ http_parms(Request, Params, DeclGoal, Data) :-
 	memberchk(content_type(Content), Request),
 	form_data_content_type(Content), !,
 	debug(post_request, 'POST Request: ~p', [Request]),
-	http_read_data(Request, Data, []),
-	debug(post, 'POST Data: ~p', [Data]),
+	posted_form(Request, Data),
 	fill_parameters(Params, Data, DeclGoal).
 http_parms(Request, Params, DeclGoal, Search) :-
 	(   memberchk(search(Search), Request)
@@ -143,6 +142,28 @@ http_parms(Request, Params, DeclGoal, Search) :-
 form_data_content_type('application/x-www-form-urlencoded') :- !.
 form_data_content_type(ContentType) :-
 	sub_atom(ContentType, 0, _, _, 'application/x-www-form-urlencoded;').
+
+%%	posted_form(+Request, -Data) is det.
+%
+%	True when Data is list  of   Name=Value  pairs  representing the
+%	posted data.
+
+posted_form(Request, _Data) :-
+	nb_current(http_post_data, read), !,
+	option(request_uri(URI), Request),
+	throw(error(permission_error('re-read', 'POST data', URI),
+		    context(_, 'Attempt to re-read POST data'))).
+posted_form(Request, Data) :-
+	http_read_data(Request, Data, []),
+	nb_setval(http_post_data, read),
+	debug(post, 'POST Data: ~p', [Data]).
+
+wipe_posted_data :-
+	nb_delete(http_post_data).
+
+:- listen(broadcast(http(request_finished(_Id, _Code, _Status, _CPU, _Bytes))),
+	  wipe_posted_data).
+
 
 %%	fill_parameters(+ParamDecls, +FormData, +DeclGoal)
 %
