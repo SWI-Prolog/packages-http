@@ -93,10 +93,11 @@ map_exception_to_http_status(E,
               []) :-
 	resource_error(E), !.
 map_exception_to_http_status(E,
-	      bad_request(E),
+	      bad_request(E2),
 	      [connection(close)],
               []) :-
-	bad_request_error(E), !.
+	bad_request_error(E), !,
+	discard_stack_trace(E, E2).
 map_exception_to_http_status(E,
 	      server_error(E),
 	      [connection(close)],
@@ -105,6 +106,12 @@ map_exception_to_http_status(E,
 resource_error(error(resource_error(_), _)).
 
 bad_request_error(error(domain_error(http_request, _), _)).
+bad_request_error(error(existence_error(http_parameter, _), _)).
+bad_request_error(error(type_error(_, _), context(_, http_parameter(Field)))) :- atom(Field).
+
+discard_stack_trace(error(Formal, context(_,Msg)),
+		    error(Formal, context(_,Msg))).
+
 
 %%	keep_alive(+Reply) is semidet.
 %

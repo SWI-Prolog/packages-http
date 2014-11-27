@@ -186,7 +186,7 @@ fill_param(Name, Value, Options, FormData) :-
 	->  true
 	;   memberchk(optional(true), Options)
 	->  true
-	;   throw(error(existence_error(form_data, Name), _))
+	;   throw(error(existence_error(http_parameter, Name), _))
 	).
 
 
@@ -213,9 +213,8 @@ http_convert_parameter([], _, Value, Value).
 http_convert_parameter([H|T], Field, Value0, Value) :-
 	(   check_type_no_error(H, Value0, Value1)
 	->  http_convert_parameter(T, Field, Value1, Value)
-	;   format(string(Msg), 'HTTP parameter ~w', [Field]),
-	    throw(error(type_error(H, Value0),
-			context(_, Msg)))
+	;   throw(error(type_error(H, Value0),
+			context(_, http_parameter(Field))))
 	).
 
 check_type_no_error(Type, In, Out) :-
@@ -344,3 +343,16 @@ option_colours(Term, option(Name)-[classify]) :-
 	compound(Term),
 	Term =.. [Name,_Value], !.
 option_colours(_, error).
+
+		 /*******************************
+		 *	      MESSAGES		*
+		 *******************************/
+
+:- multifile prolog:error_message//1.
+:- multifile prolog:message//1.
+
+prolog:error_message(existence_error(http_parameter, Name)) -->
+	[ 'Missing value for parameter "~w".'-[Name] ].
+prolog:message(error(type_error(Type, Term), context(_, http_parameter(Param)))) -->
+	{ atom(Param) },
+	[ 'Parameter "~w" must be of type "~w".  Found "~w".'-[Param, Type, Term] ].
