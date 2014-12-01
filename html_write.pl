@@ -1352,8 +1352,9 @@ html_colours(List, list-ListColours) :-
 	List = [_|_], !,
 	list_colours(List, ListColours).
 html_colours(Term, TermColours) :-
-	compound(Term), !,
+	compound(Term),
 	compound_name_arguments(Term, Name, Args),
+	Name \== '.', !,
 	(   Args = [One]
 	->  TermColours = html(Name)-ArgColours,
 	    (   layout(Name, _, empty)
@@ -1390,7 +1391,7 @@ attr_colours(NS:Term, built_in-[ html_xmlns(NS),
 				 html_attribute(Name)-[classify]
 			       ]) :-
 	compound(Term),
-	compound_name_arity(Term, Name, 1), !.
+	compound_name_arity(Term, Name, 1).
 attr_colours(Term, html_attribute(Name)-[VColour]) :-
 	compound(Term),
 	compound_name_arity(Term, Name, 1), !,
@@ -1398,6 +1399,9 @@ attr_colours(Term, html_attribute(Name)-[VColour]) :-
 	attr_value_colour(Value, VColour).
 attr_colours(Name, html_attribute(Name)) :-
 	atom(Name), !.
+attr_colours(Term, classify) :-
+	compound(Term),
+	compound_name_arity(Term, '.', 2), !.
 attr_colours(_, error).
 
 attr_list_colours(Var, classify) :-
@@ -1418,6 +1422,9 @@ attr_value_colour(encode(_), sgml_attr_function-[classify]) :- !.
 attr_value_colour(Atom, classify) :-
 	atomic(Atom), !.
 attr_value_colour([_|_], classify) :- !.
+attr_value_colour(Term, classify) :-
+	compound(Term),
+	compound_name_arity(Term, '.', 2), !.
 attr_value_colour(_, error).
 
 location_id(ID, classify) :-
