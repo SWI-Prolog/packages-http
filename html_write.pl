@@ -1422,6 +1422,7 @@ attr_value_colour(encode(_), sgml_attr_function-[classify]) :- !.
 attr_value_colour(Atom, classify) :-
 	atomic(Atom), !.
 attr_value_colour([_|_], classify) :- !.
+attr_value_colour(_Fmt-_Args, classify) :- !.
 attr_value_colour(Term, classify) :-
 	compound(Term),
 	compound_name_arity(Term, '.', 2), !.
