@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -18,7 +16,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
+    You should have received a copy of the GNU General Public
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
@@ -51,6 +49,11 @@ This library uses mime_default_charset/2 to   set  the default character
 set of the MIME library to =|UTF-8|=.   Note that this setting is global
 and not thread-safe. This implies  that   this  library cannot be safely
 used together with other code that manipulates the default MIME charset.
+
+@deprecated  POST  messages  of  type  =|multipart/form-data|=  are  now
+handled by library(http/http_multipart_plugin). The new  library is much
+more lightweight, allows processing large   files  without buffering the
+data and does not include GPL foreign components.
 */
 
 :- multifile
