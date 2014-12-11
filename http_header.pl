@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
@@ -1418,55 +1416,76 @@ read_field_value([H|T]) -->
 %	  * content_disposition
 %	  Parsed into disposition(Name, Attributes), where Attributes is
 %	  a list of Name=Value pairs.
+%	  * content_type
+%	  Parsed into media(Type/SubType, Attributes), where Attributes
+%	  is a list of Name=Value pairs.
 
 http_parse_header_value(Field, Value, Prolog) :-
-	valid_field(Field),
+	known_field(Field, _),
 	to_codes(Value, Codes),
-	field_to_prolog(Field, Codes, Prolog).
+	parse_header_value(Field, Codes, Prolog).
 
-valid_field(content_length).
-valid_field(cookie).
-valid_field(set_cookie).
-valid_field(host).
-valid_field(range).
-valid_field(accept).
+%%	known_field(?FieldName, ?AutoConvert)
+%
+%	True if the value of FieldName is   by default translated into a
+%	Prolog data structure.
+
+known_field(content_length,	 true).
+known_field(cookie,		 true).
+known_field(set_cookie,		 true).
+known_field(host,		 true).
+known_field(range,		 true).
+known_field(accept,		 true).
+known_field(content_disposition, true).
+known_field(content_type,	 false).
 
 to_codes(In, Codes) :-
-	(   is_list(In)
-	->  Codes = In
-	;   atom_codes(In, Codes)
+	(   atomic(In)
+	->  atom_codes(In, Codes)
+	;   Codes = In
 	).
 
+field_to_prolog(Field, Codes, Prolog) :-
+	known_field(Field, true),
+	parse_header_value(Field, Codes, Prolog0), !,
+	Prolog = Prolog0.
+field_to_prolog(_, Codes, Atom) :-
+	atom_codes(Atom, Codes).
 
-field_to_prolog(content_length, ValueChars, ContentLength) :- !,
+%%	parse_header_value(+Field, +ValueCodes, -Value) is semidet.
+%
+%	Parse the value text of an HTTP   field into a meaningful Prolog
+%	representation.
+
+parse_header_value(content_length, ValueChars, ContentLength) :- !,
 	number_codes(ContentLength, ValueChars).
-field_to_prolog(status, ValueChars, Code) :- !,
+parse_header_value(status, ValueChars, Code) :- !,
 	(   phrase(" ", L, _),
 	    append(Pre, L, ValueChars)
 	->  number_codes(Code, Pre)
 	;   number_codes(Code, ValueChars)
 	).
-field_to_prolog(cookie, ValueChars, Cookies) :- !,
+parse_header_value(cookie, ValueChars, Cookies) :- !,
 	debug(cookie, 'Cookie: ~s', [ValueChars]),
 	phrase(cookies(Cookies), ValueChars).
-field_to_prolog(set_cookie, ValueChars, SetCookie) :- !,
+parse_header_value(set_cookie, ValueChars, SetCookie) :- !,
 	debug(cookie, 'SetCookie: ~s', [ValueChars]),
 	phrase(set_cookie(SetCookie), ValueChars).
-field_to_prolog(host, ValueChars, Host) :- !,
+parse_header_value(host, ValueChars, Host) :- !,
 	(   append(HostChars, [0':|PortChars], ValueChars), % 0'
 	    catch(number_codes(Port, PortChars), _, fail)
 	->  atom_codes(HostName, HostChars),
 	    Host = HostName:Port
 	;   atom_codes(Host, ValueChars)
 	).
-field_to_prolog(range, ValueChars, Range) :-
+parse_header_value(range, ValueChars, Range) :-
 	phrase(range(Range), ValueChars), !.
-field_to_prolog(accept, ValueChars, Media) :-
+parse_header_value(accept, ValueChars, Media) :-
 	parse_accept(ValueChars, Media), !.
-field_to_prolog(content_disposition, ValueChars, Disposition) :-
+parse_header_value(content_disposition, ValueChars, Disposition) :-
 	phrase(content_disposition(Disposition), ValueChars), !.
-field_to_prolog(_, ValueChars, Atom) :-
-	atom_codes(Atom, ValueChars).
+parse_header_value(content_type, ValueChars, Type) :-
+	phrase(parse_content_type(Type), ValueChars), !.
 
 field_value(set_cookie(Name, Value, Options)) --> !,
 	atom(Name), "=", atom(Value),
@@ -1532,13 +1551,22 @@ media_range(s(SortQuality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) --
 	}.
 
 
-%%	content_disposition(Disposition)//
+%%	content_disposition(-Disposition)//
 %
 %	Parse Content-Disposition value
 
 content_disposition(disposition(Disposition, Options)) -->
 	token(Disposition), blanks,
-	accept_extensions(Options).
+	value_parameters(Options).
+
+%%	parse_content_type(-Type)//
+%
+%	Parse  Content-Type  value  into    a  term  media(Type/SubType,
+%	Parameters).
+
+parse_content_type(media(Type, Parameters)) -->
+	media_type(Type), blanks,
+	value_parameters(Parameters).
 
 
 %%	rank_specialised(+Type, +TypeParam, -Key) is det.
@@ -1574,7 +1602,7 @@ parameters_and_quality(Params, Quality, AcceptExts) -->
 	blanks, "=", blanks,
 	(   { Name == q }
 	->  float(Quality), blanks,
-	    accept_extensions(AcceptExts),
+	    value_parameters(AcceptExts),
 	    { Params = [] }
 	;   { Params = [Name=Value|T] },
 	    parameter_value(Value),
@@ -1589,7 +1617,12 @@ parameters_and_quality(Params, Quality, AcceptExts) -->
 	    )
 	).
 
-accept_extensions([H|T]) -->
+%%	value_parameters(-Params:list) is det.
+%
+%	Accept (";" <parameter>)*, returning a list of Name=Value, where
+%	both Name and Value are atoms.
+
+value_parameters([H|T]) -->
 	";", !,
 	blanks, token(Name), blanks,
 	(   "="
@@ -1602,15 +1635,12 @@ accept_extensions([H|T]) -->
 	;   { H = Name }
 	),
 	blanks,
-	accept_extensions(T).
-accept_extensions([]) -->
+	value_parameters(T).
+value_parameters([]) -->
 	[].
 
-parameter_value(Value) -->
-	(   token(Value)
-	->  []
-	;   quoted_string(Value)
-	).
+parameter_value(Value) --> token(Value), !.
+parameter_value(Value) --> quoted_string(Value).
 
 
 %%	token(-Name)// is semidet.
