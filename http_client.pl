@@ -36,7 +36,7 @@
 	    http_delete/3,		% +URL, -Reply, +Options
 	    http_post/4,		% +URL, +In, -Reply, +Options
 	    http_put/4,			% +URL, +In, -Reply, +Options
-	    http_read_data/3,		% +Header, -Data, +Options
+	    http_read_data/3,		% +Header, -Data, :Options
 	    http_disconnect/1		% +What
 	  ]).
 :- use_module(library(socket)).
@@ -49,7 +49,9 @@
 :- use_module(library(lists)).
 :- use_module(library(error)).
 :- use_module(library(option)).
-:- use_module(library(dcg/basics)).
+
+:- meta_predicate
+	http_read_data(+, -, :).
 
 :- multifile
 	http_convert_data/4,		% http_read_data plugin-hook
@@ -73,7 +75,10 @@
 :- predicate_options(http_delete/3, 3, [pass_to(http_get/3, 3)]).
 :- predicate_options(http_read_data/3, 3,
 		     [ to(any),
-		       content_type(any)
+		       content_type(any),
+		       form_data(oneof([form,mime])),
+		       input_encoding(encoding),
+		       on_filename(callable)
 		     ]).
 
 
@@ -385,20 +390,32 @@ proxy_auth_header(Auth, _) :-
 %	input(In) that provides the input stream   from the HTTP server.
 %	Fields is the parsed http  reply-header. Options is one of:
 %
-%		* to(stream(+WriteStream))
-%		Append the content of the message to Stream
-%		* to(atom)
-%		Return the reply as an atom
-%		* to(codes)
-%		Return the reply as a list of codes
+%	  * to(Format)
+%	    Convert data into Format.  Values are:
+%	    - stream(+WriteStream))
+%	      Append the content of the message to Stream
+%	    - atom
+%	      Return the reply as an atom
+%	    - string
+%	      Return the reply as a string
+%	    - codes
+%	      Return the reply as a list of codes
+%	  * form_data(AsForm)
+%	  * input_encoding(+Encoding)
+%	  * on_filename(:CallBack)
+%	    These options are implemented by the plugin
+%	    library(http/http_multipart_plugin) and apply to processing
+%	    =|multipart/form-data|= content.
 
-http_read_data(Fields, Data, Options) :-
+http_read_data(Fields, Data, QOptions) :-
+	meta_options(is_meta, QOptions, Options),
 	memberchk(input(In), Fields),
 	(   http_read_data(In, Fields, Data, Options)
 	->  true
 	;   throw(error(failed(http_read_data), _))
 	).
 
+is_meta(on_filename).
 
 http_read_data(In, Fields, Data, Options) :-	% Transfer-encoding: chunked
 	select(transfer_encoding(chunked), Fields, RestFields), !,
@@ -412,27 +429,26 @@ http_read_data(In, Fields, Data, Options) :-
 	    ->  copy_stream_data(In, Stream, Bytes)
 	    ;   copy_stream_data(In, Stream)
 	    )
-	;   new_memory_file(MemFile),
-	    open_memory_file(MemFile, write, Stream, [encoding(octet)]),
-	    (   memberchk(content_length(Bytes), Fields)
-	    ->  copy_stream_data(In, Stream, Bytes)
-	    ;   copy_stream_data(In, Stream)
-	    ),
-	    close(Stream),
-	    encoding(Fields, Encoding),
-	    (   X == atom
-	    ->  memory_file_to_atom(MemFile, Data0, Encoding)
-	    ;	X == codes
-	    ->	memory_file_to_codes(MemFile, Data0, Encoding)
-	    ;	domain_error(return_type, X)
-	    ),
-	    free_memory_file(MemFile),
+	;   must_be(oneof([atom,string,codes]), X),
+	    setup_call_cleanup(
+		new_memory_file(MemFile),
+		( setup_call_cleanup(
+		      open_memory_file(MemFile, write, Stream, [encoding(octet)]),
+		      (   memberchk(content_length(Bytes), Fields)
+		      ->  copy_stream_data(In, Stream, Bytes)
+		      ;   copy_stream_data(In, Stream)
+		      ),
+		      close(Stream)),
+		  encoding(Fields, Encoding),
+		  memory_file_to(X, MemFile, Encoding, Data0)
+		),
+		free_memory_file(MemFile)),
 	    Data = Data0
 	).
 http_read_data(In, Fields, Data, _) :-
 	option(content_type(ContentType), Fields),
 	form_data_content_type(ContentType), !,
-	http_read_data(In, Fields, Codes, [to(codes)]),
+	http_read_data(In, Fields, Codes, [to(string)]),
 	uri_query_components(Codes, Data).
 http_read_data(In, Fields, Data, Options) :-			% call hook
 	(   select_option(content_type(Type), Options, Options1)
@@ -442,6 +458,13 @@ http_read_data(In, Fields, Data, Options) :-			% call hook
 	), !.
 http_read_data(In, Fields, Data, Options) :-
 	http_read_data(In, Fields, Data, [to(atom)|Options]).
+
+memory_file_to(atom, MemFile, Encoding, Data) :-
+	memory_file_to_atom(MemFile, Data, Encoding).
+memory_file_to(string, MemFile, Encoding, Data) :-
+	memory_file_to_atom(MemFile, Data, Encoding).
+memory_file_to(codes, MemFile, Encoding, Data) :-
+	memory_file_to_codes(MemFile, Data, Encoding).
 
 
 encoding(Fields, utf8) :-
