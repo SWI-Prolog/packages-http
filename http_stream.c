@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007, University of Amsterdam
+    Copyright (C): 2007-2014, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -26,11 +25,13 @@
 #include "http_chunked.c"
 #include "cgi_stream.c"
 #include "stream_range.c"
+#include "multipart.c"
 
 install_t
-install_http_stream()
+install_http_stream(void)
 { init_errors();
   install_http_chunked();
   install_cgi_stream();
   install_stream_range();
+  install_multipart();
 }

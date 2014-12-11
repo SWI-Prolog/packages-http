@@ -1415,6 +1415,9 @@ read_field_value([H|T]) -->
 %	  Parsed to a list of media descriptions.  Each media is a term
 %	  media(Type, TypeParams, Quality, AcceptExts). The list is
 %	  sorted according to preference.
+%	  * content_disposition
+%	  Parsed into disposition(Name, Attributes), where Attributes is
+%	  a list of Name=Value pairs.
 
 http_parse_header_value(Field, Value, Prolog) :-
 	valid_field(Field),
@@ -1460,6 +1463,8 @@ field_to_prolog(range, ValueChars, Range) :-
 	phrase(range(Range), ValueChars), !.
 field_to_prolog(accept, ValueChars, Media) :-
 	parse_accept(ValueChars, Media), !.
+field_to_prolog(content_disposition, ValueChars, Disposition) :-
+	phrase(content_disposition(Disposition), ValueChars), !.
 field_to_prolog(_, ValueChars, Atom) :-
 	atom_codes(Atom, ValueChars).
 
@@ -1525,6 +1530,15 @@ media_range(s(SortQuality,Spec)-media(Type, TypeParams, Quality, AcceptExts)) --
 	{ SortQuality is float(-Quality),
 	  rank_specialised(Type, TypeParams, Spec)
 	}.
+
+
+%%	content_disposition(Disposition)//
+%
+%	Parse Content-Disposition value
+
+content_disposition(disposition(Disposition, Options)) -->
+	token(Disposition), blanks,
+	accept_extensions(Options).
 
 
 %%	rank_specialised(+Type, +TypeParam, -Key) is det.

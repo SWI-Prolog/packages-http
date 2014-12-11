@@ -32,6 +32,9 @@
 :- module(http_stream,
 	  [ http_chunked_open/3,	% +Stream, -DataStream, +Options
 	    stream_range_open/3,	% +Stream, -DataStream, +Options
+	    multipart_open/3,		% +Stream, +DataStream, +Options)
+	    multipart_open_next/1,	% +DataStream
+
 					% CGI Stream interaction
 	    cgi_open/4,			% +Stream, -DataStream, :Hook, +Options
 	    cgi_property/2,		% +Stream, -Property
@@ -122,11 +125,65 @@ bytes, dispite the fact that the underlying stream may be longer.
 %		an indication of the problem.  This error is raised if
 %		the input is not valid HTTP chunked data.
 
+
+		 /*******************************
+		 *	       RANGES		*
+		 *******************************/
+
 %%	stream_range_open(+RawStream, -DataStream, +Options) is det.
 %
 %	DataStream is a stream  whose  size   is  defined  by the option
 %	size(ContentLength).   Closing   DataStream   does   not   close
 %	RawStream.
+
+
+		 /*******************************
+		 *	      MULTIPART		*
+		 *******************************/
+
+%%	multipart_open(+Stream, -DataSttream, +Options) is det.
+%
+%	DataStream  is  a  stream  that  signals  `end_of_file`  if  the
+%	multipart _boundary_ is encountered. The stream  can be reset to
+%	read the next part using multipart_open_next/1. Options:
+%
+%	  - close_parent(+Boolean)
+%	  Close Stream if DataStream is closed.
+%	  - boundary(+Text)
+%	  Define the boundary string.  Text is an atom, string, code or
+%	  character list.
+%
+%	All parts of a multipart input can   be read using the following
+%	skeleton:
+%
+%	  ==
+%	  process_multipart(Stream) :-
+%		multipart_open(Stream, DataStream, [boundary(...)]),
+%		process_parts(DataStream).
+%
+%	  process_parts(DataStream) :-
+%		process_part(DataStream),
+%		(   multipart_open_next(DataStream)
+%		->  process_parts(DataStream)
+%		;   close(DataStream)
+%		).
+%	  ==
+%
+%	@license The multipart parser contains   code licensed under the
+%	MIT license, based on _node-formidable_   by Felix Geisendoerfer
+%	and Igor Afonov.
+
+%%	multipart_open_next(+DataStream) is semidet.
+%
+%	Prepare DataStream to read the  next   part  from  the multipart
+%	input data. Succeeds if a next part exists and fails if the last
+%	part was processed. Note that it is  mandatory to read each part
+%	up to the end_of_file.
+
+
+		 /*******************************
+		 *	     CGI SUPPORT	*
+		 *******************************/
 
 %%	cgi_open(+OutStream, -CGIStream, :Hook, +Options) is det.
 %
