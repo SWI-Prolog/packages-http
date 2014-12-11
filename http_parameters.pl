@@ -35,7 +35,7 @@
 	    http_convert_parameter/4	% +Options, +FieldName, +ValIn, -ValOut
 	  ]).
 :- use_module(http_client).
-:- use_module(http_mime_plugin).
+:- use_module(http_multipart_plugin).
 :- use_module(http_hook).
 :- use_module(library(debug)).
 :- use_module(library(option)).
