@@ -341,6 +341,7 @@ multipart_open_next(term_t stream)
   { case s_part_data_end:
     { ctx->state = s_part_data_next;
       Sclearerr(ctx->multipart_stream);
+      ctx->multipart_stream->encoding = ENC_OCTET;
       return TRUE;
     }
     case s_end:
