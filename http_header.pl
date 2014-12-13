@@ -1440,9 +1440,9 @@ known_field(content_disposition, true).
 known_field(content_type,	 false).
 
 to_codes(In, Codes) :-
-	(   atomic(In)
-	->  atom_codes(In, Codes)
-	;   Codes = In
+	(   is_list(In)
+	->  Codes = In
+	;   atom_codes(In, Codes)
 	).
 
 field_to_prolog(Field, Codes, Prolog) :-
