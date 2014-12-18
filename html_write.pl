@@ -859,7 +859,9 @@ html_noreceive(Id) -->
 %	the end.
 
 mailman(Tokens) :-
-	memberchk(mailbox(_, accept(_, Accepted)), Tokens),
+	(   html_token(mailbox(_, accept(_, Accepted)), Tokens)
+	->  true
+	),
 	var(Accepted), !,		% not yet executed
 	mailboxes(Tokens, Boxes),
 	keysort(Boxes, Keyed),
@@ -883,11 +885,35 @@ move_last(Box0, Id, Box) :-
 	append(Box1, [Id-List], Box).
 move_last(Box, _, Box).
 
-mailboxes([], []).
-mailboxes([mailbox(Id, Value)|T0], [Id-Value|T]) :- !,
-	mailboxes(T0, T).
-mailboxes([_|T0], T) :-
-	mailboxes(T0, T).
+%%	html_token(?Token, +Tokens) is nondet.
+%
+%	True if Token is a token in the  token set. This is like member,
+%	but the toplevel list may contain cdata(Elem, Tokens).
+
+html_token(Token, [H|T]) :-
+	html_token_(T, H, Token).
+
+html_token_(_, Token, Token) :- !.
+html_token_(_, cdata(_,Tokens), Token) :-
+	html_token(Token, Tokens).
+html_token_([H|T], _, Token) :-
+	html_token_(T, H, Token).
+
+%%	mailboxes(+Tokens, -MailBoxes) is det.
+%
+%	Get all mailboxes from the token set.
+
+mailboxes(Tokens, MailBoxes) :-
+	mailboxes(Tokens, MailBoxes, []).
+
+mailboxes([], List, List).
+mailboxes([mailbox(Id, Value)|T0], [Id-Value|T], Tail) :- !,
+	mailboxes(T0, T, Tail).
+mailboxes([cdata(_Type, Tokens)|T0], Boxes, Tail) :- !,
+	mailboxes(Tokens, Boxes, Tail0),
+	mailboxes(T0, Tail0, Tail).
+mailboxes([_|T0], T, Tail) :-
+	mailboxes(T0, T, Tail).
 
 mail_ids([]).
 mail_ids([H|T0]) :-
