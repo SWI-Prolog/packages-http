@@ -1431,12 +1431,13 @@ http_parse_header_value(Field, Value, Prolog) :-
 %	Prolog data structure.
 
 known_field(content_length,	 true).
+known_field(status,		 true).
 known_field(cookie,		 true).
 known_field(set_cookie,		 true).
 known_field(host,		 true).
-known_field(range,		 true).
-known_field(accept,		 true).
-known_field(content_disposition, true).
+known_field(range,		 maybe).
+known_field(accept,		 maybe).
+known_field(content_disposition, maybe).
 known_field(content_type,	 false).
 
 to_codes(In, Codes) :-
@@ -1445,8 +1446,19 @@ to_codes(In, Codes) :-
 	;   atom_codes(In, Codes)
 	).
 
+%%	field_to_prolog(+Field, +ValueCodes, -Prolog) is semidet.
+%
+%	Translate the value string into  a   sensible  Prolog  term. For
+%	known_fields(_,true), this must succeed. For   =maybe=,  we just
+%	return the atom if the translation fails.
+
 field_to_prolog(Field, Codes, Prolog) :-
-	known_field(Field, true),
+	known_field(Field, true), !,
+	(   parse_header_value(Field, Codes, Prolog0)
+	->  Prolog = Prolog0
+	).
+field_to_prolog(Field, Codes, Prolog) :-
+	known_field(Field, maybe),
 	parse_header_value(Field, Codes, Prolog0), !,
 	Prolog = Prolog0.
 field_to_prolog(_, Codes, Atom) :-
@@ -1457,35 +1469,35 @@ field_to_prolog(_, Codes, Atom) :-
 %	Parse the value text of an HTTP   field into a meaningful Prolog
 %	representation.
 
-parse_header_value(content_length, ValueChars, ContentLength) :- !,
+parse_header_value(content_length, ValueChars, ContentLength) :-
 	number_codes(ContentLength, ValueChars).
-parse_header_value(status, ValueChars, Code) :- !,
+parse_header_value(status, ValueChars, Code) :-
 	(   phrase(" ", L, _),
 	    append(Pre, L, ValueChars)
 	->  number_codes(Code, Pre)
 	;   number_codes(Code, ValueChars)
 	).
-parse_header_value(cookie, ValueChars, Cookies) :- !,
+parse_header_value(cookie, ValueChars, Cookies) :-
 	debug(cookie, 'Cookie: ~s', [ValueChars]),
 	phrase(cookies(Cookies), ValueChars).
-parse_header_value(set_cookie, ValueChars, SetCookie) :- !,
+parse_header_value(set_cookie, ValueChars, SetCookie) :-
 	debug(cookie, 'SetCookie: ~s', [ValueChars]),
 	phrase(set_cookie(SetCookie), ValueChars).
-parse_header_value(host, ValueChars, Host) :- !,
-	(   append(HostChars, [0':|PortChars], ValueChars), % 0'
+parse_header_value(host, ValueChars, Host) :-
+	(   append(HostChars, [0':|PortChars], ValueChars),
 	    catch(number_codes(Port, PortChars), _, fail)
 	->  atom_codes(HostName, HostChars),
 	    Host = HostName:Port
 	;   atom_codes(Host, ValueChars)
 	).
 parse_header_value(range, ValueChars, Range) :-
-	phrase(range(Range), ValueChars), !.
+	phrase(range(Range), ValueChars).
 parse_header_value(accept, ValueChars, Media) :-
-	parse_accept(ValueChars, Media), !.
+	parse_accept(ValueChars, Media).
 parse_header_value(content_disposition, ValueChars, Disposition) :-
-	phrase(content_disposition(Disposition), ValueChars), !.
+	phrase(content_disposition(Disposition), ValueChars).
 parse_header_value(content_type, ValueChars, Type) :-
-	phrase(parse_content_type(Type), ValueChars), !.
+	phrase(parse_content_type(Type), ValueChars).
 
 field_value(set_cookie(Name, Value, Options)) --> !,
 	atom(Name), "=", atom(Value),
