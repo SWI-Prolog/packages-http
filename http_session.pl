@@ -285,7 +285,7 @@ http_session(Request, Request, SessionID) :-
 http_session(Request0, Request, SessionID) :-
 	memberchk(cookie(Cookies), Request0),
 	session_setting(cookie(Cookie)),
-	memberchk(Cookie=SessionID0, Cookies),
+	member(Cookie=SessionID0, Cookies),
 	peer(Request0, Peer),
 	valid_session_id(SessionID0, Peer), !,
 	SessionID = SessionID0,
