@@ -172,6 +172,10 @@ http:location(openid, root(openid), [priority(-100)]).
 %
 %	  * ax(Values)
 %	  Called if the server provided AX attributes
+%
+%	  * x_parameter(+Server, -Name, -Value)
+%	  Called to find additional HTTP parameters to send with the
+%	  OpenID verify request.
 
 :- multifile
 	openid_hook/1.			% +Action
@@ -451,6 +455,8 @@ openid_verify(Options, Request) :-
 	->  true
 	;   domain_error('openid.ns', NS)
 	),
+	findall(P=V, openid_hook(x_parameter(Server, P, V)), XAttrs, AXAttrs),
+	debug(openid(verify), 'XAttrs: ~p', [XAttrs]),
 	ax_options(ServerOptions, Options, AXAttrs),
 	http_link_to_id(openid_authenticate, [], AuthenticateLoc),
 	public_url(Request, AuthenticateLoc, Authenticate),
@@ -461,7 +467,7 @@ openid_verify(Options, Request) :-
 				   'openid.assoc_handle' = Handle,
 				   'openid.return_to'    = Authenticate,
 				   RealmAttribute        = Realm
-				 | AXAttrs
+				 | XAttrs
 				 ]).
 
 realm_attribute('http://specs.openid.net/auth/2.0', 'openid.realm').
