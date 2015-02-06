@@ -32,7 +32,10 @@
 :- module(http_parameters,
 	  [ http_parameters/2,		% +Request, -Params
 	    http_parameters/3,		% +Request, -Params, +TypeG
-	    http_convert_parameter/4	% +Options, +FieldName, +ValIn, -ValOut
+
+	    http_convert_parameter/4,	% +Options, +FieldName, +ValIn, -ValOut
+	    http_convert_parameters/2,	% +Data, +Params
+	    http_convert_parameters/3	% +Data, +Params, :DeclGoal
 	  ]).
 :- use_module(http_client).
 :- use_module(http_multipart_plugin).
@@ -70,7 +73,8 @@ an HTTP request. The typical usage is e.g.,
 */
 
 :- meta_predicate
-	http_parameters(+, ?, :).
+	http_parameters(+, ?, :),
+	http_convert_parameters(+, ?, 2).
 
 %%	http_parameters(+Request, ?Parms) is det.
 %%	http_parameters(+Request, ?Parms, :Options) is det.
@@ -218,6 +222,24 @@ fill_param_list([Name=Value0|Form], Name, [Value|VT], Options) :- !,
 fill_param_list([_|Form], Name, VT, Options) :-
 	fill_param_list(Form, Name, VT, Options).
 
+
+%%	http_convert_parameters(+Data, ?Params) is det.
+%%	http_convert_parameters(+Data, ?Params, :AttrDecl) is det.
+%
+%	Implements the parameter  translation   of  http_parameters/2 or
+%	http_parameters/3. I.e., http_parameters/2 for   a  POST request
+%	can be implemented as:
+%
+%	  ==
+%	  http_parameters(Request, Params) :-
+%	      http_read_data(Request, Data, []),
+%	      http_convert_parameters(Data, Params).
+%	  ==
+
+http_convert_parameters(Data, ParamDecls) :-
+	fill_parameters(ParamDecls, Data, -).
+http_convert_parameters(Data, ParamDecls, DeclGoal) :-
+	fill_parameters(ParamDecls, Data, DeclGoal).
 
 %%	http_convert_parameter(+Options, +FieldName, +ValueIn, -ValueOut) is det.
 %
