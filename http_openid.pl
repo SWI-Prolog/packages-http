@@ -331,6 +331,9 @@ openid_login_page(Request) :-
 %	  displayed below the OpenID URL field.  Clicking the
 %	  button sets the URL field and submits the form.  Requires
 %	  Javascript support.
+%
+%	  If the =href= is _relative_, clicking it opens the given
+%	  location after adding 'openid.return_to' and `stay'.
 %	  - show_stay(+Boolean)
 %	  If =true=, show a checkbox that allows the user to stay
 %	  logged on.
@@ -369,7 +372,7 @@ openid_login_form(ReturnTo, Options) -->
 stay_logged_on(Options) -->
 	{ option(show_stay(true), Options) }, !,
 	html(div(class('openid-stay'),
-		 [ input([ type(checkbox), name(stay), value(yes)]),
+		 [ input([ type(checkbox), id(stay), name(stay), value(yes)]),
 		   'Stay signed in'
 		 ])).
 stay_logged_on(_) --> [].
@@ -387,14 +390,34 @@ buttons(_) --> [].
 prelogin_buttons([]) --> [].
 prelogin_buttons([H|T]) --> prelogin_button(H), prelogin_buttons(T).
 
+%%	prelogin_button(+Image)// is det.
+%
+%	Handle OpenID 2.0 and other pre-login  buttons. If the image has
+%	a =href= attribute that is absolute, it   is  taken as an OpenID
+%	2.0 endpoint. Otherwise it is taken  as   a  link on the current
+%	server. This allows us to present  non-OpenId logons in the same
+%	screen. The dedicated  handler  is   passed  the  HTTP paramters
+%	=openid.return_to= and =stay=.
+
 prelogin_button(img(Attrs)) -->
-	{ select_option(href(HREF), Attrs, RestAttrs) },
+	{ select_option(href(HREF), Attrs, RestAttrs),
+	  uri_is_global(HREF), !
+	},
 	html(img([ onClick('javascript:{$("#openid_url").val("'+HREF+'");'+
 			   '$("form#login").submit();}'
 			  )
 		 | RestAttrs
 		 ])).
-
+prelogin_button(img(Attrs)) -->
+	{ select_option(href(HREF), Attrs, RestAttrs)
+	},
+	html(img([ onClick('window.location = "'+HREF+
+			   '?openid.return_to="'+
+			   '+encodeURIComponent($("#return_to").val())'+
+			   '+"&stay="'+
+			   '+$("#stay").val()')
+		 | RestAttrs
+		 ])).
 
 
 		 /*******************************
@@ -1013,7 +1036,7 @@ checkid_setup_server(_Request, Form, _Options) :-
 	    ]).
 
 hidden(Name, Value) -->
-	html(input([type(hidden), name(Name), value(Value)])).
+	html(input([type(hidden), id(return_to), name(Name), value(Value)])).
 
 
 openid_title -->
