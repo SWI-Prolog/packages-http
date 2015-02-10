@@ -1067,6 +1067,7 @@ layout(ul,	   1-1,	1-1).
 layout(ol,	   2-1,	1-2).
 layout(form,	   2-1,	1-2).
 layout(frameset,   2-1,	1-2).
+layout(address,	   2-1,	1-2).
 
 layout(head,	   1-1,	1-1).
 layout(body,	   1-1,	1-1).
