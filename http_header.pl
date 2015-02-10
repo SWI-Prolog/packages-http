@@ -104,7 +104,7 @@ http_read_request(In, Request) :-
 		Request =  [input(In)|Request1],
 		phrase(request(In, Request1), Codes),
 		(   Request1 = [unknown(Text)|_]
-		->  atom_codes(S, Text),
+		->  string_codes(S, Text),
 		    syntax_error(http_request(S))
 		;   true
 		)
@@ -2144,8 +2144,8 @@ header([]) -->
 	eos, !.
 header(_) -->
 	string(S), blanks_to_nl, !,
-	{ atom_codes(Line, S),
-	  syntax_error(http_request_line(Line))
+	{ string_codes(Line, S),
+	  syntax_error(http_parameter(Line))
 	}.
 
 %%	address//
@@ -2187,9 +2187,15 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 		 *******************************/
 
 :- multifile
-	prolog:message//1.
+	prolog:message//1,
+	prolog:error_message//1.
 
-prolog:message(error(http_write_short(Data, Sent), _)) -->
+prolog:error_message(http_write_short(Data, Sent)) -->
 	[ '~p: remote hangup after ~D bytes'-[Data, Sent] ].
+prolog:error_message(syntax_error(http_request(Request))) -->
+	[ 'Illegal HTTP request: ~s'-[Request] ].
+prolog:error_message(syntax_error(http_parameter(Line))) -->
+	[ 'Illegal HTTP parameter: ~s'-[Line] ].
+
 prolog:message(http(skipped_cookie(S))) -->
 	[ 'Skipped illegal cookie: ~s'-[S] ].

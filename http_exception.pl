@@ -1,9 +1,10 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2009, University of Amsterdam
+    Copyright (C): 2009-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -107,7 +108,10 @@ resource_error(error(resource_error(_), _)).
 
 bad_request_error(error(domain_error(http_request, _), _)).
 bad_request_error(error(existence_error(http_parameter, _), _)).
-bad_request_error(error(type_error(_, _), context(_, http_parameter(Field)))) :- atom(Field).
+bad_request_error(error(type_error(_, _), context(_, http_parameter(Field)))) :-
+	atom(Field).
+bad_request_error(error(syntax_error(http_request_line(_)), _)).
+bad_request_error(error(syntax_error(http_request(_)), _)).
 
 discard_stack_trace(error(Formal, context(_,Msg)),
 		    error(Formal, context(_,Msg))).
