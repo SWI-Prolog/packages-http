@@ -32,10 +32,21 @@
 	  [ map_exception_to_http_status/4
 	  ]).
 
-/** <module> Internal module of the HTTP server
+/** <module> Map Prolog exceptions to HTTP errors
+
+This module maps exceptions from various parts  of the HTTP libraries as
+well as exceptions from user  handler   predicates  into meaningful HTTP
+error codes such as 4XX and 5XX  codes. For example, existence errors on
+http locations are mapped to 404 while out-of-stack is mapped to 503.
+
+This library provides one hook: http:bad_request_error/2 can be extended
+to map exceptions into 400 bad request responses.
 
 @see	http_header.pl, http_wrapper.pl
 */
+
+:- multifile
+	http:bad_request_error/2.	% Formal, Context
 
 %%	map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
 %
@@ -97,7 +108,7 @@ map_exception_to_http_status(E,
 	      bad_request(E2),
 	      [connection(close)],
               []) :-
-	bad_request_error(E), !,
+	bad_request_exception(E), !,
 	discard_stack_trace(E, E2).
 map_exception_to_http_status(E,
 	      server_error(E),
@@ -106,15 +117,44 @@ map_exception_to_http_status(E,
 
 resource_error(error(resource_error(_), _)).
 
-bad_request_error(error(domain_error(http_request, _), _)).
-bad_request_error(error(existence_error(http_parameter, _), _)).
-bad_request_error(error(type_error(_, _), context(_, http_parameter(Field)))) :-
-	atom(Field).
-bad_request_error(error(syntax_error(http_request_line(_)), _)).
-bad_request_error(error(syntax_error(http_request(_)), _)).
+bad_request_exception(error(Error, Context)) :-
+	nonvar(Error),
+	bad_request_error(Error, ContextGeneral),
+	(   var(ContextGeneral)
+	->  true
+	;   Context = context(_Stack, ContextGeneral)
+	->  subsumes_term(ContextGeneral, Context)
+	), !.
+
+bad_request_error(Error, Context) :-
+	http:bad_request_error(Error, Context).
+bad_request_error(Error, Context) :-
+	default_bad_request_error(Error, Context).
+
+default_bad_request_error(domain_error(http_request, _), _).
+default_bad_request_error(existence_error(http_parameter, _), _).
+default_bad_request_error(type_error(_, _), http_parameter(_)).
+default_bad_request_error(syntax_error(http_request_line(_)), _).
+default_bad_request_error(syntax_error(http_request(_)), _).
 
 discard_stack_trace(error(Formal, context(_,Msg)),
 		    error(Formal, context(_,Msg))).
+
+%%	http:bad_request_error(+Formal, -ContextTemplate) is semidet.
+%
+%	If  an  exception  of  the   term  error(Formal,  context(Stack,
+%	Context)) is caught and  subsumes_term(ContextTemplate, Context)
+%	is true, translate the exception into  an HTTP 400 exception. If
+%	the exception contains a stack-trace, this  is stripped from the
+%	response.
+%
+%	The idea behind this hook  is   that  applications can raise 400
+%	responses by
+%
+%	  - Throwing a specific (error) exception and adding a rule
+%	    to this predicate to interpret this as 400.
+%	  - Define rules for prolog:error_message//1 to formulate
+%	    an appropriate message.
 
 
 %%	keep_alive(+Reply) is semidet.
