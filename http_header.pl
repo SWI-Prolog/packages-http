@@ -168,7 +168,7 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 %		typical output from a CGI script.
 %
 %		* Status
-%		HTTP status report and defined by http_status_reply/4.
+%		HTTP status report as defined by http_status_reply/4.
 %
 %	@param HdrExtra provides additional reply-header fields, encoded
 %	       as Name(Value). It can also contain a field
@@ -272,6 +272,25 @@ copy_stream(Out, In, Header, From, To) :-
 %
 %	Emit HTML non-200 status reports. Such  requests are always sent
 %	as UTF-8 documents.
+%
+% Status can be one of the following:
+%   - authorise(Method)
+%   - authorise(basic,Realm)
+%   - bad_request(ErrorTerm)
+%   - `busy`
+%   - created(Location)
+%   - forbidden(Url)
+%   - moved(To)
+%   - moved_temporarily(To)
+%   - `no_content`
+%   - not_acceptable(WhyHtml)
+%   - not_found(Url)
+%   - `not_modified`
+%   - resource_error(ErrorTerm)
+%   - see_other(To)
+%   - switching_protocols(Goal,Options)
+%   - server_error(ErrorTerm)
+%   - unavailable(WhyHtml)
 
 http_status_reply(Status, Out, HdrExtra, Code) :-
         http_status_reply(Status, Out, HdrExtra, [], Code).
