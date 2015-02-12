@@ -106,6 +106,7 @@ http_wrapper(Goal, In, Out, Close, Options) :-
 	    handler_with_output_to(Goal, Id, Request1, CGI, Error),
 	    cgi_close(CGI, Request1, State0, Error, Close)
 	;   Id = 0,
+	    add_header_context(ReqError),
 	    (	debugging(http(request))
 	    ->	print_message(warning, ReqError)
 	    ;	true
@@ -113,6 +114,9 @@ http_wrapper(Goal, In, Out, Close, Options) :-
 	    send_error(Out, [], State0, ReqError, Close),
 	    extend_request(Options, [], _)
 	).
+
+add_header_context(error(_,context(_,in_http_request))) :- !.
+add_header_context(_).
 
 status(Id, state0(Thread, CPU, Id)) :-
 	thread_self(Thread),

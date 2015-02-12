@@ -136,6 +136,7 @@ default_bad_request_error(existence_error(http_parameter, _), _).
 default_bad_request_error(type_error(_, _), http_parameter(_)).
 default_bad_request_error(syntax_error(http_request_line(_)), _).
 default_bad_request_error(syntax_error(http_request(_)), _).
+default_bad_request_error(syntax_error(_), in_http_request).
 
 discard_stack_trace(error(Formal, context(_,Msg)),
 		    error(Formal, context(_,Msg))).
