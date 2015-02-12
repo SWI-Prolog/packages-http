@@ -122,8 +122,8 @@ bad_request_exception(error(Error, Context)) :-
 	bad_request_error(Error, ContextGeneral),
 	(   var(ContextGeneral)
 	->  true
-	;   Context = context(_Stack, ContextGeneral)
-	->  subsumes_term(ContextGeneral, Context)
+	;   Context = context(_Stack, ContextInstance)
+	->  subsumes_term(ContextGeneral, ContextInstance)
 	), !.
 
 bad_request_error(Error, Context) :-
