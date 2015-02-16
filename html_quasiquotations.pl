@@ -78,7 +78,7 @@ html(Content, Vars, Dict, DOM) :-
 	    Content, In,
 	    load_html(In, DOM0,
 		      [ max_errors(0),
-			case_sensitive_attributes(true)
+			case_preserving_attributes(true)
 		      ])),
 	xml_content(QQDict, DOM0, DOM).
 
