@@ -368,6 +368,9 @@ http_current_handler(Path, M:C, Options) :-
 %	    The unqualified name of the predicate.
 %
 %	@error existence_error(http_handler_id, Id).
+%	@deprecated The predicate http_link_to_id/3 provides the same
+%	functionality with the option to add query parameters or a
+%	path parameter.
 
 :- dynamic
 	id_location_cache/2.
