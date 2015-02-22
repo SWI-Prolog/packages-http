@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2008-2014, University of Amsterdam
+    Copyright (C): 2008-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -58,7 +58,7 @@ two additional modules that acts as plugins:
 
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 HTTPS connections.  Relevant
-    options for SLL certificate handling are handled to ssl_context/3.
+    options for SLL certificate handling are handed to ssl_context/3.
 
 Here is a simple example to fetch a web-page:
 
@@ -112,13 +112,16 @@ resource. See also parse_time/2.
 		       status_code(-integer),
 		       output(-stream),
 		       timeout(number),
-		       post(any),		    % library(http/http_header)
 		       proxy(atom, integer),
 		       proxy_authorization(compound),
 		       request_header(any),
 		       user_agent(atom),
-		       pem_password_hook(callable), % if SSL is loaded
-		       cert_verify_hook(callable)   % if SSL is loaded
+	% The option below applies if library(http/http_header) is loaded
+		       post(any),
+	% The options below apply if library(http/http_ssl_plugin)) is loaded
+		       pem_password_hook(callable),
+		       cacert_file(atom),
+		       cert_verify_hook(callable)
 		     ]).
 
 %%	user_agent(-Agent) is det.
