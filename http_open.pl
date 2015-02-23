@@ -246,6 +246,7 @@ http_open(URL, Stream, QOptions) :-
 	->  parse_url_ex(URL, Parts)
 	;   Parts = URL
 	),
+	autoload_https(Parts),
 	add_authorization(Parts, Options, Options1),
 	(   http:open_options(Parts, HostOptions)
 	->  merge_options(Options1, HostOptions, Options2)
@@ -297,6 +298,18 @@ default_port(_,	    80).
 
 host_and_port(Host, DefPort, DefPort, Host) :- !.
 host_and_port(Host, _,       Port,    Host:Port).
+
+%%	autoload_https(+Parts) is det.
+%
+%	If the requested scheme is https, load the HTTPS plugin.
+
+autoload_https(Parts) :-
+	memberchk(scheme(https), Parts),
+	\+ clause(http:http_protocol_hook(https, _, In, Out, In, Out, _),_),
+	exists_source(library(http/http_ssl_plugin)), !,
+	use_module(library(http/http_ssl_plugin)).
+autoload_https(_).
+
 
 %%	send_rec_header(+Out, +In, -InStream,
 %%			+Host, +RequestURI, +Parts, +Options) is det.
