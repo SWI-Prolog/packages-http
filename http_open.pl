@@ -41,6 +41,7 @@
 :- use_module(library(error)).
 :- use_module(library(base64)).
 :- use_module(library(debug)).
+:- use_module(library(apply)).
 
 /** <module> Simple HTTP client
 
@@ -248,10 +249,10 @@ http_open(URL, Stream, QOptions) :-
 	),
 	autoload_https(Parts),
 	add_authorization(Parts, Options, Options1),
-	(   http:open_options(Parts, HostOptions)
-	->  merge_options(Options1, HostOptions, Options2)
-	;   Options2 = Options1
-	),
+	findall(HostOptions,
+		http:open_options(Parts, HostOptions),
+		AllHostOptions),
+	foldl(merge_options, AllHostOptions, Options1, Options2),
 	http_open_parts(Parts, Stream, Options2).
 
 is_meta(pem_password_hook).		% SSL plugin callbacks
@@ -951,7 +952,7 @@ update_cookies(Lines, Parts, Options) :-
 		 *     HOOK DOCUMENTATION	*
 		 *******************************/
 
-%%	http:open_options(+Parts, -Options) is semidet.
+%%	http:open_options(+Parts, -Options) is nondet.
 %
 %	This hook is used by the HTTP   client library to define default
 %	options based on the the broken-down request-URL.  The following
@@ -966,6 +967,10 @@ update_cookies(Lines, Parts, Options) :-
 %		Host \== localhost,
 %		Options = [proxy('proxy.local', 3128)].
 %	    ==
+%
+%	This hook may return multiple   solutions.  The returned options
+%	are  combined  using  merge_options/3  where  earlier  solutions
+%	overrule later solutions.
 
 %%	http:write_cookies(+Out, +Parts, +Options) is semidet.
 %
