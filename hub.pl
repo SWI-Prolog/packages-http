@@ -195,13 +195,15 @@ wait_for_sockets(Hub, Max) :-
 	      wait_for_input(Set, ReadySet, Timeout),
 	      (	  ReadySet \== []
 	      ->  debug(hub(ready), 'Data on ~p', [ReadySet]),
-		  maplist(thread_send_message(Queues.ready), ReadySet),
+		  Ready = Queues.ready,
+		  maplist(thread_send_message(Ready), ReadySet),
 		  create_reader_threads(Hub),
 		  ord_subtract(Set, ReadySet, NotReadySet)
 	      ;	  NotReadySet = Set		% timeout
 	      ),
 	      debug(hub(wait), 'Re-scheduling: ~p', [NotReadySet]),
-	      maplist(thread_send_message(Queues.wait), NotReadySet),
+	      Wait = Queues.wait,
+	      maplist(thread_send_message(Wait), NotReadySet),
 	      fail
 	  ;   !
 	  ).
