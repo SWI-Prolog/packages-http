@@ -57,6 +57,7 @@
 		       workers(positive_integer),
 		       timeout(number),
 		       keep_alive_timeout(number),
+		       ssl(list(any)),	% if http/http_ssl_plugin is loaded
 		       pass_to(system:thread_create/3, 3)
 		     ]).
 :- predicate_options(http_spawn/2, 2,
