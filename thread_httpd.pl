@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2014, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -73,15 +73,24 @@
 
 /** <module> Threaded HTTP server
 
-This library provides a multi-threaded Prolog-based HTTP server based on
-the same wrapper as xpce_httpd and   inetd_httpd. This server can handle
-multiple clients in Prolog threads and doesn't need XPCE.
+This library defines the HTTP server  frontend of choice for SWI-Prolog.
+It is based on the multi-threading   capabilities of SWI-Prolog and thus
+exploits multiple cores  to  serve   requests  concurrently.  The server
+scales well and can cooperate with   library(thread_pool) to control the
+number of concurrent requests of a given   type.  For example, it can be
+configured to handle 200 file download requests concurrently, 2 requests
+that potentially uses a lot of memory and   8 requests that use a lot of
+CPU resources.
 
-In addition to the other two frontends   (XPCE and inetd), this frontend
-provides hooks for http_ssl_plugin.pl for creating   an HTTPS server. It
-is activated using the  option   ssl(+SSLOptions),  where SSLOptions are
-options required by ssl_init/3. See   http_ssl_plugin.pl and package ssl
-for details.
+On   Unix   systems,    this    library     can    be    combined   with
+library(http/http_unix_daemon) to realise a proper  Unix service process
+that creates a web server at  port   80,  runs under a specific account,
+optionally detaches from the controlling terminal, etc.
+
+Combined with library(http/http_ssl_plugin) from the   SSL package, this
+library   can   be   used   to    create     an    HTTPS   server.   See
+<plbase>/doc/packages/examples/ssl/https for an example   server using a
+self-signed SSL certificate.
 */
 
 :- meta_predicate
@@ -90,9 +99,9 @@ for details.
 	http_spawn(0, +).
 
 :- dynamic
-	current_server/5,		% Port, Goal, Thread, Queue, StartTime
-	queue_worker/2,			% Queue, ThreadID
-	queue_options/2.		% Queue, Options
+	current_server/6,	% Port, Goal, Thread, Queue, Scheme, StartTime
+	queue_worker/2,		% Queue, ThreadID
+	queue_options/2.	% Queue, Options
 
 :- multifile
 	make_socket_hook/3,
@@ -134,17 +143,27 @@ for details.
 %	  * local(+Kbytes)
 %	  * global(+Kbytes)
 %	  * trail(+Kbytes)
-%	  Stack sizes to use for the workers.  Default come from the
-%	  command line options.  Applications that wish to do resource
-%	  management are adviced to use library(http/http_dispatch) and
-%	  the =spawn= option of http_handler/3.
+%	  Stack sizes to use for the workers.  The default is inherited
+%	  from the `main` thread. As of version 5.9 stacks are no longer
+%	  _pre-allocated_ and the given sizes only act as a limit.
+%	  If you need to control resource usage look at the `spawn`
+%	  option of http_handler/3 and library(thread_pool).
 %
-%	A typical initialization of the server is
+%	A  typical  initialization  for  an    HTTP   server  that  uses
+%	http_dispatch/1 to relay requests to predicates is:
 %
 %	  ==
+%	  :- use_module(library(http/thread_httpd)).
+%	  :- use_module(library(http/http_dispatch)).
+%
 %	  start_server(Port) :-
-%	      http_server(http_dispatch, [port(8080)]).
+%	      http_server(http_dispatch, [port(Port)]).
 %	  ==
+%
+%	Note that multiple servers  can  coexist   in  the  same  Prolog
+%	process. A notable application of this is   to have both an HTTP
+%	and HTTPS server, where the HTTP   server redirects to the HTTPS
+%	server for handling sensitive requests.
 
 http_server(Goal, Options) :-
 	select_option(port(Port), Options, Options1), !,
@@ -210,8 +229,15 @@ create_server(Goal, Port, Options) :-
 	thread_create(accept_server(Goal, Options), _,
 		      [ alias(Alias)
 		      ]),
-	assert(current_server(Port, Goal, Alias, Queue, StartTime)).
+	scheme(Scheme, Options),
+	assert(current_server(Port, Goal, Alias, Queue, Scheme, StartTime)).
 
+scheme(Scheme, Options) :-
+	option(scheme(Scheme), Options), !.
+scheme(Scheme, Options) :-
+	option(ssl(_), Options), !,
+	Scheme = https.
+scheme(http, _).
 
 %%	http_current_server(:Goal, ?Port) is nondet.
 %
@@ -220,7 +246,7 @@ create_server(Goal, Port, Options) :-
 %	@deprecated Use http_server_property(Port, goal(Goal))
 
 http_current_server(Goal, Port) :-
-	current_server(Port, Goal, _, _, _).
+	current_server(Port, Goal, _, _, _, _).
 
 
 %%	http_server_property(?Port, ?Property) is nondet.
@@ -231,6 +257,8 @@ http_current_server(Goal, Port) :-
 %	    * goal(:Goal)
 %	    Goal used to start the server. This is often
 %	    http_dispatch/1.
+%	    * scheme(-Scheme)
+%	    Scheme is one of `http` or `https`.
 %	    * start_time(?Time)
 %	    Time-stamp when the server was created.
 
@@ -238,9 +266,11 @@ http_server_property(Port, Property) :-
 	server_property(Property, Port).
 
 server_property(goal(Goal), Port) :-
-	current_server(Port, Goal, _, _, _).
+	current_server(Port, Goal, _, _, _, _).
+server_property(scheme(Scheme), Port) :-
+	current_server(Port, _, _, _, Scheme, _).
 server_property(start_time(Time), Port) :-
-	current_server(Port, _, _, _, Time).
+	current_server(Port, _, _, _, _, Time).
 
 
 %%	http_workers(+Port, -Workers) is det.
@@ -252,7 +282,7 @@ server_property(start_time(Time), Port) :-
 
 http_workers(Port, Workers) :-
 	must_be(ground, Port),
-	current_server(Port, _, _, Queue, _), !,
+	current_server(Port, _, _, Queue, _, _), !,
 	(   integer(Workers)
 	->  resize_pool(Queue, Workers)
 	;   findall(W, queue_worker(Queue, W), WorkerIDs),
@@ -274,7 +304,7 @@ http_workers(Port, _) :-
 
 http_add_worker(Port, Options) :-
 	must_be(ground, Port),
-	current_server(Port, _, _, Queue, _), !,
+	current_server(Port, _, _, Queue, _, _), !,
 	queue_options(Queue, QueueOptions),
 	merge_options(Options, QueueOptions, WorkerOptions),
 	atom_concat(Queue, '_', AliasBase),
@@ -291,7 +321,7 @@ http_add_worker(Port, _) :-
 %	statistics.
 
 http_current_worker(Port, ThreadID) :-
-	current_server(Port, _, _, Queue, _),
+	current_server(Port, _, _, Queue, _, _),
 	queue_worker(Queue, ThreadID).
 
 
@@ -303,7 +333,7 @@ http_current_worker(Port, ThreadID) :-
 accept_server(Goal, Options) :-
 	catch(accept_server2(Goal, Options), http_stop, true),
 	thread_self(Thread),
-	retract(current_server(_Port, _, Thread, _Queue, _StartTime)),
+	retract(current_server(_Port, _, Thread, _Queue, _Scheme, _StartTime)),
 	close_server_socket(Options).
 
 accept_server2(Goal, Options) :-
@@ -350,7 +380,7 @@ close_server_socket(Options) :-
 
 http_stop_server(Port, _Options) :-
 	http_workers(Port, 0),
-	current_server(Port, _, Thread, Queue, _Start),
+	current_server(Port, _, Thread, Queue, _Scheme, _Start),
 	retractall(queue_options(Queue, _)),
 	thread_signal(Thread, throw(http_stop)),
 	catch(connect(localhost:Port), _, true),
@@ -370,7 +400,7 @@ enough_workers(Queue, Why, Peer) :-
 	message_queue_property(Queue, size(Size)),
 	(   enough(Size, Why)
 	->  true
-	;   current_server(Port, _, _, Queue, _),
+	;   current_server(Port, _, _, Queue, _, _),
 	    catch(http:schedule_workers(_{port:Port,
 					  reason:Why,
 					  peer:Peer,
@@ -801,6 +831,11 @@ prolog:message(httpd(created_pool(Pool))) -->
 	].
 
 http_root(Port) -->
+	http_scheme(Port),
 	{ http_absolute_location(root(.), URI, []) },
-	[ 'http://localhost:~w~w'-[Port, URI] ].
+	[ 'localhost:~w~w'-[Port, URI] ].
+
+http_scheme(Port) -->
+	{ http_server_property(Port, scheme(Scheme)) },
+	[ '~w://'-[Scheme] ].
 
