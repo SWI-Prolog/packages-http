@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -47,7 +45,13 @@
 /** <module> Demo implementation of some HTTP handlers
 
 This module implements some HTTP handlers  using rather low-level simple
-primitives.
+primitives. It illustrates the process that HTTP handlers are similar to
+CGI handlers in the sense that they need  to write a CGI document to the
+`current_output` stream.  For high level primitives:
+
+  - More advanced dispatching of requests over predicates that implement
+    them is provided by http_handler/3 from library(http/http_dispatch).
+  - High level HTML is generated with library(http/html_write).
 
 @see	http://www.swi-prolog.org/howto/http/ provides a much better
 	tutorial introduction to the SWI-Prolog HTTP services.
@@ -57,6 +61,28 @@ primitives.
 reply(_) :-
 	flag(request, N, N+1),
 	fail.
+
+%	/
+%
+%	Show available locations
+
+reply(Request) :-
+	memberchk(path('/'), Request), !,
+	format('Content-type: text/html~n~n', []),
+	format('<html>~n', []),
+	format('<h1>Some simple demo queries</h1>', []),
+	format('<ul>~n', []),
+	format('  <li><a href="quit">Say bye bye</a>'),
+	format('  <li><a href="env">Print environment</a>'),
+	format('  <li><a href="upload">Upload some data</a>'),
+	format('  <li><a href="xml">Reply with an XML document</a>'),
+	format('  <li><a href="foreign">Reply Chinese characters</a>'),
+	format('  <li><a href="work">Work hard for a while</a>'),
+	format('  <li><a href="error">Show what happens on an error</a>'),
+	format('  <li><a href="xpce?class=box">Return image (requires xpce)</a>'),
+	format('  <li><a href="otherwise">Otherwise, print request</a>'),
+	format('</ul>~n', []),
+	format('</html>~n', []).
 
 %	/quit
 %
@@ -148,12 +174,10 @@ reply(Request) :-
 <html>
 <head><title>Foreign characters</title></head>
 <body>
-<p>Chinese for book is ~s
+<p>Chinese for book is \u5b66\u4e60
 </body>
 </html>
-',
-[ [23398, 20064]
-]).
+').
 
 
 %	/work
