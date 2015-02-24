@@ -60,6 +60,9 @@ two additional modules that acts as plugins:
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 HTTPS connections.  Relevant
     options for SLL certificate handling are handed to ssl_context/3.
+    This plugin is loaded automatically if the scheme `https` is
+    requested using a default SSL context.  See the plugin for
+    additional information regarding security.
 
 Here is a simple example to fetch a web-page:
 
