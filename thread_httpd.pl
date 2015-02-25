@@ -96,7 +96,7 @@ self-signed SSL certificate.
 */
 
 :- meta_predicate
-	http_server(1, +),
+	http_server(1, :),
 	http_current_server(1, ?),
 	http_spawn(0, +).
 
@@ -113,7 +113,7 @@ self-signed SSL certificate.
 	http:create_pool/1,
 	http:schedule_workers/1.
 
-%%	http_server(:Goal, +Options) is det.
+%%	http_server(:Goal, :Options) is det.
 %
 %	Create a server at Port that calls Goal for each parsed request.
 %	Options provide a list of options. Defined options are
@@ -167,9 +167,9 @@ self-signed SSL certificate.
 %	and HTTPS server, where the HTTP   server redirects to the HTTPS
 %	server for handling sensitive requests.
 
-http_server(Goal, Options) :-
+http_server(Goal, M:Options) :-
 	select_option(port(Port), Options, Options1), !,
-	make_socket(Port, Options1, Options2),
+	make_socket(Port, M:Options1, Options2),
 	create_workers(Options2),
 	create_server(Goal, Port, Options2),
 	print_message(informational,
@@ -178,20 +178,23 @@ http_server(_Goal, _Options) :-
 	existence_error(option, port).
 
 
-%%	make_socket(?Port, +OptionsIn, -OptionsOut) is det.
+%%	make_socket(?Port, :OptionsIn, -OptionsOut) is det.
 %
 %	Create the HTTP server socket and  worker pool queue. OptionsOut
 %	is quaranteed to hold the option queue(QueueId).
+%
+%	@arg   OptionsIn   is   qualified   to     allow   passing   the
+%	module-sensitive ssl option argument.
 
 make_socket(Port, Options0, Options) :-
 	make_socket_hook(Port, Options0, Options), !.
-make_socket(Port, Options0, Options) :-
+make_socket(Port, _:Options0, Options) :-
 	option(tcp_socket(_), Options0), !,
 	make_addr_atom('httpd', Port, Queue),
 	Options = [ queue(Queue)
 		  | Options0
 		  ].
-make_socket(Port, Options0, Options) :-
+make_socket(Port, _:Options0, Options) :-
 	tcp_socket(Socket),
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Port),
