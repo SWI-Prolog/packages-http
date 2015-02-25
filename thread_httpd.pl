@@ -201,14 +201,14 @@ make_socket(Port, Options0, Options) :-
 		  | Options0
 		  ].
 
-%%	make_addr_atom(+Prefix, +Address, -Atom) is det.
+%%	make_addr_atom(+Scheme, +Address, -Atom) is det.
 %
 %	Create an atom that identifies  the   server's  queue and thread
 %	resources.
 
-make_addr_atom(Prefix, Address, Atom) :-
+make_addr_atom(Scheme, Address, Atom) :-
 	phrase(address_parts(Address), Parts),
-	atomic_list_concat([Prefix|Parts], Atom).
+	atomic_list_concat([Scheme,@|Parts], Atom).
 
 address_parts(Atomic) -->
 	{ atomic(Atomic) }, !,
@@ -226,11 +226,11 @@ address_parts(ip(A,B,C,D)) --> !,
 create_server(Goal, Port, Options) :-
 	get_time(StartTime),
 	memberchk(queue(Queue), Options),
-	make_addr_atom('http@', Port, Alias),
+	scheme(Scheme, Options),
+	make_addr_atom(Scheme, Port, Alias),
 	thread_create(accept_server(Goal, Options), _,
 		      [ alias(Alias)
 		      ]),
-	scheme(Scheme, Options),
 	assert(current_server(Port, Goal, Alias, Queue, Scheme, StartTime)).
 
 scheme(Scheme, Options) :-
