@@ -174,7 +174,7 @@ http_server(Goal, Options) :-
 	print_message(informational,
 		      httpd_started_server(Port)).
 http_server(_Goal, _Options) :-
-	throw(error(existence_error(option, port), _)).
+	existence_error(option, port).
 
 
 %%	make_socket(?Port, +OptionsIn, -OptionsOut) is det.
