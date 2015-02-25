@@ -39,7 +39,8 @@
 	    http_spawn/2,		% :Goal, +Options
 
 	    http_requeue/1,		% +Request
-	    http_close_connection/1	% +Request
+	    http_close_connection/1,	% +Request
+	    http_enough_workers/3	% +Queue, +Why, +Peer
 	  ]).
 :- use_module(library(debug)).
 :- use_module(library(error)).
@@ -186,7 +187,7 @@ make_socket(Port, Options0, Options) :-
 	make_socket_hook(Port, Options0, Options), !.
 make_socket(Port, Options0, Options) :-
 	option(tcp_socket(_), Options0), !,
-	make_addr_atom('httpd@', Port, Queue),
+	make_addr_atom('httpd', Port, Queue),
 	Options = [ queue(Queue)
 		  | Options0
 		  ].
@@ -195,7 +196,7 @@ make_socket(Port, Options0, Options) :-
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Port),
 	tcp_listen(Socket, 5),
-	make_addr_atom('httpd@', Port, Queue),
+	make_addr_atom('httpd', Port, Queue),
 	Options = [ queue(Queue),
 		    tcp_socket(Socket)
 		  | Options0
@@ -338,24 +339,29 @@ accept_server(Goal, Options) :-
 	close_server_socket(Options).
 
 accept_server2(Goal, Options) :-
-	accept_hook(Goal, Options), !.
-accept_server2(Goal, Options) :-
-	memberchk(tcp_socket(Socket), Options), !,
-	memberchk(queue(Queue), Options),
 	repeat,
-	  (   catch(tcp_accept(Socket, Client, Peer), E, true)
+	  (   catch(accept_server3(Goal, Options), E, true)
 	  ->  (   var(E)
-	      ->  debug(http(connection), 'New HTTP connection from ~p', [Peer]),
-		  enough_workers(Queue, accept, Peer),
-		  thread_send_message(Queue, tcp_client(Client, Goal, Peer)),
-		  fail
-	      ;   accept_rethrow_error(E)
+	      ->  fail
+	      ;	  accept_rethrow_error(E)
 	      ->  throw(E)
-	      ;   print_message(error, E),
+	      ;	  print_message(error, E),
 		  fail
 	      )
-	  ;   print_message(error, goal_failed(tcp_accept(Socket, _, _)))
+	  ;   print_message(error,	% internal error
+			    goal_failed(accept_server3(Goal, Options))),
+	      fail
 	  ).
+
+accept_server3(Goal, Options) :-
+	accept_hook(Goal, Options), !.
+accept_server3(Goal, Options) :-
+	memberchk(tcp_socket(Socket), Options),
+	memberchk(queue(Queue), Options),
+	tcp_accept(Socket, Client, Peer),
+	debug(http(connection), 'New HTTP connection from ~p', [Peer]),
+	http_enough_workers(Queue, accept, Peer),
+	thread_send_message(Queue, tcp_client(Client, Goal, Peer)).
 
 accept_rethrow_error(http_stop).
 accept_rethrow_error('$aborted').
@@ -393,11 +399,13 @@ connect(Address) :-
         tcp_connect(Socket, Address),
 	tcp_close_socket(Socket).
 
-%%	enough_workers(+Queue, +Why, +Peer) is det.
+%%	http_enough_workers(+Queue, +Why, +Peer) is det.
 %
-%	Check that we have enough workers in our queue.
+%	Check that we have enough workers in our queue. If not, call the
+%	hook http:schedule_workers/1 to extend  the   worker  pool. This
+%	predicate can be used by accept_hook/2.
 
-enough_workers(Queue, Why, Peer) :-
+http_enough_workers(Queue, Why, Peer) :-
 	message_queue_property(Queue, size(Size)),
 	(   enough(Size, Why)
 	->  true
@@ -675,7 +683,7 @@ http_requeue(Header) :-
 	requeue_header(Header, ClientOptions),
 	memberchk(pool(client(Queue, Goal, In, Out)), ClientOptions),
 	memberchk(peer(Peer), ClientOptions),
-	enough_workers(Queue, keep_alive, Peer),
+	http_enough_workers(Queue, keep_alive, Peer),
 	thread_send_message(Queue, requeue(In, Out, Goal, ClientOptions)), !.
 http_requeue(Header) :-
 	debug(http(error), 'Re-queue failed: ~p', [Header]),
