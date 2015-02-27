@@ -255,8 +255,11 @@ http_open(URL, Stream, QOptions) :-
 	findall(HostOptions,
 		http:open_options(Parts, HostOptions),
 		AllHostOptions),
-	foldl(merge_options, AllHostOptions, Options1, Options2),
+	foldl(merge_options_rev, AllHostOptions, Options1, Options2),
 	http_open_parts(Parts, Stream, Options2).
+
+merge_options_rev(Old, New, Merged) :-
+	merge_options(New, Old, Merged).
 
 is_meta(pem_password_hook).		% SSL plugin callbacks
 is_meta(cert_verify_hook).
