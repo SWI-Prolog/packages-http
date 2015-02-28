@@ -32,11 +32,11 @@
 	  [ reply/1
 	  ]).
 :- use_module(library(http/http_client)).
-:- use_module(library(http/http_mime_plugin)). % Decode multipart data
-:- use_module(library(http/http_image)).	 % make XPCE generate images
+:- use_module(library(http/http_mime_plugin)).	% Decode multipart data
 
 :- if(exists_source(library(pce))).
 :- use_module(library(pce)).
+:- use_module(library(http/http_image)).	% make XPCE generate images
 :- endif.
 
 :- discontiguous
