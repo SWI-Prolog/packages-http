@@ -824,16 +824,15 @@ html_receive(Id) -->
 %
 %	This extended version of html_receive//1   causes  Handler to be
 %	called to process all messages posted to the channal at the time
-%	output is generated. Handler is a   grammar  rule that is called
-%	with three extra arguments.
+%	output  is  generated.  Handler  is    called  as  below,  where
+%	`PostedTerms` is a list of  Module:Term   created  from calls to
+%	html_post//2. Module is the context module of html_post and Term
+%	is the unmodified term. Members  in   `PostedTerms`  are  in the
+%	order posted and may contain duplicates.
 %
-%	    1. A list of Module:Term, of posted terms.  Module is the
-%	       contest module of html_post and Term is the unmodified
-%	       term.  Members are in the order posted and may contain
-%	       duplicates.
-%	    2. DCG input list.  The final output must be produced by a
-%	       call to html//1.
-%	    3. DCG output list.
+%	  ==
+%	    phrase(Handler, PostedTerms, HtmlTerms, Rest)
+%	  ==
 %
 %	Typically, Handler collects the posted   terms,  creating a term
 %	suitable for html//1 and finally calls html//1.
