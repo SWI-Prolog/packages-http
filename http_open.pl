@@ -110,6 +110,7 @@ resource. See also parse_time/2.
 		     [ authorization(compound),
 		       final_url(-atom),
 		       header(+atom, -atom),
+		       headers(-list),
 		       connection(+atom),
 		       method(oneof([delete,get,head,post])),
 		       size(-integer),
@@ -162,6 +163,12 @@ user_agent('SWI-Prolog').
 %	  (-). Multiple of these options  may   be  provided  to extract
 %	  multiple  header  fields.  If  the  header  is  not  available
 %	  AtomValue is unified to the empty atom ('').
+%
+%	  * headers(-List)
+%	  If provided, List is unified with a list of Name-Value pairs
+%	  corresponding to fields in the reply header.  Name and Value
+%	  follow the same conventions used by the header(Name,Value)
+%	  option.
 %
 %	  * method(+Method)
 %	  One of =get= (default), =head= or =delete=.
@@ -465,6 +472,7 @@ do_open(Code, _, Lines, Options, Parts, In0, In) :-
 	), !,
 	return_size(Options, Lines),
 	return_fields(Options, Lines),
+	return_headers(Options, Lines),
 	transfer_encoding_filter(Lines, In0, In),
 					% properly re-initialise the stream
 	parts_uri(Parts, URI),
@@ -583,6 +591,17 @@ return_fields([header(Name, Value)|T], Lines) :- !,
 	return_fields(T, Lines).
 return_fields([_|T], Lines) :-
 	return_fields(T, Lines).
+
+return_headers([], _).
+return_headers([headers(Headers)|_], Lines) :- !,
+	use_module(library(http/http_header), [http_parse_header/2]),
+	maplist(parse_header,Lines,Headers).
+return_headers([_|T], Lines) :-
+	return_headers(T, Lines).
+
+parse_header(Line,Name-Value) :-
+	http_parse_header(Line,[Header]),
+	Header =.. [Name,Value].
 
 
 %%	return_final_url(+Options) is semidet.
