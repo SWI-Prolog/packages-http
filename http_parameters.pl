@@ -274,6 +274,8 @@ check_type3((T1;T2), In, Out) :- !,
 	->  true
 	;   check_type_no_error(T2, In, Out)
 	).
+check_type3(string, Atom, String) :- !,
+	to_string(Atom, String).
 check_type3(number, Atom, Number) :- !,
 	to_number(Atom, Number).
 check_type3(integer, Atom, Integer) :- !,
@@ -303,6 +305,10 @@ to_number(In, Number) :-
 to_number(In, Number) :-
 	atom(In),
 	atom_number(In, Number).
+
+to_string(In, String) :- string(In), !, String = In.
+to_string(In, String) :- atom(In),   !, atom_string(In, String).
+to_string(In, String) :- number(In), !, number_string(In, String).
 
 %%	check_type2(+Type, +ValueIn) is semidet.
 %

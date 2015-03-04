@@ -578,6 +578,9 @@ Succeeds if value is an atom of length than or equal to $N$ characters.
     \termitem{atom}{}
 No-op.  Allowed for consistency.
 
+    \termitem{string}{}
+Convert value to a string.
+
     \termitem{between}{+Low, +High}
 Convert value to a number and if either \arg{Low} or \arg{High} is a
 float, force value to be a float.  Then check that the value is in the
