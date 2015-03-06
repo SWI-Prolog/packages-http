@@ -120,6 +120,7 @@ resource. See also parse_time/2.
 		       proxy_authorization(compound),
 		       request_header(any),
 		       user_agent(atom),
+		       version(-integer,-integer),
 	% The option below applies if library(http/http_header) is loaded
 		       post(any),
 	% The options below apply if library(http/http_ssl_plugin)) is loaded
@@ -177,6 +178,10 @@ user_agent('SWI-Prolog').
 %	  * size(-Size)
 %	  Size is unified with the   integer value of =|Content-Length|=
 %	  in the reply header.
+%
+%	  * version(-Major,-Minor)
+%	  Major and Minor are unified with the integer values of the
+%	  HTTP version in the reply header.
 %
 %	  * status_code(-Code)
 %	  If this option is  present  and   Code  unifies  with the HTTP
@@ -359,9 +364,9 @@ guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
         ),
 	flush_output(Out),
 					% read the reply header
-	read_header(In, Code, Comment, Lines),
+	read_header(In, ReplyVersion, Code, Comment, Lines),
 	update_cookies(Lines, Parts, Options),
-	do_open(Code, Comment, Lines, Options, Parts, In, Stream).
+	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, In, Stream).
 
 
 %%	http_version(-Version:atom) is det.
@@ -433,7 +438,7 @@ user_agent(Agent, Options) :-
 	;   user_agent(Agent)
 	).
 
-%%	do_open(+HTTPStatusCode, +HTTPStatusComment, +Header,
+%%	do_open(+HTTPVersion, +HTTPStatusCode, +HTTPStatusComment, +Header,
 %%		+Options, +Parts, +In, -FinalIn) is det.
 %
 %	Handle the HTTP status. If 200, we   are ok. If a redirect, redo
@@ -442,7 +447,7 @@ user_agent(Agent, Options) :-
 %	@error	existence_error(url, URL)
 
 					% Redirections
-do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
+do_open(_, Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_code(Code),
 	location(Lines, RequestURI), !,
 	debug(http(redirect), 'http_open: redirecting to ~w', [RequestURI]),
@@ -458,11 +463,12 @@ do_open(Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_options(Options0, Options),
 	http_open(RedirectedParts, Stream, Options).
 					% Accepted codes
-do_open(Code, _, Lines, Options, Parts, In0, In) :-
+do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
 	(   option(status_code(Code), Options)
 	->  true
 	;   Code == 200
 	), !,
+	return_version(Options, Version),
 	return_size(Options, Lines),
 	return_fields(Options, Lines),
 	transfer_encoding_filter(Lines, In0, In),
@@ -568,6 +574,10 @@ open_socket(Address, In, Out, Options) :-
 	).
 
 
+return_version(Options, Major-Minor) :-
+	option(version(Major,Minor), Options), !.
+return_version(_, _).
+
 return_size(Options, Lines) :-
 	option(size(Size), Options), !,
 	content_length(Lines, Size).
@@ -626,20 +636,21 @@ transfer_encoding(Encoding) -->
 	field('transfer-encoding'),
 	rest(Encoding).
 
-%%	read_header(+In:stream, -Code:int, -Comment:atom, -Lines:list) is det.
+%%	read_header(+In:stream, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
 %
 %	Read the HTTP reply-header. If the replied header is invalid, it
 %	simulates a 500 error with the comment =|Invalid reply header|=.
 %
+%	@param Version	HTTP reply version as Major-Minor pair
 %	@param Code	Numeric HTTP reply-code
 %	@param Comment	Comment of reply-code as atom
 %	@param Lines	Remaining header lines as code-lists.
 
-read_header(In, Code, Comment, Lines) :-
+read_header(In, Major-Minor, Code, Comment, Lines) :-
 	read_line_to_codes(In, Line),
 	Line \== end_of_file,
-	phrase(first_line(Code, Comment), Line),
-	debug(http(open), '~w ~w', [Code, Comment]),
+	phrase(first_line(Major-Minor, Code, Comment), Line),
+	debug(http(open), 'HTTP/~d.~d ~w ~w', [Major, Minor, Code, Comment]),
 	read_line_to_codes(In, Line2),
 	rest_header(Line2, In, Lines), !,
 	(   debugging(http(open))
@@ -647,7 +658,7 @@ read_header(In, Code, Comment, Lines) :-
 		   debug(http(open), '~s', [HL]))
 	;   true
 	).
-read_header(_, 500, 'Invalid reply header', []).
+read_header(_, 1-1, 500, 'Invalid reply header', []).
 
 rest_header([], _, []) :- !.		% blank line: end of header
 rest_header(L0, In, [L0|L]) :-
@@ -667,8 +678,8 @@ location(Lines, RequestURI) :-
 	member(Line, Lines),
 	phrase(atom_field(location, RequestURI), Line), !.
 
-first_line(Code, Comment) -->
-	"HTTP/", [_], ".", [_],
+first_line(Major-Minor, Code, Comment) -->
+	"HTTP/", integer(Major), ".", integer(Minor),
 	skip_blanks,
 	integer(Code),
 	skip_blanks,
