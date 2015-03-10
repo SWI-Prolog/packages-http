@@ -1520,19 +1520,58 @@ parse_header_value(content_type, ValueChars, Type) :-
 
 field_value(set_cookie(Name, Value, Options)) --> !,
 	atom(Name), "=", atom(Value),
-	set_cookie_options(Options).
+	value_options(Options, cookie).
+field_value(disposition(Disposition, Options)) --> !,
+	atom(Disposition), value_options(Options, disposition).
 field_value(Atomic) -->
 	atom(Atomic).
 
-set_cookie_options([]) -->
-	[].
-set_cookie_options([secure=true|T]) --> !,
-	" ; secure",
-	set_cookie_options(T).
-set_cookie_options([Name=Value|T]) -->
-	" ; ", field_name(Name), "=",
-	atom(Value),
-	set_cookie_options(T).
+value_options([], _) --> [].
+value_options([H|T], Field) -->
+	"; ", value_option(H, Field),
+	value_options(T, Field).
+
+value_option(secure=true, cookie) --> !,
+	"secure".
+value_option(Name=Value, Type) -->
+	{ string_option(Name, Type) }, !,
+	atom(Name), "=",
+	qstring(Value).
+value_option(Name=Value, _Type) -->
+	atom(Name), "=",
+	option_value(Value).
+
+string_option(filename, disposition).
+
+option_value(Value) -->
+	{ number(Value) }, !,
+	number(Value).
+option_value(Value) -->
+	{ (   atom(Value)
+	  ->  true
+	  ;   string(Value)
+	  ),
+	  forall(string_code(_, Value, C),
+		 token_char(C))
+	}, !,
+	atom(Value).
+option_value(Atomic) -->
+	qstring(Atomic).
+
+qstring(Atomic) -->
+	{ string_codes(Atomic, Codes) },
+	"\"",
+	qstring_codes(Codes),
+	"\"".
+
+qstring_codes([]) --> [].
+qstring_codes([H|T]) --> qstring_code(H), qstring_codes(T).
+
+qstring_code(C) --> {qstring_esc(C)}, !, "\\", [C].
+qstring_code(C) --> [C].
+
+qstring_esc(0'").
+qstring_esc(C) :- ctl(C).
 
 
 		 /*******************************
