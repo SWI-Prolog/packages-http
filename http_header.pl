@@ -1688,11 +1688,11 @@ token_chars([H|T]) -->
 	token_chars(T).
 token_chars([]) --> [].
 
-token_char(C) -->
-	[C],
-	{   \+ ctl(C),
-	    \+ separator_code(C)
-	}, !.
+token_char(C) --> [C], { token_char(C) }.
+
+token_char(C) :-
+	\+ ctl(C),
+	\+ separator_code(C).
 
 ctl(C) :- between(0,31,C), !.
 ctl(127).
@@ -1714,7 +1714,7 @@ separator_code(0'?).
 separator_code(0'=).
 separator_code(0'{).
 separator_code(0'}).
-separator_code(32).
+separator_code(0'\s).
 separator_code(0'\t).
 
 
