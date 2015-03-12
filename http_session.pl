@@ -248,6 +248,7 @@ http_session_id(SessionID) :-
 http_in_session(SessionID) :-
 	nb_current(http_session_id, ID),
 	ID \== [], !,
+	debug(http_session, 'Session id from global variable: ~q', [ID]),
 	ID \== no_session,
 	SessionID = ID.
 http_in_session(SessionID) :-
@@ -255,13 +256,15 @@ http_in_session(SessionID) :-
 	http_in_session(Request, SessionID).
 
 http_in_session(Request, SessionID) :-
-	memberchk(session(ID), Request),
-	b_setval(http_session_id, ID), !,
+	memberchk(session(ID), Request), !,
+	debug(http_session, 'Session id from request: ~q', [ID]),
+	b_setval(http_session_id, ID),
 	SessionID = ID.
 http_in_session(Request, SessionID) :-
 	memberchk(cookie(Cookies), Request),
 	session_setting(cookie(Cookie)),
-	memberchk(Cookie=SessionID0, Cookies),
+	member(Cookie=SessionID0, Cookies),
+	debug(http_session, 'Session id from cookie: ~q', [SessionID0]),
 	peer(Request, Peer),
 	valid_session_id(SessionID0, Peer), !,
 	b_setval(http_session_id, SessionID0),
@@ -303,7 +306,9 @@ create_session(Request0, Request, SessionID) :-
 	http_session_cookie(SessionID),
 	session_setting(cookie(Cookie)),
 	session_setting(path(Path)),
-	format('Set-Cookie: ~w=~w; path=~w\r\n', [Cookie, SessionID, Path]),
+	debug(http_session, 'Created session ~q at path=~q', [SessionID, Path]),
+	format('Set-Cookie: ~w=~w; Path=~w; Version=1\r\n',
+	       [Cookie, SessionID, Path]),
 	Request = [session(SessionID)|Request0],
 	peer(Request0, Peer),
 	open_session(SessionID, Peer),
