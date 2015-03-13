@@ -1526,6 +1526,13 @@ field_value(disposition(Disposition, Options)) --> !,
 field_value(Atomic) -->
 	atom(Atomic).
 
+%%	value_options(+List, +Field)//
+%
+%	Emit field parameters such as =|; charset=UTF-8|=.  There
+%	are three versions: a plain _key_ (`secure`), _token_ values
+%	and _quoted string_ values.  Seems we cannot deduce that from
+%	the actual value.
+
 value_options([], _) --> [].
 value_options([H|T], Field) -->
 	"; ", value_option(H, Field),
@@ -1537,11 +1544,16 @@ value_option(Name=Value, Type) -->
 	{ string_option(Name, Type) }, !,
 	atom(Name), "=",
 	qstring(Value).
+value_option(Name=Value, Type) -->
+	{ token_option(Name, Type) }, !,
+	atom(Name), "=", atom(Value).
 value_option(Name=Value, _Type) -->
 	atom(Name), "=",
 	option_value(Value).
 
 string_option(filename, disposition).
+
+token_option(path, cookie).
 
 option_value(Value) -->
 	{ number(Value) }, !,
