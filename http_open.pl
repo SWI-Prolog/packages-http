@@ -97,8 +97,8 @@ resource. See also parse_time/2.
 :- multifile
 	http:encoding_filter/3,		  % +Encoding, +In0,  -In
 	http:current_transfer_encoding/1, % ?Encoding
-	http:http_protocol_hook/7,	  % +Protocol, +Parts, +In, +Out,
-					  % -NewIn, -NewOut, +Options
+	http:http_protocol_hook/5,	  % +Protocol, +Parts, +StreamPair,
+					  % -NewStreamPair, +Options
 	http:open_options/2,		  % +Parts, -Options
 	http:write_cookies/3,		  % +Out, +Parts, +Options
 	http:update_cookies/3.		  % +CookieLine, +Parts, +Options
@@ -256,11 +256,15 @@ user_agent('SWI-Prolog').
 %	@see ssl_context/3 for SSL related options if
 %	library(http/http_ssl_plugin) is loaded.
 
+:-multifile(network_proxy:find_proxy_for_url/3).
+
 http_open(URL, Stream, QOptions) :-
 	meta_options(is_meta, QOptions, Options),
-	(   atomic(URL)
-	->  parse_url_ex(URL, Parts)
-	;   Parts = URL
+	(  atomic(URL)
+	-> parse_url_ex(URL, Parts),
+           AtomicURL = URL
+        ;  Parts = URL,
+           memberchk(uri(AtomicURL), Parts)
 	),
 	autoload_https(Parts),
 	add_authorization(Parts, Options, Options1),
@@ -268,7 +272,71 @@ http_open(URL, Stream, QOptions) :-
 		http:open_options(Parts, HostOptions),
 		AllHostOptions),
 	foldl(merge_options_rev, AllHostOptions, Options1, Options2),
-	http_open_parts(Parts, Stream, Options2).
+                option(host(Host), Parts),
+        ( option(bypass_proxy(true), Options)->
+            try_http_proxy(direct, Parts, Stream, Options2)
+        ; network_proxy:find_proxy_for_url(AtomicURL, Host, ProxyList) ->
+            try_http_proxies(ProxyList, Parts, Stream, Options2)
+        ; try_http_proxy(direct, Parts, Stream, Options2)
+        ).
+
+
+try_http_proxies([Last], Parts, Stream, Options):-
+        !,
+        debug(http(proxy), 'http_open: Connecting via proxy ~w to ~w', [Last, Parts]),
+        try_http_proxy(Last, Parts, Stream, Options),
+        debug(http(proxy), 'http_open: Successfully connected to ~w via proxy ~w', [Parts, Last]).
+
+try_http_proxies([Proxy|_Proxies], Parts, Stream, Options):-
+        debug(http(proxy), 'http_open: Connecting via proxy ~w to ~w', [Proxy, Parts]),
+        catch(try_http_proxy(Proxy, Parts, Stream, Options),
+              Error,
+              ( print_message(warning, proxy_failed_to_respond(Proxy, Error)),
+                fail
+              )), !,
+        debug(http(proxy), 'http_open: Successfully connected to ~w via proxy ~w', [Parts, Proxy]).
+
+try_http_proxies([_|Proxies], Parts, Stream, Options):-
+         try_http_proxies(Proxies, Parts, Stream, Options).
+
+
+try_http_proxy(Method, Parts, Stream, Options0):-
+        option(host(Host), Parts),
+        parts_uri(Parts, RequestURI),
+        Options = [visited(Parts)|Options0],
+        parts_scheme(Parts, Scheme),
+        default_port(Scheme, DefPort),
+        url_part(port(Port), Parts, DefPort),
+        http:http_connection_over_proxy(Method, Parts, Host:Port, SocketStreamPair, Options, Options1),
+        ( http:http_protocol_hook(Scheme, Parts,
+                                  SocketStreamPair,
+                                  StreamPair, Options)
+        ->  true
+        ;   StreamPair = SocketStreamPair
+        ),
+        send_rec_header(StreamPair, Stream, Host:Port, RequestURI, Parts, Options1),
+        return_final_url(Options).
+
+:-multifile(http:http_connection_over_proxy/6).
+http:http_connection_over_proxy(direct, _, Host:Port, StreamPair, Options, Options):-
+        !,
+        open_socket(Host:Port, StreamPair, Options).
+
+http:http_connection_over_proxy(proxy(ProxyHost, ProxyPort), Parts, _, StreamPair, Options, Options):-
+        \+memberchk(scheme(https), Parts),
+        !,
+        % We do not want any /more/ proxy after this
+        open_socket(ProxyHost:ProxyPort, StreamPair, [bypass_proxy(true)|Options]).
+
+http:http_connection_over_proxy(socks(SocksHost, SocksPort), _Parts, Host:Port, StreamPair, Options, Options):-
+         !,
+         tcp_connect(SocksHost:SocksPort, StreamPair, [bypass_proxy(true)]),
+         catch(negotiate_socks_connection(Host:Port, StreamPair),
+               Error,
+               ( close(StreamPair, [force(true)]),
+                 throw(Error)
+              )).
+
 
 merge_options_rev(Old, New, Merged) :-
 	merge_options(New, Old, Merged).
@@ -276,40 +344,8 @@ merge_options_rev(Old, New, Merged) :-
 is_meta(pem_password_hook).		% SSL plugin callbacks
 is_meta(cert_verify_hook).
 
-http_open_parts(Parts, Stream, Options0) :-
-	(   is_list(Options0),
-	    memberchk(proxy(Host, ProxyPort), Options0)
-	;   option(proxy(Host:ProxyPort), Options0)
-	), !,
-	parts_uri(Parts, RequestURI),
-	Options = [visited(Parts)|Options0],
-	open_socket(Host:ProxyPort, In, Out, Options),
-	parts_scheme(Parts, Scheme),
-	default_port(Scheme, DefPort),
-	url_part(port(Port), Parts, DefPort),
-	host_and_port(Host, DefPort, Port, HostPort),
-	send_rec_header(Out, In, Stream, HostPort, RequestURI, Parts, Options),
-	return_final_url(Options).
-http_open_parts(Parts, Stream, Options0) :-
-	option(host(Host), Parts),
-	parts_scheme(Parts, Scheme),
-	default_port(Scheme, DefPort),
-	url_part(port(Port), Parts, DefPort),
-	parts_request_uri(Parts, RequestURI),
-	Options = [visited(Parts)|Options0],
-	open_socket(Host:Port, SocketIn, SocketOut, Options),
-        (   http:http_protocol_hook(Scheme, Parts,
-				    SocketIn, SocketOut,
-				    In, Out, Options)
-        ->  true
-        ;   In = SocketIn,
-            Out = SocketOut
-        ),
-	host_and_port(Host, DefPort, Port, HostPort),
-	send_rec_header(Out, In, Stream, HostPort, RequestURI, Parts, Options),
-	return_final_url(Options).
 
-http:http_protocol_hook(http, _, In, Out, In, Out, _).
+http:http_protocol_hook(http, _, StreamPair, StreamPair, _).
 
 default_port(https, 443) :- !.
 default_port(wss,   443) :- !.
@@ -324,56 +360,56 @@ host_and_port(Host, _,       Port,    Host:Port).
 
 autoload_https(Parts) :-
 	memberchk(scheme(https), Parts),
-	\+ clause(http:http_protocol_hook(https, _, In, Out, In, Out, _),_),
+	\+ clause(http:http_protocol_hook(https, _, StreamPair, StreamPair, _),_),
 	exists_source(library(http/http_ssl_plugin)), !,
 	use_module(library(http/http_ssl_plugin)).
 autoload_https(_).
 
 
-%%	send_rec_header(+Out, +In, -InStream,
+%%	send_rec_header(+StreamPair, -Stream,
 %%			+Host, +RequestURI, +Parts, +Options) is det.
 %
 %	Send header to Out and process reply.  If there is an error or
 %	failure, close In and Out and return the error or failure.
 
-send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
-	(   catch(guarded_send_rec_header(Out, In, Stream,
+send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
+	(   catch(guarded_send_rec_header(StreamPair, Stream,
 					  Host, RequestURI, Parts, Options),
 		  E, true)
 	->  (   var(E)
-	    ->	(   option(output(Out), Options)
+	    ->	(   option(output(StreamPair), Options)
 		->  true
-		;   close(Out)
+		;   true
 		)
-	    ;	force_close(In, Out),
+            ; close(StreamPair, [force(true)]),
 		throw(E)
 	    )
-	;   force_close(In, Out),
+	;   close(StreamPair, [force(true)]),
 	    fail
 	).
 
-guarded_send_rec_header(Out, In, Stream, Host, RequestURI, Parts, Options) :-
+guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 	user_agent(Agent, Options),
 	method(Options, MNAME),
 	http_version(Version),
 	option(connection(Connection), Options, close),
-	format(Out,
+	format(StreamPair,
 	       '~w ~w HTTP/~w\r\n\c
 	       Host: ~w\r\n\c
 	       User-Agent: ~w\r\n\c
 	       Connection: ~w\r\n',
 	       [MNAME, RequestURI, Version, Host, Agent, Connection]),
-	x_headers(Options, Out),
-	write_cookies(Out, Parts, Options),
+	x_headers(Options, StreamPair),
+	write_cookies(StreamPair, Parts, Options),
         (   option(post(PostData), Options)
-        ->  http_header:http_post_data(PostData, Out, [])
-        ;   format(Out, '\r\n', [])
+        ->  http_header:http_post_data(PostData, StreamPair, [])
+        ;   format(StreamPair, '\r\n', [])
         ),
-	flush_output(Out),
+	flush_output(StreamPair),
 					% read the reply header
-	read_header(In, ReplyVersion, Code, Comment, Lines),
+	read_header(StreamPair, ReplyVersion, Code, Comment, Lines),
 	update_cookies(Lines, Parts, Options),
-	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, In, Stream).
+	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, StreamPair, Stream).
 
 
 %%	http_version(-Version:atom) is det.
@@ -482,8 +518,9 @@ do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
 	transfer_encoding_filter(Lines, In0, In),
 					% properly re-initialise the stream
 	parts_uri(Parts, URI),
-	set_stream(In, file_name(URI)),
-	set_stream(In, record_position(true)).
+        stream_pair(In, ActualIn, _),
+	set_stream(ActualIn, file_name(URI)),
+	set_stream(ActualIn, record_position(true)).
 					% report anything else as error
 do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
 	parts_uri(Parts, URI),
@@ -554,7 +591,7 @@ redirect_code(301).			% moved permanently
 redirect_code(302).			% moved temporary
 redirect_code(303).			% see also
 
-%%	open_socket(+Address, -In, -Out, +Options) is det.
+%%	open_socket(+Address, -StreamPair, +Options) is det.
 %
 %	Create and connect a client socket to Address.  Options
 %
@@ -565,15 +602,11 @@ redirect_code(303).			% see also
 %	@tbd	Make timeout also work on tcp_connect/4.
 %	@tbd	This is the same as do_connect/4 in http_client.pl
 
-open_socket(Address, In, Out, Options) :-
+open_socket(Address, StreamPair, Options) :-
 	debug(http(open), 'http_open: Connecting to ~p ...', [Address]),
-	tcp_socket(Socket),
-	catch(tcp_connect(Socket, Address, In, Out),
-	      E,
-	      (	  tcp_close_socket(Socket),
-		  throw(E)
-	      )),
-	debug(http(open), '\tok ~p --> ~p', [In, Out]),
+	tcp_connect(Address, StreamPair, Options),
+        stream_pair(StreamPair, In, Out),
+	debug(http(open), '\tok ~p ---> ~p', [In, Out]),
 	set_stream(In, record_position(false)),
 	(   option(timeout(Timeout), Options)
 	->  set_stream(In, timeout(Timeout))
