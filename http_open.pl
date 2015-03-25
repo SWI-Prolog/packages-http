@@ -484,9 +484,8 @@ do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
 	parts_uri(Parts, URI),
 	set_stream(In, file_name(URI)),
 	set_stream(In, record_position(true)).
-					% Handle redirections
 					% report anything else as error
-do_open(Code, Comment, _,  _, Parts, _, _) :-
+do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
 	parts_uri(Parts, URI),
 	(   map_error_code(Code, Error)
 	->  Formal =.. [Error, url, URI]
