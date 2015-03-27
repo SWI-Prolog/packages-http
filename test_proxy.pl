@@ -13,7 +13,7 @@
 
 :- use_module(library(http/http_header)).
 :- use_module(library(http/http_open)).
-:- use_module(library(http/http_hooks)).
+:- use_module(library(http/http_proxy)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(option)).
 :- use_module(library(plunit)).
@@ -63,12 +63,13 @@ alloc_port(Socket, Port) :-
 	socks_control/3.
 
 :- multifile
-	network_proxy:find_proxy_for_url/3.
+	socket:proxy_for_url/3.
 
-network_proxy:find_proxy_for_url(URL, Hostname, ProxyList):-
+socket:proxy_for_url(URL, Hostname, Proxy):-
         debug(proxy, 'Proxy requested for ~w (~w)~n', [URL, Hostname]),
         test_proxy(URL, Hostname, ProxyList),
-	debug(proxy, '... -> ~w~n', [ProxyList]).
+	debug(proxy, '... -> ~w~n', [ProxyList]),
+	member(Proxy, ProxyList).
 
 start_http_proxy(Port):-
         tcp_socket(Socket),
@@ -446,10 +447,7 @@ test('First try SOCKS then fall back to direct'):-
 	proxy_test(tcp_connect(localhost:HTTP_port, StreamPair, []),
 		   close(StreamPair),
 		   SocksProxyAttempts,
-		   HTTPProxyAttempts,
-		   Messages),
-	assertion((sub_term(T, Messages),
-		   subsumes_term(socket_error(_), T))),
+		   HTTPProxyAttempts),
         assertion(SocksProxyAttempts == []),
         assertion(HTTPProxyAttempts == []).
 
@@ -464,10 +462,7 @@ test('First try direct to a nonexistent-host then fall back to SOCKS'):-
         proxy_test(tcp_connect(localhost:UNUSED_port, StreamPair, []),
                    close(StreamPair),
                    SocksProxyAttempts,
-                   HTTPProxyAttempts,
-		   Messages),
-	assertion((sub_term(T, Messages),
-		   subsumes_term(socket_error(_), T))),
+                   HTTPProxyAttempts),
         assertion(SocksProxyAttempts == [localhost:UNUSED_port]),
         assertion(HTTPProxyAttempts == []).
 

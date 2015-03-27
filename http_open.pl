@@ -103,7 +103,6 @@ resource. See also parse_time/2.
 	http:open_options/2,		  % +Parts, -Options
 	http:write_cookies/3,		  % +Out, +Parts, +Options
 	http:update_cookies/3,		  % +CookieLine, +Parts, +Options
-	network_proxy:find_proxy_for_url/3,
 	http:http_connection_over_proxy/6.
 
 :- meta_predicate
@@ -263,6 +262,9 @@ user_agent('SWI-Prolog').
 %	@see ssl_context/3 for SSL related options if
 %	library(http/http_ssl_plugin) is loaded.
 
+:- multifile
+	socket:proxy_for_url/3.		  % +URL, +Host, -ProxyList
+
 http_open(URL, Stream, QOptions) :-
 	meta_options(is_meta, QOptions, Options),
 	(   atomic(URL)
@@ -275,37 +277,33 @@ http_open(URL, Stream, QOptions) :-
 		http:open_options(Parts, HostOptions),
 		AllHostOptions),
 	foldl(merge_options_rev, AllHostOptions, Options1, Options2),
-	option(host(Host), Parts),
         (   option(bypass_proxy(true), Options)
 	->  try_http_proxy(direct, Parts, Stream, Options2)
-        ;   parts_uri(Parts, AtomicURL),
-	    network_proxy:find_proxy_for_url(AtomicURL, Host, ProxyList)
-	->  try_http_proxies(ProxyList, Parts, Stream, Options2)
+        ;   findall(Result,
+		    try_a_proxy(Parts, Result, Options2),
+		    ResultList),
+	    last(ResultList, Status)
+	->  (	Status = true(_Proxy, Stream)
+	    ->	true
+	    ;	throw(error(proxy_error(tried(ResultList)), _))
+	    )
         ;   try_http_proxy(direct, Parts, Stream, Options2)
         ).
 
-try_http_proxies([Last], Parts, Stream, Options) :- !,
-        debug(http(proxy),
-	      'http_open: Connecting via proxy ~w to ~w', [Last, Parts]),
-	try_http_proxy(Last, Parts, Stream, Options),
-        debug(http(proxy),
-	      'http_open: Successfully connected to ~w via proxy ~w',
-	      [Parts, Last]).
-try_http_proxies([Proxy|_Proxies], Parts, Stream, Options) :-
-        debug(http(proxy),
-	      'http_open: Connecting via proxy ~w to ~w', [Proxy, Parts]),
-        catch(try_http_proxy(Proxy, Parts, Stream, Options),
-              Error,
-              ( print_message(warning, proxy_failed_to_respond(Proxy, Error)),
-                fail
-              )), !,
-        debug(http(proxy),
-	      'http_open: Successfully connected to ~w via proxy ~w',
-	      [Parts, Proxy]).
-
-try_http_proxies([_|Proxies], Parts, Stream, Options) :-
-         try_http_proxies(Proxies, Parts, Stream, Options).
-
+try_a_proxy(Parts, Result, Options) :-
+	parts_uri(Parts, AtomicURL),
+	option(host(Host), Parts),
+	socket:proxy_for_url(AtomicURL, Host, Proxy),
+	debug(http(proxy),
+	      'http_open: Connecting via ~w to ~w', [Proxy, AtomicURL]),
+	(   catch(try_http_proxy(Proxy, Parts, Stream, Options), E, true)
+	->  (   var(E)
+	    ->	!, Result = true(Proxy, Stream)
+	    ;	Result = error(Proxy, E)
+	    )
+	;   Result = false(Proxy)
+	),
+        debug(http(proxy), 'http_open: ~w: ~p', [Proxy, Result]).
 
 try_http_proxy(Method, Parts, Stream, Options0) :-
         option(host(Host), Parts),

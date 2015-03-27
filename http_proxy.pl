@@ -29,18 +29,15 @@
 */
 
 
-:- module(http_hooks, []).
+:- module(http_proxy, []).
 :- use_module(library(http/http_header)).
 :- use_module(library(socket)).
 
-/** <module> Hooks for the HTTP libraries
+/** <module> Use HTTP network proxies
 
-This module combines the hooks for  the   HTTP  libraries.
-
-@tbd In fact it is only a first step to do so that has been introduced
-	for dealing with the HTTP and SOCKS proxy infrastructure added
-	by Matt Lilley. Future versions will collect more HTTP related
-	hooks in this module.
+This  module  provides  a  plugin  for   tcp_connect/3  to  realise  TCP
+connections through an HTTP proxy that   supports the HTTP 1.1 =CONNECT=
+method.
 */
 
 		 /*******************************
@@ -76,46 +73,3 @@ negotiate_http_connect(StreamPair, Address) :-
         ;   throw(error(proxy_error(Message), _))
         ).
 
-
-%%      network_proxy:find_proxy_for_url(+URL, +Hostname, -ListOfProxies) is det.
-%
-%	This hook can be implemented to return  a list of proxies to try
-%	when connecting to URL. Pre-defined proxy methods are:
-%
-%          * direct
-%	     connect directly to the resource
-%          * proxy(Host, Port)
-%	     Connect to the resource using an HTTP proxy. If the
-%	     resource is not an HTTP URL, then try to connect using the
-%	     CONNECT verb, otherwise, use the GET verb.
-%          * socks(Host, Port)
-%	     Connect to the resource via a SOCKS5 proxy
-%
-%	These correspond to the proxy methods defined by PAC. Additional
-%	methods   can   be   returned   if     suitable    clauses   for
-%	http:http_connection_over_proxy/6  or  socket:try_proxy/4    are
-%	defined.
-
-:- multifile
-	network_proxy:find_proxy_for_url/3.
-
-%%      socket:try_proxy(+Proxy, +TargetAddress, -Socket, -StreamPair).
-%
-%	Attempt  a  socket-level  connection  via  the  given  proxy  to
-%	TargetAddress.
-
-:- multifile
-	socket:try_proxy/4.
-
-%%      http:http_connection_over_proxy(+Proxy, +URLParts, +Endpoint,
-%%					-StreamPair, +Options, -NewOptions).
-%
-%	Try to connect to the host Endpoint   via Proxy for the purposes
-%	of retrieving the resource  identified   by  URLParts. Different
-%	options can be returned in NewOptions,  which may be required if
-%	you   have   defined   a   non-standard     proxy    method   in
-%	network_proxy:find_proxy_for_url/3  (such  as    one   requiring
-%	authentication)
-
-:- multifile
-	http:http_connection_over_proxy/6.

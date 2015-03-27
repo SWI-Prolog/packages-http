@@ -74,11 +74,28 @@ Get the declarations of the HTTP package using
 		 *	 HTTP-PARAMETERS	*
 		 *******************************/
 
-:- multifile
-	http:convert_parameter/3.
-
 %%	http:convert_parameter(+Type, +ValueIn, -ValueOut) is semidet.
 %
 %	Hook to execute a step in the HTTP parameter conversion process.
 %
 %	@see http_parameters:check_type/4.
+
+:- multifile
+	http:convert_parameter/3.
+
+
+		 /*******************************
+		 *	      PROXIES		*
+		 *******************************/
+
+%%      http:http_connection_over_proxy(+Proxy, +URLParts, +Endpoint,
+%%					-StreamPair, +Options, -NewOptions).
+%
+%	Try to connect to the host Endpoint   via Proxy for the purposes
+%	of retrieving the resource  identified   by  URLParts. Different
+%	options can be returned in NewOptions,  which may be required if
+%	you   have   defined   a   non-standard     proxy    method   in
+%	socket:proxy_for_url/3 (such as one requiring authentication)
+
+:- multifile
+	http:http_connection_over_proxy/6.
