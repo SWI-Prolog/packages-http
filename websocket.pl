@@ -138,8 +138,10 @@ http_open_websocket(URL, WebSocket, Options) :-
 	(   Status == 101,
 	    sec_websocket_accept(_{key:Key}, AcceptedKey)
 	->  ws_client_options(Selected, WsOptions),
-	    ws_open(In,  WsIn,  WsOptions),
-	    ws_open(Out, WsOut, WsOptions),
+	    stream_pair(In,  Read, Write),	% Old API: In and Out
+	    stream_pair(Out, Read, Write),	% New API: In == Out (= pair)
+	    ws_open(Read,  WsIn,  WsOptions),
+	    ws_open(Write, WsOut, WsOptions),
 	    stream_pair(WebSocket, WsIn, WsOut)
 	;   close(Out),
 	    close(In),
