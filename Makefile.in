@@ -74,6 +74,7 @@ check::
 		$(PL) -q -f test_cgi_stream.pl -g true -t test_cgi_stream
 		$(PL) -q -f test_websocket.pl -g test_websocket,halt -t 'halt(1)'
 		$(PL) -q -f test_multipart.pl -g test_multipart,halt -t 'halt(1)'
+		$(PL) -q -f test_proxy.pl -g test_proxy,halt -t 'halt(1)'
 
 ################################################################
 # Documentation
