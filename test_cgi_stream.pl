@@ -31,11 +31,11 @@
 
 :- module(test_cgi_stream,
 	  [ test_cgi_stream/0
-	    , t/0, d/0, nd/0		% Handy things
 	  ]).
 :- asserta(user:file_search_path(foreign, '.')).
 :- asserta(user:file_search_path(foreign, '../clib')).
 :- asserta(user:file_search_path(foreign, '../sgml')).
+:- asserta(user:file_search_path(library, '..')).
 :- asserta(user:file_search_path(library, '../plunit')).
 :- asserta(user:file_search_path(library, '../clib')).
 :- asserta(user:file_search_path(library, '../sgml')).
@@ -55,18 +55,6 @@ Instead of using real sockets, we use temporary storage on a file.
 
 @tbd	Validate error processing
 */
-
-t :-
-	test_cgi_stream.
-
-d :-
-	http_stream:http_stream_debug(1),
-	debug(http(hook)),
-	debug(http(header)).
-nd :-
-	http_stream:http_stream_debug(0),
-	nodebug(http(hook)),
-	nodebug(http(header)).
 
 test_cgi_stream :-
 	run_tests([ cgi_stream,

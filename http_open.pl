@@ -42,6 +42,7 @@
 :- use_module(library(base64)).
 :- use_module(library(debug)).
 :- use_module(library(apply)).
+:- use_module(library(http/http_header), [http_parse_header/2]).
 
 /** <module> Simple HTTP client
 
@@ -635,7 +636,6 @@ return_fields([_|T], Lines) :-
 
 return_headers([], _).
 return_headers([headers(Headers)|_], Lines) :- !,
-	use_module(library(http/http_header), [http_parse_header/2]),
 	maplist(parse_header,Lines,Headers).
 return_headers([_|T], Lines) :-
 	return_headers(T, Lines).
