@@ -2269,5 +2269,3 @@ prolog:error_message(syntax_error(http_parameter(Line))) -->
 
 prolog:message(http(skipped_cookie(S))) -->
 	[ 'Skipped illegal cookie: ~s'-[S] ].
-
-
