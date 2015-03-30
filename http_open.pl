@@ -516,9 +516,8 @@ do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
 	transfer_encoding_filter(Lines, In0, In),
 					% properly re-initialise the stream
 	parts_uri(Parts, URI),
-        stream_pair(In, ActualIn, _),
-	set_stream(ActualIn, file_name(URI)),
-	set_stream(ActualIn, record_position(true)).
+	set_stream(In, file_name(URI)),
+	set_stream(In, record_position(true)).
 					% report anything else as error
 do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
 	parts_uri(Parts, URI),
