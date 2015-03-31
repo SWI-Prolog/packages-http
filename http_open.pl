@@ -307,11 +307,12 @@ try_a_proxy(Parts, Result, Options) :-
 
 try_http_proxy(Method, Parts, Stream, Options0) :-
         option(host(Host), Parts),
-        parts_uri(Parts, RequestURI),
+        parts_request_uri(Parts, RequestURI),
         Options = [visited(Parts)|Options0],
         parts_scheme(Parts, Scheme),
         default_port(Scheme, DefPort),
         url_part(port(Port), Parts, DefPort),
+	host_and_port(Host, DefPort, Port, HostPort),
         http:http_connection_over_proxy(Method, Parts, Host:Port,
 					SocketStreamPair, Options, Options1),
         (   http:http_protocol_hook(Scheme, Parts,
@@ -320,7 +321,7 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
         ->  true
         ;   StreamPair = SocketStreamPair
         ),
-        send_rec_header(StreamPair, Stream, Host:Port,
+        send_rec_header(StreamPair, Stream, HostPort,
 			RequestURI, Parts, Options1),
         return_final_url(Options).
 
@@ -355,6 +356,9 @@ http:http_protocol_hook(http, _, StreamPair, StreamPair, _).
 default_port(https, 443) :- !.
 default_port(wss,   443) :- !.
 default_port(_,	    80).
+
+host_and_port(Host, DefPort, DefPort, Host) :- !.
+host_and_port(Host, _,       Port,    Host:Port).
 
 %%	autoload_https(+Parts) is det.
 %
