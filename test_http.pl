@@ -32,15 +32,17 @@ run_network_tests :-
 :- begin_tests(http_open, [condition(run_network_tests)]).
 
 test(read, true) :-
-     http_open('http://www.swi-prolog.org/', In, []),
+     http_open('http://www.swi-prolog.org/', In,
+	       [status_code(Code)]),
+     assertion(Code == 200),
      read_stream_to_codes(In, Codes),
      close(In),
-     contains_codes("http://www.swi-prolog.org", Codes).
+     contains_codes("href=\"/Download.html\"", Codes).
 test(redirect, true) :-
      http_open('http://www.swi-prolog.org', In, []),
      read_stream_to_codes(In, Codes),
      close(In),
-     contains_codes("http://www.swi-prolog.org", Codes).
+     contains_codes("href=\"/Download.html\"", Codes).
 test(chunked, true(Codes == Ref)) :-
      http_open('http://www.swi-prolog.org/Tests/chunked/data', In, []),
      read_stream_to_codes(In, Codes),
