@@ -307,7 +307,10 @@ try_a_proxy(Parts, Result, Options) :-
 
 try_http_proxy(Method, Parts, Stream, Options0) :-
         option(host(Host), Parts),
-        parts_request_uri(Parts, RequestURI),
+	(   Method == direct
+	->  parts_request_uri(Parts, RequestURI)
+	;   parts_uri(Parts, RequestURI)
+	),
         Options = [visited(Parts)|Options0],
         parts_scheme(Parts, Scheme),
         default_port(Scheme, DefPort),
