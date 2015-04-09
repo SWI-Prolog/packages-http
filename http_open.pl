@@ -664,11 +664,17 @@ return_final_url(_).
 
 %%	transfer_encoding_filter(+Lines, +In0, -In) is det.
 %
-%	Install filters depending on the encoding.
+%	Install  filters  depending  on  the  encoding.   If  In0  is  a
+%	stream-pair, we close the output side.
 
 transfer_encoding_filter(Lines, In0, In) :-
 	transfer_encoding(Lines, Encoding), !,
-	(   http:encoding_filter(Encoding, In0, In)
+	stream_pair(In0, In1, Out),
+	(   nonvar(Out)
+	->  close(Out)
+	;   true
+	),
+	(   http:encoding_filter(Encoding, In1, In)
 	->  true
 	;   domain_error(http_encoding, Encoding)
 	).
