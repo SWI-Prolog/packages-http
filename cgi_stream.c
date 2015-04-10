@@ -695,7 +695,8 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   term_t hook = PL_new_term_ref();
   record_t request = 0;
 
-  PL_strip_module(closure, &module, hook);
+  if ( !PL_strip_module(closure, &module, hook) )
+    return FALSE;
   if ( !PL_is_callable(hook) )
     return type_error(closure, "callable");
 
