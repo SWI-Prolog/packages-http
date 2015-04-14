@@ -1049,7 +1049,7 @@ post_close(_) -->
 %	@param Tag	Name of the tag
 %	@param Open	Tuple M-N, where M is the number of lines before
 %			the tag and N after.
-%	@param Close	Either as Open, or the atom - (minus) to imit the
+%	@param Close	Either as Open, or the atom - (minus) to omit the
 %			close-tag or =empty= to indicate the element has
 %			no content model.
 %
