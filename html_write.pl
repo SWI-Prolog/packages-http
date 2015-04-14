@@ -1060,7 +1060,8 @@ post_close(_) -->
 
 layout(table,	   2-1,	1-2).
 layout(blockquote, 2-1,	1-2).
-layout(pre,	   2-1,	1-2).
+layout(pre,	   2-1,	0-2).
+layout(textarea,   1-1,	0-1).
 layout(center,	   2-1,	1-2).
 layout(dl,	   2-1,	1-2).
 layout(ul,	   1-1,	1-1).
