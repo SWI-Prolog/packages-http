@@ -1026,6 +1026,32 @@ update_cookies(Lines, Parts, Options) :-
 
 
 		 /*******************************
+		 *	     OPEN ANY		*
+		 *******************************/
+
+:- multifile iostream:open_hook/6.
+
+%%	iostream:open_hook(+Spec, +Mode, -Stream, -Close,
+%%			   +Options0, -Options) is semidet.
+%
+%	Hook implementation that makes  open_any/5   support  =http= and
+%	=https= URLs for `Mode == read`.
+
+iostream:open_hook(URL, read, Stream, Close, Options0, Options) :-
+	(atom(URL) -> true ; string(URL)),
+	uri_is_global(URL),
+	uri_components(URL, Components),
+        uri_data(scheme, Components, Scheme),
+	http_scheme(Scheme), !,
+	Options = Options0,
+	Close = close(Stream),
+	http_open(URL, Stream, Options0).
+
+http_scheme(http).
+http_scheme(https).
+
+
+		 /*******************************
 		 *     HOOK DOCUMENTATION	*
 		 *******************************/
 
