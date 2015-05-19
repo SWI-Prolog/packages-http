@@ -293,7 +293,13 @@ http_open(URL, Stream, QOptions) :-
 try_a_proxy(Parts, Result, Options) :-
 	parts_uri(Parts, AtomicURL),
 	option(host(Host), Parts),
-	socket:proxy_for_url(AtomicURL, Host, Proxy),
+	(   (   option(proxy(Host:Port), Options)
+	    ;	is_list(Options),
+		memberchk(proxy(Host,Port), Options)
+	    )
+	->  Proxy = proxy(Host, Port)
+	;   socket:proxy_for_url(AtomicURL, Host, Proxy)
+	),
 	debug(http(proxy),
 	      'http_open: Connecting via ~w to ~w', [Proxy, AtomicURL]),
 	(   catch(try_http_proxy(Proxy, Parts, Stream, Options), E, true)
