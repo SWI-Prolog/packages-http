@@ -294,11 +294,11 @@ http_open(URL, Stream, QOptions) :-
 try_a_proxy(Parts, Result, Options) :-
 	parts_uri(Parts, AtomicURL),
 	option(host(Host), Parts),
-	(   (   option(proxy(Host:Port), Options)
+	(   (   option(proxy(ProxyHost:ProxyPort), Options)
 	    ;	is_list(Options),
-		memberchk(proxy(Host,Port), Options)
+		memberchk(proxy(ProxyHost,ProxyPort), Options)
 	    )
-	->  Proxy = proxy(Host, Port)
+	->  Proxy = proxy(ProxyHost, ProxyPort)
 	;   socket:proxy_for_url(AtomicURL, Host, Proxy)
 	),
 	debug(http(proxy),
