@@ -76,8 +76,8 @@ Here is a simple example to fetch a web-page:
   ==
 
 The example below fetches the modification time of a web-page. Note that
-Modified is '' if the web-server does not provide a time-stamp for the
-resource. See also parse_time/2.
+Modified is '' (the empty atom)  if   the  web-server does not provide a
+time-stamp for the resource. See also parse_time/2.
 
   ==
   modified(URL, Stamp) :-
@@ -189,9 +189,9 @@ user_agent('SWI-Prolog').
 %	  Size is unified with the   integer value of =|Content-Length|=
 %	  in the reply header.
 %
-%	  * version(-Major - -Minor)
-%	  Major and Minor are unified with the integer values of the
-%	  HTTP version in the reply header.
+%	  * version(-Version)
+%	  Version is a _pair_ `Major-Minor`, where `Major` and `Minor`
+%	  are integers representing the HTTP version in the reply header.
 %
 %	  * status_code(-Code)
 %	  If this option is  present  and   Code  unifies  with the HTTP
@@ -215,7 +215,9 @@ user_agent('SWI-Prolog').
 %	  handed to http_post_data/3.
 %
 %	  * proxy(+Host:Port)
-%	  Use an HTTP proxy to connect to the outside world.
+%	  Use an HTTP proxy to connect to the outside world.  See also
+%	  socket:proxy_for_url/3.  This option overrules the proxy
+%	  specification defined by socket:proxy_for_url/3.
 %
 %	  * proxy(+Host, +Port)
 %	  Synonym for proxy(+Host:Port).  Deprecated.
@@ -234,7 +236,7 @@ user_agent('SWI-Prolog').
 %
 %	  * user_agent(+Agent)
 %	  Defines the value of the  =|User-Agent|=   field  of  the HTTP
-%	  header. Default is =|SWI-Prolog (http://www.swi-prolog.org)|=.
+%	  header. Default is =SWI-Prolog=.
 %
 %	The hook http:open_options/2 can be used to provide default
 %	options based on the broken-down URL.
@@ -247,7 +249,7 @@ user_agent('SWI-Prolog').
 %		The following example below opens the URL
 %		=|http://www.example.com/my/path?q=Hello%20World&lang=en|=.
 %		Note that values must *not* be quoted because the
-%		library inserts the required quites.
+%		library inserts the required quotes.
 %
 %		==
 %		http_open([ host('www.example.com'),
