@@ -279,10 +279,11 @@ http_open(URL, Stream, QOptions) :-
 	foldl(merge_options_rev, AllHostOptions, Options1, Options2),
         (   option(bypass_proxy(true), Options)
 	->  try_http_proxy(direct, Parts, Stream, Options2)
-        ;   findall(Result,
+        ;   term_variables(Options2, Vars2),
+	    findall(Result-Vars2,
 		    try_a_proxy(Parts, Result, Options2),
 		    ResultList),
-	    last(ResultList, Status)
+	    last(ResultList, Status-Vars2)
 	->  (	Status = true(_Proxy, Stream)
 	    ->	true
 	    ;	throw(error(proxy_error(tried(ResultList)), _))
