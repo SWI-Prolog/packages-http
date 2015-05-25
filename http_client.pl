@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam,
+    Copyright (C): 1985-2015, University of Amsterdam,
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -57,7 +55,8 @@
 	http_convert_data/4,		% http_read_data plugin-hook
 	post_data_hook/3,		% http_post_data/3 hook
 	open_connection/4,		% do_connect/5 hook
-	close_connection/4.
+	close_connection/4,
+	http:open_options/2.		% +Parts, -Options (shared with http_open.pl)
 
 :- predicate_options(http_get/3, 3,
 		     [ connection(oneof([close,'Keep-alive'])),
@@ -139,12 +138,8 @@ do_connect(Address, Protocol, In, Out, Options) :-
 	debug(http(client), 'http_client: Connecting to ~p ...', [Address]),
 	(   open_connection(Protocol, Address, In, Out)
 	->  true
-	;   tcp_socket(Socket),
-	    catch(tcp_connect(Socket, Address, In, Out),
-		  E,
-		  (   tcp_close_socket(Socket),
-		      throw(E)
-		  ))
+	;   tcp_connect(Address, StreamPair, []),
+	    stream_pair(StreamPair, In, Out)
 	),
 	debug(http(client), '\tok ~p --> ~p', [In, Out]),
 	(   memberchk(timeout(Timeout), Options)
@@ -247,7 +242,9 @@ http_get(Parts, Data, Options) :-
 	          disconnect(Parts),
 		  fail
 	      )), !.
-http_get(Parts, Data, Options) :-
+http_get(Parts, Data, Options0) :-
+	findall(OpenOptions, http:open_options(Parts,OpenOptions), AllOpenOptions),
+	foldl(merge_options_rev, AllOpenOptions, Options0, Options),
 	address(Parts, Address, Protocol, Options),
 	do_connect(Address, Protocol, Read, Write, Options),
 	call_cleanup(http_do_get([socket(Read, Write)|Parts], Data, Options),
@@ -255,7 +252,9 @@ http_get(Parts, Data, Options) :-
 
 http_do_get(Parts, Data, Options) :-
 	connect(Parts, Read, Write, Options),
-	(   select(proxy(_,_), Options, Options1)
+	(   (	select(proxy(_,_), Options, Options1)
+	    ;   select(proxy(_:_), Options, Options1)
+	    )
 	->  parse_url(Location, Parts)
 	;   http_location(Parts, Location),
 	    Options1 = Options
@@ -520,7 +519,9 @@ http_post(Parts, In, Out, Options) :-
 	      (	  disconnect(Parts),
 		  fail
 	      )), !.
-http_post(Parts, In, Out, Options) :-
+http_post(Parts, In, Out, Options0) :-
+	findall(OpenOptions, http:open_options(Parts,OpenOptions), AllOpenOptions),
+	foldl(merge_options_rev, AllOpenOptions, Options0, Options),
 	address(Parts, Address, Protocol, Options),
 	do_connect(Address, Protocol, Read, Write, Options),
 	call_cleanup(http_do_post([socket(Read, Write)|Parts],
@@ -529,12 +530,14 @@ http_post(Parts, In, Out, Options) :-
 
 http_do_post(Parts, In, Out, Options) :-
 	connect(Parts, Read, Write, Options),
-	(   memberchk(proxy(_,_), Options)
+	(   (	select(proxy(_,_), Options, Options1)
+	    ;	select(proxy(_:_), Options, Options1)
+	    )
 	->  parse_url(Location, Parts)
 	;   http_location(Parts, Location)
 	),
 	memberchk(host(Host), Parts),
-	split_options(Options, PostOptions, ReplyOptions),
+	split_options(Options1, PostOptions, ReplyOptions),
 	write_post_header(Write, Location, Host, In, PostOptions),
 	http_read_reply(Read, Out, ReplyOptions).
 
@@ -556,3 +559,7 @@ split_options([H|T], [H|P], R) :-
 	split_options(T, P, R).
 split_options([H|T], P, [H|R]) :-
 	split_options(T, P, R).
+
+merge_options_rev(Old, New, Merged) :-
+	merge_options(New, Old, Merged).
+
