@@ -534,7 +534,8 @@ http_do_post(Parts, In, Out, Options) :-
 	    ;	select(proxy(_:_), Options, Options1)
 	    )
 	->  parse_url(Location, Parts)
-	;   http_location(Parts, Location)
+	;   http_location(Parts, Location),
+	    Options1 = Options
 	),
 	memberchk(host(Host), Parts),
 	split_options(Options1, PostOptions, ReplyOptions),
