@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2009-2013, University of Amsterdam
+    Copyright (C): 2009-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -148,6 +148,7 @@ html_resource(About, Properties) :-
 	assert_resource(About, -, Properties).
 
 assert_resource(About, Location, Properties) :-
+	retractall(html_resource(About, _, _)),
 	assert(html_resource(About, Location, Properties)),
 	clean_cache(About, Properties).
 
