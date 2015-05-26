@@ -39,10 +39,12 @@ install:	$(LIBPL) $(SOLIBS)
 		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)
 		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/icons
 		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/css
+		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/js
 		$(INSTALL_DATA) $(LIBPL) $(DESTDIR)$(PKGPLLIBDIR)
 		$(INSTALL_DATA) README $(DESTDIR)$(PKGPLLIBDIR)/README$(TXTEXT)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(PKGPLLIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(PKGPLLIBDIR)/web/css
+		$(INSTALL_DATA) web/js/*.js $(DESTDIR)$(PKGPLLIBDIR)/web/js
 		$(MKPKGINDEX)
 		$(MKINDEX)
 
