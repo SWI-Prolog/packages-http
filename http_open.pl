@@ -238,8 +238,11 @@ user_agent('SWI-Prolog').
 %	  Defines the value of the  =|User-Agent|=   field  of  the HTTP
 %	  header. Default is =SWI-Prolog=.
 %
-%	The hook http:open_options/2 can be used to provide default
-%	options based on the broken-down URL.
+%	The hook http:open_options/2 can  be   used  to  provide default
+%	options   based   on   the   broken-down     URL.   The   option
+%	status_code(-Code)  is  particularly  useful   to  query  *REST*
+%	interfaces that commonly return status   codes  other than `200`
+%	that need to be be processed by the client code.
 %
 %	@param	URL is either an atom (url) or a list of _parts_.
 %		If this list is provided, it may contain the fields
