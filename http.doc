@@ -755,7 +755,7 @@ canonicalised for use with Prolog.  Canonisation implies that the
 Here is an example:
 
 \begin{code}
-?- http_read_request(user, X).
+?- http_read_request(user_input, X).
 |: GET /mydb?class=person HTTP/1.0
 |: Host: gollem
 |:
