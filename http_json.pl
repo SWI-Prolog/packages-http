@@ -61,6 +61,9 @@
 	http_client:post_data_hook/3,
 	json_type/1.
 
+:- public
+	json_type/1.
+
 :- predicate_options(http_read_json/3, 3,
 		     [ content_type(any),
 		       false(ground),
@@ -149,13 +152,10 @@ http_client:http_convert_data(In, Fields, Data, Options) :-
 	).
 
 
-is_json_type(Type) :-
+is_json_type(String) :-
+	http_parse_header_value(content_type, String,
+				media(Type, _Attributes)),
 	json_type(Type), !.
-is_json_type(ContentType) :-
-	json_type(Type),
-	sub_atom(ContentType, 0, _, _, Type), !,
-	strip_utf8(ContentType, Plain),
-	json_type(Plain).
 
 :- if(current_predicate(is_dict/1)).
 json_read_to(In, Data, Options) :-
@@ -165,29 +165,17 @@ json_read_to(In, Data, Options) :-
 json_read_to(In, Data, Options) :-
 	json_read(In, Data, Options).
 
-%%	strip_utf8(+ContentTypeIn, -ContentType) is det.
+%%	json_type(?MediaType) is semidet.
 %
-%	Strip an optional  =|;  charset=UTF-8|=.   JSON  data  is always
-%	UTF-8, but some clients seem to insist in sending this.
-
-strip_utf8(ContentType, Plain) :-
-	sub_atom(ContentType, B, _, A, ;),
-	sub_atom(ContentType, _, A, 0, Ext),
-	normalize_space(atom(Charset), Ext),
-	downcase_atom(Charset, 'charset=utf-8'), !,
-	sub_atom(ContentType, 0, B, _, CT),
-	normalize_space(atom(Plain), CT).
-strip_utf8(ContentType, ContentType).
-
-
-%%	json_type(?MIMEType:atom) is semidet.
-%
-%	True if MIMEType is a JSON  mimetype. http_json:json_type/1 is a
-%	multifile  predicate  and  may   be    extended   to  facilitate
+%	True if MediaType is a JSON media type. http_json:json_type/1 is
+%	a  multifile  predicate  and  may   be  extended  to  facilitate
 %	non-conforming clients.
+%
+%	@arg MediaType is a term `Type`/`SubType`, where both `Type` and
+%	`SubType` are atoms.
 
-json_type('application/jsonrequest').
-json_type('application/json').
+json_type(application/jsonrequest).
+json_type(application/json).
 
 
 %%	http_client:post_data_hook(+Data, +Out:stream, +HdrExtra) is semidet.
