@@ -461,7 +461,7 @@ http_read_data(In, Fields, Data, Options) :-
 memory_file_to(atom, MemFile, Encoding, Data) :-
 	memory_file_to_atom(MemFile, Data, Encoding).
 memory_file_to(string, MemFile, Encoding, Data) :-
-	memory_file_to_atom(MemFile, Data, Encoding).
+	memory_file_to_string(MemFile, Data, Encoding).
 memory_file_to(codes, MemFile, Encoding, Data) :-
 	memory_file_to_codes(MemFile, Data, Encoding).
 
