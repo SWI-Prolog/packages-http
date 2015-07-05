@@ -546,23 +546,27 @@ html_include([H|T]) --> !,
 html_include(Path) -->
 	{ res_property(Path, mime_type(Mime))
 	}, !,
-	html_include(Mime, Path).
+	html_include_with_mime(Mime, Path).
 html_include(Path) -->
-	{ file_mime_type(Path, Mime) }, !,
-	html_include(Mime, Path).
+	{file_mime_type(Path, Mime)}, !,
+	html_include_with_mime(Mime, Path).
 
-html_include(text/css, Path) --> !,
-	html(link([ rel(stylesheet),
-		    type('text/css'),
-		    href(Path)
-		  ], [])).
-html_include(text/javascript, Path) --> !,
-	html(script([ type('text/javascript'),
-		      src(Path)
-		    ], [])).
-html_include(Mime, Path) -->
-	{ print_message(warning, html_include(dont_know, Mime, Path))
-	}.
+html_include_with_mime(Mime, Path) -->
+	http:html_include(Mime, Path), !.
+html_include_with_mime(Mime, Path) -->
+	{print_message(warning, html_include(dont_know, Mime, Path))}.
+
+%! http:html_include(+Mime:compound, +Path:atom)// is det.
+% Multifile hook that allows other modules to extend
+% the types of files that can be included in an HTML page.
+
+:- dynamic(http:html_include//2).
+:- multifile(http:html_include//2).
+
+http:html_include(text/css, Path) -->
+	html(link([rel(stylesheet),type('text/css'),href(Path)], [])).
+http:html_include(text/javascript, Path) -->
+	html(script([type('text/javascript'),src(Path)], [])).
 
 
 		 /*******************************
