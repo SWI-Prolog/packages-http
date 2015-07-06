@@ -99,7 +99,8 @@ command recognises the names of HTML resources.
 :- dynamic
 	html_resource/3.		% Resource, Source, Properties
 :- multifile
-	html_resource/3.
+	html_resource/3,
+	mime_include//2.		% +Mime, +Path
 
 %%	html_resource(+About, +Properties) is det.
 %
@@ -551,6 +552,8 @@ html_include(Path) -->
 	{ file_mime_type(Path, Mime) }, !,
 	html_include(Mime, Path).
 
+html_include(Mime, Path) -->
+	mime_include(Mime, Path), !.	% user hook
 html_include(text/css, Path) --> !,
 	html(link([ rel(stylesheet),
 		    type('text/css'),
@@ -564,6 +567,24 @@ html_include(Mime, Path) -->
 	{ print_message(warning, html_include(dont_know, Mime, Path))
 	}.
 
+%%	mime_include(+Mime, +Path)// is semidet.
+%
+%	Hook called to include a link to   an HTML resource of type Mime
+%	into the HTML head. The Mime type   is  computed from Path using
+%	file_mime_type/2. If the hook  fails,   two  built-in  rules for
+%	`text/css` and `text/javascript` are  tried.   For  example,  to
+%	include a =.pl= files as a Prolog script, use:
+%
+%	  ```
+%	  :- multifile
+%	      html_head:mime_include//2.
+%
+%	  html_head:mime_include(text/'x-prolog', Path) --> !,
+%	      html(script([ type('text/x-prolog'),
+%		            src(Path)
+%		          ],  [])).
+%
+%	  ```
 
 		 /*******************************
 		 *	  CACHE CLEANUP		*
