@@ -842,6 +842,10 @@ prolog:message(httpd(created_pool(Pool))) -->
 	  'pool that fits the usage-profile.'
 	].
 
+http_root(Host:Port) --> !,
+	http_scheme(Host:Port),
+	{ http_absolute_location(root(.), URI, []) },
+	[ '~w:~w~w'-[Host, Port, URI] ].
 http_root(Port) -->
 	http_scheme(Port),
 	{ http_absolute_location(root(.), URI, []) },
