@@ -448,7 +448,7 @@ http_read_data(In, Fields, Data, Options) :-
 	).
 http_read_data(In, Fields, Data, _) :-
 	option(content_type(ContentType), Fields),
-	form_data_content_type(ContentType), !,
+	is_content_type(ContentType, 'application/x-www-form-urlencoded'), !,
 	http_read_data(In, Fields, Codes, [to(string)]),
 	uri_query_components(Codes, Data).
 http_read_data(In, Fields, Data, Options) :-			% call hook
@@ -476,20 +476,34 @@ encoding(Fields, utf8) :-
 	), !.
 encoding(_, octet).
 
-%%	form_data_content_type(+ContentType) is semidet.
-%
-%	True if ContentType   is  =|application/x-www-form-urlencoded|=.
-%	Note that there can be parameters,   but  the ; MUST immediately
-%	follow the type.
-%
-%	@tbd	Within ClioPatria, there is a library http_request_value.pl
-%		that generalises these things. That library must be
-%		completed and used for this match.
+is_content_type(ContentType, Check) :-
+	sub_atom(ContentType, 0, Len, After, Check),
+	(   After == 0
+	->  true
+	;   sub_atom(ContentType, Len, 1, _, ';')
+	).
 
-form_data_content_type('application/x-www-form-urlencoded') :- !.
-form_data_content_type(ContentType) :-
-	sub_atom(ContentType, 0, _, _, 'application/x-www-form-urlencoded;').
+%%	http_convert_data(+In, +Fields, -Data, +Options) is semidet.
+%
+%	Multi-file hook to convert  a  HTTP   payload  according  to the
+%	_Content-type_ header. The  default   implementation  deals with
+%	application/x-prolog.    The    HTTP      framework     provides
+%	implementations  for  JSON  (library(http/http_json)),  HTML/XML
+%	(library(http/http_sgml_plugin))
 
+http_convert_data(In, Fields, Data, Options) :-
+	memberchk(content_type(Type), Fields),
+	is_content_type(Type, 'application/x-prolog'), !,
+	(   memberchk(content_length(Bytes), Fields)
+	->  setup_call_cleanup(
+		( stream_range_open(In, Range, [size(Bytes)]),
+		  set_stream(Range, encoding(utf8))
+		),
+		read_term(Range, Data, Options),
+		close(Range))
+	;   set_stream(In, encoding(utf8)),
+	    read_term(In, Data, Options)
+	).
 
 		 /*******************************
 		 *	       POST		*
