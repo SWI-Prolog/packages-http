@@ -47,6 +47,7 @@
 :- use_module(library(lists)).
 :- use_module(library(error)).
 :- use_module(library(option)).
+:- use_module(library(apply)).
 
 :- meta_predicate
 	http_read_data(+, -, :).
@@ -418,9 +419,10 @@ is_meta(on_filename).
 
 http_read_data(In, Fields, Data, Options) :-	% Transfer-encoding: chunked
 	select(transfer_encoding(chunked), Fields, RestFields), !,
-	http_chunked_open(In, DataStream, []),
-	call_cleanup(http_read_data(DataStream, RestFields, Data, Options),
-		     close(DataStream)).
+	setup_call_cleanup(
+	    http_chunked_open(In, DataStream, []),
+	    http_read_data(DataStream, RestFields, Data, Options),
+	    close(DataStream)).
 http_read_data(In, Fields, Data, Options) :-
 	option(to(X), Options), !,
 	(   X = stream(Stream)
