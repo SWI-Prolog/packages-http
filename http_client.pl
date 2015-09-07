@@ -580,3 +580,31 @@ split_options([H|T], P, [H|R]) :-
 merge_options_rev(Old, New, Merged) :-
 	merge_options(New, Old, Merged).
 
+%%	post_data_hook(+Term, +Out, +Options) is semidet.
+%
+%	Hook to extend the datatypes supported  by the post(Data) option
+%	of   http_open/3.   The   default     implementation    supports
+%	prolog(Term), sending a Prolog term as =|application/x-prolog|=.
+
+post_data_hook(prolog(Term), Out, HdrExtra) :-
+	setup_call_cleanup(
+	    ( new_memory_file(MemFile),
+	      open_memory_file(MemFile, write, Handle)
+	    ),
+	    ( format(Handle,
+		     'Content-type: application/x-prolog; charset=UTF-8~n~n',
+		     []),
+	      write_term(Handle, Term,
+			 [ quoted(true),
+			   ignore_ops(true),
+			   fullstop(true),
+			   nl(true)
+			 ])
+	    ),
+	    close(Handle)),
+	setup_call_cleanup(
+	    open_memory_file(MemFile, read, RdHandle,
+			     [ free_on_close(true)
+			     ]),
+	    http_post_data(cgi_stream(RdHandle), Out, HdrExtra),
+	    close(RdHandle)).
