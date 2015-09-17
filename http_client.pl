@@ -253,17 +253,11 @@ http_get(Parts, Data, Options0) :-
 
 http_do_get(Parts, Data, Options) :-
 	connect(Parts, Read, Write, Options),
-	(   (	select(proxy(_,_), Options, Options1)
-	    ;   select(proxy(_:_), Options, Options1)
-	    )
-	->  parse_url(Location, Parts)
-	;   http_location(Parts, Location),
-	    Options1 = Options
-	),
+	http_location(Parts, Location),
 	memberchk(host(Host), Parts),
 	option(method(Method), Options, 'GET'),
 	http_write_header(Write, Method, Location, Host,
-			  Options1, ReplyOptions),
+			  Options, ReplyOptions),
 	write(Write, '\r\n'),
 	flush_output(Write),
 	http_read_reply(Read, Data0, ReplyOptions), !,
@@ -546,15 +540,9 @@ http_post(Parts, In, Out, Options0) :-
 
 http_do_post(Parts, In, Out, Options) :-
 	connect(Parts, Read, Write, Options),
-	(   (	select(proxy(_,_), Options, Options1)
-	    ;	select(proxy(_:_), Options, Options1)
-	    )
-	->  parse_url(Location, Parts)
-	;   http_location(Parts, Location),
-	    Options1 = Options
-	),
+	http_location(Parts, Location),
 	memberchk(host(Host), Parts),
-	split_options(Options1, PostOptions, ReplyOptions),
+	split_options(Options, PostOptions, ReplyOptions),
 	write_post_header(Write, Location, Host, In, PostOptions),
 	http_read_reply(Read, Out, ReplyOptions).
 
