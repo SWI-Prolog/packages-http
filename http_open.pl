@@ -495,6 +495,8 @@ auth_header(Auth, _, _) :-
 user_agent(Agent, Options) :-
 	(   option(user_agent(Agent), Options)
 	->  true
+	;   memberchk(request_header('User-Agent'=Agent), Options)
+	->  true
 	;   user_agent(Agent)
 	).
 
