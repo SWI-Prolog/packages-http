@@ -239,7 +239,7 @@ user_agent('SWI-Prolog').
 %	  Sets the maximum length of a redirection chain.  This is needed
 %	  for some IRIs that redirect indefinitely to other IRIs without
 %	  looping (e.g., redirecting to IRIs with a random element in them).
-%	  Max must be either a non-negative integer or the atom `inf`.
+%	  Max must be either a non-negative integer or the atom `infinite`.
 %	  The default value is `10`.
 %
 %	  * user_agent(+Agent)
@@ -565,7 +565,7 @@ do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
 redirect_length(Options, Max) :-
 	aggregate_all(count, member(visited(_), Options), N),
 	option(redirect_max(Max), Options, 10),
-	(Max == inf -> fail ; N >= Max).
+	(Max == infinite -> fail ; N >= Max).
 
 
 %%	redirect_loop(Parts, Options) is semidet.
