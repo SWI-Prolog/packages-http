@@ -676,13 +676,25 @@ return_fields([_|T], Lines) :-
 
 return_headers([], _).
 return_headers([headers(Headers)|_], Lines) :- !,
-	maplist(parse_header,Lines,Headers).
+	parse_headers(Lines, Headers).
 return_headers([_|T], Lines) :-
 	return_headers(T, Lines).
 
-parse_header(Line,Name-Value) :-
-	http_parse_header(Line,[Header]),
-	Header =.. [Name,Value].
+%%	parse_headers(+Lines, -HeaderPairs) is det.
+%
+%	Parse the header lines for the  headers(-Pairs) option. If there
+%	are invalid header lines, we skip them.
+
+parse_headers([], []) :- !.
+parse_headers([Line|Lines], Headers) :-
+	catch(http_parse_header(Line, [Header]), Error, true),
+	(   var(Error)
+	->  Header =.. [Name,Value],
+	    Headers = [Name-Value|More]
+	;   print_message(warning, Error),
+	    More = Headers
+	),
+	parse_headers(Lines, More).
 
 
 %%	return_final_url(+Options) is semidet.
