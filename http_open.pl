@@ -652,13 +652,19 @@ return_fields([_|T], Lines) :-
 
 return_headers([], _).
 return_headers([headers(Headers)|_], Lines) :- !,
-	maplist(parse_header,Lines,Headers).
+	parse_headers(Lines, Headers).
 return_headers([_|T], Lines) :-
 	return_headers(T, Lines).
 
-parse_header(Line,Name-Value) :-
-	http_parse_header(Line,[Header]),
-	Header =.. [Name,Value].
+parse_headers([], []) :- !.
+parse_headers([Line|Lines], L1) :-
+	http_parse_header(Line, Header0),
+	(   Header0 = [Header],
+	    Header =.. [Name,Value]
+	->  L1 = [Name-Value|L2]
+	;   L1 = L2
+	),
+	parse_headers(Lines, L2).
 
 
 %%	return_final_url(+Options) is semidet.
