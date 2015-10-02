@@ -41,6 +41,7 @@
 :- use_module(library(error)).
 :- use_module(library(base64)).
 :- use_module(library(debug)).
+:- use_module(library(aggregate)).
 :- use_module(library(apply)).
 :- use_module(library(http/http_header), [http_parse_header/2]).
 
@@ -233,6 +234,13 @@ user_agent('SWI-Prolog').
 %	  Additional  name-value  parts  are  added   in  the  order  of
 %	  appearance to the HTTP request   header.  No interpretation is
 %	  done.
+%
+%	  * redirect_max(+Max)
+%	  Sets the maximum length of a redirection chain.  This is needed
+%	  for some IRIs that redirect indefinitely to other IRIs without
+%	  looping (e.g., redirecting to IRIs with a random element in them).
+%	  Max must be either a non-negative integer or the atom `inf`.
+%	  The default value is `10`.
 %
 %	  * user_agent(+Agent)
 %	  Defines the value of the  =|User-Agent|=   field  of  the HTTP
@@ -515,7 +523,10 @@ do_open(_, Code, _, Lines, Options0, Parts, In, Stream) :-
 	parts_uri(Parts, Base),
 	uri_resolve(RequestURI, Base, Redirected),
 	parse_url_ex(Redirected, RedirectedParts),
-	(   redirect_loop(RedirectedParts, Options0)
+	(   redirect_length(Options0, Max)
+	->  throw(error(permission_error(redirect, http, Max),
+			context(_, 'Rediction length exceeded')))
+	;   redirect_loop(RedirectedParts, Options0)
 	->  throw(error(permission_error(redirect, http, Redirected),
 			context(_, 'Redirection loop')))
 	;   true
@@ -545,6 +556,17 @@ do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
 	;   Formal = existence_error(url, URI)
 	),
 	throw(error(Formal, context(_, status(Code, Comment)))).
+
+
+%%	redirect_length(+Options:list(compound), -Max:nonneg) is semidet.
+%
+%	True if we have exceeded the maximum redirection length (default 10).
+
+redirect_length(Options, Max) :-
+	aggregate_all(count, member(visited(_), Options), N),
+	option(redirect_max(Max), Options, 10),
+	(Max == inf -> fail ; N >= Max).
+
 
 %%	redirect_loop(Parts, Options) is semidet.
 %
