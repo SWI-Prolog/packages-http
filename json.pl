@@ -379,6 +379,7 @@ number_code(C) :-
 	between(0'0, 0'9, C), !.
 number_code(0'.).
 number_code(0'-).
+number_code(0'+).
 number_code(0'e).
 number_code(0'E).
 
