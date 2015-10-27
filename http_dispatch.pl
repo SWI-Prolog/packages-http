@@ -58,7 +58,8 @@
 		     [ cache(boolean),
 		       mime_type(any),
 		       static_gzip(boolean),
-		       pass_to(http_safe_file/2, 2)
+		       pass_to(http_safe_file/2, 2),
+		       headers(list)
 		     ]).
 :- predicate_options(http_safe_file/2, 2, [unsafe(boolean)]).
 :- predicate_options(http_switch_protocol/2, 2, []).
@@ -678,6 +679,10 @@ extend(G0, Extra, G) :-
 %		specifications such as =|www('../../etc/passwd')|= are
 %		not allowed.
 %
+%		* headers(+List)
+%		Provides additional reply-header fields, encoded as a
+%		list of =Field(Value)=.
+%
 %	If caching is not disabled,  it   processes  the request headers
 %	=|If-modified-since|= and =Range=.
 %
@@ -716,7 +721,8 @@ http_reply_file(File, Options, Request) :-
 	->  true
 	;   Type = text/plain		% fallback type
 	),
-	throw(http_reply(Reply)).
+	option(headers(Headers), Options, []),
+	throw(http_reply(Reply, Headers)).
 
 accepts_encoding(Request, Enc) :-
 	memberchk(accept_encoding(Accept), Request),
