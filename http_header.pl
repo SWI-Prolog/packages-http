@@ -184,8 +184,8 @@ http_reply(What, Out) :-
 http_reply(Data, Out, HdrExtra) :-
 	http_reply(Data, Out, HdrExtra, _Code).
 
-http_reply(Status, Out, HdrExtra, Code) :-
-	http_status_reply(Status, Out, HdrExtra, [], Code).
+http_reply(Data, Out, HdrExtra, Code) :-
+	http_reply(Data, Out, HdrExtra, [], Code).
 
 http_reply(Data, Out, HdrExtra, _Context, Code) :-
 	byte_count(Out, C0),
