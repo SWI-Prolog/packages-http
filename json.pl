@@ -860,7 +860,10 @@ json_read_dict(Stream, Dict) :-
 
 json_read_dict(Stream, Dict, Options) :-
 	make_json_dict_options(Options, OptionTerm, _RestOptions),
-	json_value(Stream, Term, _, OptionTerm),
+	(   json_value(Stream, Term, _, OptionTerm)
+	->  true
+	;   syntax_error(illegal_json, Stream)
+	),
 	term_to_dict(Term, Dict, OptionTerm).
 
 term_to_dict(json(Pairs), Dict, Options) :- !,
