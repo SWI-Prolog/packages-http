@@ -62,10 +62,7 @@ map_exception_to_http_status(http_reply(Reply),
 	      Reply,
 	      [connection(Close)],
               []) :- !,
-	(   keep_alive(Reply)
-	->  Close = 'Keep-Alive'
-	;   Close = close
-	).
+	keep_alive(Reply, Close).
 map_exception_to_http_status(http_reply(Reply, HdrExtra0),
 	      Reply,
 	      HdrExtra,
@@ -79,13 +76,10 @@ map_exception_to_http_status(http_reply(Reply, HdrExtra0, Context),
 	      Reply,
 	      HdrExtra,
               Context):- !,
-	(   memberchk(close(_), HdrExtra0)
+	(   memberchk(connection(_), HdrExtra0)
 	->  HdrExtra = HdrExtra0
-	;   HdrExtra = [close(Close)|HdrExtra0],
-	    (   keep_alive(Reply)
-	    ->  Close = 'Keep-Alive'
-	    ;   Close = close
-	    )
+	;   HdrExtra = [connection(Close)|HdrExtra0],
+	    keep_alive(Reply, Close)
 	).
 map_exception_to_http_status(error(existence_error(http_location, Location), _),
 	      not_found(Location),
@@ -159,8 +153,15 @@ discard_stack_trace(error(Formal, context(_,Msg)),
 
 
 %%	keep_alive(+Reply) is semidet.
+%%	keep_alive(+Reply, -Connection) is det.
 %
 %	If true for Reply, the default is to keep the connection open.
+
+keep_alive(Reply, Connection) :-
+	(   keep_alive(Reply)
+	->  Connection = 'Keep-Alive'
+	;   Connection = close
+	).
 
 keep_alive(not_modified).
 keep_alive(file(_Type, _File)).
