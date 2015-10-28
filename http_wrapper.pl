@@ -180,13 +180,16 @@ cgi_close(CGI, _, State0, ok, Close) :- !,
 	;   http_done(500, E, 0, State0),	% TBD: amount written?
 	    throw(E)
 	).
-cgi_close(CGI, Request, Id, http_reply(Status), Close) :-
+cgi_close(CGI, Request, Id, http_reply(Status), Close) :- !,
+	cgi_close(CGI, Request, Id, http_reply(Status, []), Close).
+cgi_close(CGI, Request, Id, http_reply(Status, ExtraHdrOpts), Close) :-
 	cgi_property(CGI, header_codes(Text)),
 	Text \== [], !,
-	http_parse_header(Text, ExtraHdr),
+	http_parse_header(Text, ExtraHdrCGI),
 	cgi_property(CGI, client(Out)),
 	cgi_discard(CGI),
 	close(CGI),
+	append(ExtraHdrCGI, ExtraHdrOpts, ExtraHdr),
 	send_error(Out, Request, Id, http_reply(Status, ExtraHdr), Close).
 cgi_close(CGI, Request, Id, Error, Close) :-
 	cgi_property(CGI, client(Out)),
@@ -225,7 +228,7 @@ send_error(Out, Request, State0, Error, Close) :-
 	;   http_done(500,  E, 0, State0),
 	    throw(E)			% is that wise?
 	),
-        (   Error = http_reply(switching_protocols(Goal, SwitchOptions))
+        (   Error = http_reply(switching_protocols(Goal, SwitchOptions), _)
         ->  Close = switch_protocol(Goal, SwitchOptions)
 	;   memberchk(connection(Close), HdrExtra)
 	->  true
