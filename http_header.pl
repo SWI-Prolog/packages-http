@@ -1974,9 +1974,11 @@ uri_parts(Components) -->
 
 uri_search(Components) -->
 	{ uri_data(search, Components, Search),
-	  nonvar(Search), !,
-	  uri_query_components(Search, Query)
-	},
+	  nonvar(Search),
+	  catch(uri_query_components(Search, Query),
+		error(syntax_error(_),_),
+		fail)
+	}, !,
 	[ search(Query) ].
 uri_search(_) --> [].
 

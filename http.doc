@@ -723,6 +723,10 @@ Prolog \arg{Name}=\arg{Value} terms with decoded names and values.
 This field is only present if the location contains a
 search-specification.
 
+The URL specification does not \emph{demand} the query part to be
+of the form \textit{name=value}.  If the field is syntactically
+incorrect, ListOfNameValue is bound the the empty list ([]).
+
     \termitem{http_version}{Major-Minor}
 If the first line contains the \const{HTTP/}\arg{Major}.\arg{Minor}
 version indicator this element indicate the HTTP version of the
