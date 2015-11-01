@@ -47,9 +47,9 @@
 
 /** <module> Simple HTTP client
 
-This library provides a light-weight HTTP client library to get the data
-from a URL. The functionality of the  library can be extended by loading
-two additional modules that acts as plugins:
+This library provides a HTTP client library to  access a URL as a Prolog
+stream. The functionality of the  library   can  be  extended by loading
+three additional modules that act as plugins:
 
     * library(http/http_chunked)
     Loading this library causes http_open/3 to support chunked
@@ -60,10 +60,10 @@ two additional modules that acts as plugins:
     in addition to =GET=, =HEAD= and =DELETE=.
 
     * library(http/http_ssl_plugin)
-    Loading this library causes http_open/3 HTTPS connections.  Relevant
-    options for SLL certificate handling are handed to ssl_context/3.
-    This plugin is loaded automatically if the scheme `https` is
-    requested using a default SSL context.  See the plugin for
+    Loading this library causes http_open/3 to handle HTTPS connections.
+    Relevant options for SLL certificate handling are handed to
+    ssl_context/3. This plugin is loaded automatically if the scheme
+    `https` is requested using a default SSL context. See the plugin for
     additional information regarding security.
 
 Here is a simple example to fetch a web-page:
@@ -91,9 +91,10 @@ time-stamp for the resource. See also parse_time/2.
 	  parse_time(Modified, Stamp).
   ==
 
-@see xpath/3
-@see http_get/3
-@see http_post/4
+@see load_html/3 and xpath/3 can be used to parse and navigate HTML
+     documents.
+@see http_get/3 and http_post/4 provide an alternative interface that
+     convert the reply depending on the =|Content-Type|= header.
 */
 
 :- multifile

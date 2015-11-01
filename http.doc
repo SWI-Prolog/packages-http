@@ -84,23 +84,49 @@ van Ossenbruggen, Michiel Hildebrandt, Matt Lilley and Keri Harris.
 \section{The HTTP client libraries}
 \label{sec:http-clients}
 
-This package provides two packages for building HTTP clients. The first,
-\pllib{http/http_open} is a lightweight library for opening a HTTP
-URL address as a Prolog stream. It can only deal with the HTTP GET
-protocol. The second, \pllib{http/http_client} is a more advanced
-library dealing with \jargon{keep-alive}, \jargon{chunked transfer} and
-a plug-in mechanism providing conversions based on the MIME content-type.
+This package provides two client libraries for accessing HTTP servers.
+The first, \pllib{http/http_open} is a library for opening a HTTP URL
+address as a Prolog stream. The general skeleton for using this library
+is given below, where \nopredref{process}{1} processes the data from the
+HTTP server.\footnote{One may opt to use cleanup/2 intead of
+setup_call_cleanup/3 to allow for aborting while http_open/3 is waiting
+for the connection.}
+
+\begin{code}
+    setup_call_cleanup(
+	http_open(URL, In, []),
+	process(In),
+	close(In)).
+\end{code}
+
+The second, \pllib{http/http_client} provides http_get/3 and
+http_post/4, both of which process the reply using plugins to deal
+convert the data based on the \texttt{Content-Type} of the reply.
+
+\paragraph{Status}
+
+The two libraries use a distinct code base that largely overlaps while
+both libraries both provide and lack vital functionality. Notably
+http_open/3 cannot deal with \jargon{Keep-alive} connections while
+http_get/3 and http_post/4 poorly deal with proxies and cannot deal with
+HTTPS. In the future, http_get/3 and http_post/4 will be based on
+http_open/3 and http_open/3 will support all vital HTTP client
+functions.
 
 \input{httpopen.tex}
 
 \subsection{The \pllib{http/http_client} library}
 \label{sec:httpclient}
 
-The \pllib{http/http_client} library provides more powerful access to
-reading HTTP resources, providing \jargon{keep-alive} connections,
-\jargon{chunked} transfer and conversion of the content, such as
-breaking down \jargon{multipart} data, parsing HTML, etc. The library
-announces itself as providing \const{HTTP/1.1}.
+The \pllib{http/http_client} library provides http_get/3 and
+http_post/4, both of which process the reply using plugins to deal
+convert the data based on the \texttt{Content-Type} of the reply.
+
+For most tasks, http_open/3 is superior to this library because it
+allows for streaming processing of large documents and provides better
+control on how the data is processed by examining the reply headers
+and/or the content\footnote{See peek_string/3.} before deciding how
+process the reply.
 
 \begin{description}
     \predicate{http_get}{3}{+URL, -Reply, +Options}
@@ -160,9 +186,9 @@ Please check the RFC2616 (HTTP) document for available fields and their
 meaning.
 
 	\termitem{reply_header}{Header}
-Unify \arg{Header} with a list of \arg{Name}=\arg{Value} pairs
-expressing all header fields of the reply.  See http_read_request/2
-for the result format.
+Unify \arg{Header} with a list of \arg{Name(Value)} terms expressing all
+header fields of the reply. See http_read_request/2 for the result
+format.
     \end{description}
 
 Remaining options are passed to http_read_data/3.
@@ -694,7 +720,8 @@ The \arg{Stream} is passed along, allowing to read more data or
 requests from the same stream.  This field is always present.
 
     \termitem{method}{Method}
-\arg{Method} is one of \const{get}, \const{put} or \const{post}. This
+\arg{Method} is the HTTP \jargon{method} represented as a lower-case
+atom, e.g., \const{get}, \const{put}, \const{post}. This
 field is present if the header has been parsed successfully.
 
     \termitem{path}{Path}
