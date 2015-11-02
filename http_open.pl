@@ -98,6 +98,50 @@ time-stamp for the resource. See also parse_time/2.
 	  parse_time(Modified, Stamp).
   ==
 
+Then next example uses Google search. It exploits library(uri) to manage
+URIs, library(sgml) to load  an  HTML   document  and  library(xpath) to
+navigate the parsed HTML. Note that  you   may  need to adjust the xpath
+queries if the data returned by Google changes.
+
+  ==
+  :- use_module(library(http/http_open)).
+  :- use_module(library(xpath)).
+  :- use_module(library(sgml)).
+  :- use_module(library(uri)).
+
+  google(For, Title, HREF) :-
+	  uri_encoded(query_value, For, Encoded),
+	  atom_concat('http://www.google.com/search?q=', Encoded, URL),
+	  http_open(URL, In, []),
+	  call_cleanup(
+	      load_html(In, DOM, []),
+	      close(In)),
+	  xpath(DOM, //h3(@class=r), Result),
+	  xpath(Result, //a(@href=HREF0, text), Title),
+	  uri_components(HREF0, Components),
+	  uri_data(search, Components, Query),
+	  uri_query_components(Query, Parts),
+	  memberchk(q=HREF, Parts).
+  ==
+
+An example query is below:
+
+==
+?- google(prolog, Title, HREF).
+Title = 'SWI-Prolog',
+HREF = 'http://www.swi-prolog.org/' ;
+Title = 'Prolog - Wikipedia',
+HREF = 'https://nl.wikipedia.org/wiki/Prolog' ;
+Title = 'Prolog - Wikipedia, the free encyclopedia',
+HREF = 'https://en.wikipedia.org/wiki/Prolog' ;
+Title = 'Pro-Log is logistiek dienstverlener m.b.t. vervoer over water.',
+HREF = 'http://www.pro-log.nl/' ;
+Title = 'Learn Prolog Now!',
+HREF = 'http://www.learnprolognow.org/' ;
+Title = 'Free Online Version - Learn Prolog
+...
+==
+
 @see load_html/3 and xpath/3 can be used to parse and navigate HTML
      documents.
 @see http_get/3 and http_post/4 provide an alternative interface that
