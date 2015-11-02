@@ -49,17 +49,17 @@
 
 /** <module> Simple HTTP client
 
-This library provides a HTTP client library to  access a URL as a Prolog
-stream. The functionality of the  library   can  be  extended by loading
-three additional modules that act as plugins:
+This library defines http_open/3, which opens a  URL as a Prolog stream.
+The functionality of the  library  can   be  extended  by  loading three
+additional modules that act as plugins:
 
     * library(http/http_chunked)
     Loading this library causes http_open/3 to support chunked
     transfer encoding.
 
     * library(http/http_header)
-    Loading this library causes http_open/3 to support the =POST= method
-    in addition to =GET=, =HEAD= and =DELETE=.
+    Loading this library adds support for the =POST= and =PUT= methods
+    to http_open/3.
 
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 to handle HTTPS connections.
@@ -67,6 +67,11 @@ three additional modules that act as plugins:
     ssl_context/3. This plugin is loaded automatically if the scheme
     `https` is requested using a default SSL context. See the plugin for
     additional information regarding security.
+
+    * library(http/http_cookie)
+    Loading this library adds tracking cookies to this library. Returned
+    cookies are collected in the Prolog database and supplied for
+    subsequent requests.
 
 Here is a simple example to fetch a web-page:
 
