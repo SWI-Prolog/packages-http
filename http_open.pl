@@ -31,7 +31,8 @@
 
 :- module(http_open,
 	  [ http_open/3,		% +URL, -Stream, +Options
-	    http_set_authorization/2	% +URL, +Authorization
+	    http_set_authorization/2,	% +URL, +Authorization
+	    http_close_keep_alive/1	% +Address
 	  ]).
 :- use_module(library(uri)).
 :- use_module(library(readutil)).
@@ -44,6 +45,7 @@
 :- use_module(library(aggregate)).
 :- use_module(library(apply)).
 :- use_module(library(http/http_header), [http_parse_header/2]).
+:- use_module(library(http/http_stream)).
 
 /** <module> Simple HTTP client
 
@@ -154,6 +156,17 @@ user_agent('SWI-Prolog').
 %	  * authorization(+Term)
 %	  Send authorization.  Currently only supports basic(User,Password).
 %	  See also http_set_authorization/2.
+%
+%	  * connection(+Connection)
+%	  Specify the =Connection= header.  Default is =close=.  The
+%	  alternative is =|Keep-alive|=.  This maintains a pool of
+%	  available connections as determined by keep_connection/1.
+%	  The library(http/websockets) uses =|Keep-alive, Upgrade|=.
+%	  Keep-alive connections can be closed explicitly using
+%	  http_close_keep_alive/1. Keep-alive connections may
+%	  significantly improve repetitive requests on the same server,
+%	  especially if the IP route is long, HTTPS is used or the
+%	  connection uses a proxy.
 %
 %	  * final_url(-FinalURL)
 %	  Unify FinalURL with the final   destination. This differs from
@@ -337,16 +350,27 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
         default_port(Scheme, DefPort),
         url_part(port(Port), Parts, DefPort),
 	host_and_port(Host, DefPort, Port, HostPort),
-        http:http_connection_over_proxy(Method, Parts, Host:Port,
-					SocketStreamPair, Options, Options1),
-        (   http:http_protocol_hook(Scheme, Parts,
-				    SocketStreamPair,
-				    StreamPair, Options)
-        ->  true
-        ;   StreamPair = SocketStreamPair
-        ),
-        send_rec_header(StreamPair, Stream, HostPort,
-			RequestURI, Parts, Options1),
+	(   option(connection(Connection), Options0),
+	    keep_alive(Connection),
+	    get_from_pool(Host:Port, StreamPair),
+	    debug(http(connection), 'Trying Keep-alive to ~p using ~p',
+		  [ Host:Port, StreamPair ]),
+	    catch(send_rec_header(StreamPair, Stream, HostPort,
+				  RequestURI, Parts, Options),
+		  error(E,_),
+		  keep_alive_error(E))
+	->  true
+	;   http:http_connection_over_proxy(Method, Parts, Host:Port,
+					    SocketStreamPair, Options, Options1),
+	    (   http:http_protocol_hook(Scheme, Parts,
+					SocketStreamPair,
+					StreamPair, Options)
+	    ->  true
+	    ;   StreamPair = SocketStreamPair
+	    ),
+	    send_rec_header(StreamPair, Stream, HostPort,
+			    RequestURI, Parts, Options1)
+	),
         return_final_url(Options).
 
 http:http_connection_over_proxy(direct, _, Host:Port,
@@ -439,7 +463,8 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 					% read the reply header
 	read_header(StreamPair, ReplyVersion, Code, Comment, Lines),
 	update_cookies(Lines, Parts, Options),
-	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, StreamPair, Stream).
+	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, Host,
+		StreamPair, Stream).
 
 
 %%	http_version(-Version:atom) is det.
@@ -508,7 +533,7 @@ user_agent(Agent, Options) :-
 	).
 
 %%	do_open(+HTTPVersion, +HTTPStatusCode, +HTTPStatusComment, +Header,
-%%		+Options, +Parts, +In, -FinalIn) is det.
+%%		+Options, +Parts, +Host, +In, -FinalIn) is det.
 %
 %	Handle the HTTP status. If 200, we   are ok. If a redirect, redo
 %	the open, returning a new stream. Else issue an error.
@@ -516,7 +541,7 @@ user_agent(Agent, Options) :-
 %	@error	existence_error(url, URL)
 
 					% Redirections
-do_open(_, Code, _, Lines, Options0, Parts, In, Stream) :-
+do_open(_, Code, _, Lines, Options0, Parts, _, In, Stream) :-
 	redirect_code(Code),
 	location(Lines, RequestURI), !,
 	debug(http(redirect), 'http_open: redirecting to ~w', [RequestURI]),
@@ -536,8 +561,9 @@ do_open(_, Code, _, Lines, Options0, Parts, In, Stream) :-
 	redirect_options(Options0, Options),
 	http_open(RedirectedParts, Stream, Options).
 					% Accepted codes
-do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
-	(   option(status_code(Code), Options)
+do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
+	(   option(status_code(Code), Options),
+	    Lines \== []
 	->  true
 	;   Code == 200
 	), !,
@@ -545,13 +571,18 @@ do_open(Version, Code, _, Lines, Options, Parts, In0, In) :-
 	return_size(Options, Lines),
 	return_fields(Options, Lines),
 	return_headers(Options, Lines),
-	transfer_encoding_filter(Lines, In0, In),
+	consider_keep_alive(Lines, Parts, Host, In0, In1, Options),
+	transfer_encoding_filter(Lines, In1, In),
 					% properly re-initialise the stream
 	parts_uri(Parts, URI),
 	set_stream(In, file_name(URI)),
 	set_stream(In, record_position(true)).
+do_open(_, _, _, [], Options, _, _, _, _) :-
+	option(connection(Connection), Options),
+	keep_alive(Connection), !,
+	throw(error(keep_alive(closed),_)).
 					% report anything else as error
-do_open(_Version, Code, Comment, _,  _, Parts, _, _) :-
+do_open(_Version, Code, Comment, _,  _, Parts, _, _, _) :-
 	parts_uri(Parts, URI),
 	(   map_error_code(Code, Error)
 	->  Formal =.. [Error, url, URI]
@@ -786,6 +817,11 @@ content_length(Lines, Length) :-
 location(Lines, RequestURI) :-
 	member(Line, Lines),
 	phrase(atom_field(location, RequestURI), Line), !.
+
+connection(Lines, Connection) :-
+	member(Line, Lines),
+	phrase(atom_field(connection, Connection0), Line), !,
+	Connection = Connection0.
 
 first_line(Major-Minor, Code, Comment) -->
 	"HTTP/", integer(Major), ".", integer(Minor),
@@ -1040,6 +1076,11 @@ parts_uri(Parts, URI) :-
 	uri_data(authority, Data, Auth),
 	uri_components(URI, Data).
 
+parts_port(Parts, Port) :-
+	parts_scheme(Parts, Scheme),
+        default_port(Scheme, DefPort),
+        url_part(port(Port), Parts, DefPort).
+
 url_part(Part, Parts) :-
 	Part =.. [Name,Value],
 	Gen =.. [Name,RawValue],
@@ -1098,6 +1139,138 @@ iostream:open_hook(URL, read, Stream, Close, Options0, Options) :-
 
 http_scheme(http).
 http_scheme(https).
+
+
+		 /*******************************
+		 *	    KEEP-ALIVE		*
+		 *******************************/
+
+%%	consider_keep_alive(+HeaderLines, +Parts, +Host,
+%%			    +Stream0, -Stream,
+%%			    +Options) is det.
+
+consider_keep_alive(Lines, Parts, Host, StreamPair, In, Options) :-
+	option(connection(Asked), Options),
+	keep_alive(Asked),
+	connection(Lines, Given),
+	keep_alive(Given),
+	content_length(Lines, Bytes), !,
+	stream_pair(StreamPair, In0, _),
+	connection_address(Host, Parts, HostPort),
+	debug(http(connection),
+	      'Keep-alive to ~w (~D bytes)', [HostPort, Bytes]),
+	stream_range_open(In0, In,
+			  [ size(Bytes),
+			    onclose(keep_alive(StreamPair, HostPort))
+			  ]).
+consider_keep_alive(_, _, _, Stream, Stream, _).
+
+connection_address(Host, _, Host) :-
+	Host = _:_, !.
+connection_address(Host, Parts, Host:Port) :-
+	parts_port(Parts, Port).
+
+keep_alive(keep_alive) :- !.
+keep_alive(Connection) :-
+	downcase_atom(Connection, 'keep-alive').
+
+:- public keep_alive/4.
+
+keep_alive(StreamPair, Host, In, Left) :-
+	read_incomplete(In, Left),
+	add_to_pool(Host, StreamPair), !.
+keep_alive(StreamPair, _, _, _) :-
+	close(StreamPair, [force(true)]).
+
+%%	read_incomplete(+In, +Left) is semidet.
+%
+%	If we have not all input from  a Keep-alive connection, read the
+%	remainder if it is short. Else, we fail and close the stream.
+
+read_incomplete(_, 0) :- !.
+read_incomplete(In, Left) :-
+	Left < 100, !,
+	catch(setup_call_cleanup(
+		  open_null_stream(Null),
+		  copy_stream_data(In, Null, Left),
+		  close(Null)),
+	      _,
+	      fail).
+
+:- dynamic
+	connection_pool/4,		% Hash, Address, Stream, Time
+	connection_gc_time/1.
+
+add_to_pool(Address, StreamPair) :-
+	keep_connection(Address),
+	get_time(Now),
+	term_hash(Address, Hash),
+	assertz(connection_pool(Hash, Address, StreamPair, Now)).
+
+get_from_pool(Address, StreamPair) :-
+	term_hash(Address, Hash),
+	retract(connection_pool(Hash, Address, StreamPair, _)).
+
+%%	keep_connection(+Address) is semidet.
+%
+%	Succeeds if we want to keep   the  connection open. We currently
+%	keep a maximum of 10 connections  waiting   and  a  maximum of 2
+%	waiting for the same address. Connections   older than 2 seconds
+%	are closed.
+
+keep_connection(Address) :-
+	close_old_connections(2),
+	predicate_property(connection_pool(_,_,_,_), number_of_clauses(C)),
+	C =< 10,
+	term_hash(Address, Hash),
+	aggregate_all(count, connection_pool(Hash, Address, _, _), Count),
+	Count =< 2.
+
+close_old_connections(Timeout) :-
+	get_time(Now),
+	Before is Now - Timeout,
+	(   connection_gc_time(GC),
+	    GC > Before
+	->  true
+	;   (   retractall(connection_gc_time(_)),
+	        asserta(connection_gc_time(Now)),
+		connection_pool(Hash, Address, StreamPair, Added),
+	        Added < Before,
+		retract(connection_pool(Hash, Address, StreamPair, Added)),
+		debug(http(connection),
+		      'Closing inactive keep-alive to ~p', [Address]),
+		close(StreamPair, [force(true)]),
+		fail
+	    ;   true
+	    )
+	).
+
+
+%%	http_close_keep_alive(+Address) is det.
+%
+%	Close all keep-alive connections matching Address. Address is of
+%	the  form  Host:Port.  In  particular,  http_close_keep_alive(_)
+%	closes all currently known keep-alive connections.
+
+http_close_keep_alive(Address) :-
+	forall(get_from_pool(Address, StreamPair),
+	       close(StreamPair, [force(true)])).
+
+%%	keep_alive_error(+Error)
+%
+%	Deal with an error from reusing  a keep-alive connection. If the
+%	error is due to an I/O error   or end-of-file, fail to backtrack
+%	over get_from_pool/2. Otherwise it is a   real error and we thus
+%	re-raise it.
+
+keep_alive_error(keep_alive(closed)) :- !,
+	debug(http(connection), 'Keep-alive connection was closed', []),
+	fail.
+keep_alive_error(io_error(_,_)) :- !,
+	debug(http(connection), 'IO error on Keep-alive connection', []),
+	fail.
+keep_alive_error(Error) :-
+	throw(Error).
 
 
 		 /*******************************
