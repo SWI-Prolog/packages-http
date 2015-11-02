@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2007, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -46,6 +45,9 @@
 
 :- use_foreign_library(foreign(http_stream)).
 :- public http_stream_debug/1.		% set debug level
+
+:- meta_predicate
+	stream_range_open(+,-,:).	% onclose option is module sensitive
 
 /** <module> HTTP Streams
 
@@ -134,7 +136,18 @@ bytes, dispite the fact that the underlying stream may be longer.
 %
 %	DataStream is a stream  whose  size   is  defined  by the option
 %	size(ContentLength).   Closing   DataStream   does   not   close
-%	RawStream.
+%	RawStream.  Options processed:
+%
+%	  - size(+Bytes)
+%	  Number of bytes represented by the main stream.
+%	  - onclose(:Closure)
+%	  Calls call(Closure, RawStream, BytesLeft) when DataStream is
+%	  closed. BytesLeft is the number of bytes of the range stream
+%	  that have *not* been read, i.e., 0 (zero) if all data has been
+%	  read from the stream when the range is closed. This was
+%	  introduced for supporting Keep-alive in http_open/3 to
+%	  reschedule the original stream for a new request if the data
+%	  of the previous request was processed.
 
 
 		 /*******************************
