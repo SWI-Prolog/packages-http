@@ -58,7 +58,7 @@
 
 :- multifile
 	http_client:http_convert_data/4,
-	http_client:post_data_hook/3,
+	http:post_data_hook/3,
 	json_type/1.
 
 :- public
@@ -178,7 +178,7 @@ json_type(application/jsonrequest).
 json_type(application/json).
 
 
-%%	http_client:post_data_hook(+Data, +Out:stream, +HdrExtra) is semidet.
+%%	http:post_data_hook(+Data, +Out:stream, +HdrExtra) is semidet.
 %
 %	Hook implementation that allows   http_post_data/3  posting JSON
 %	objects using one of the  forms   below.
@@ -198,14 +198,14 @@ json_type(application/json).
 %	@tbd avoid creation of intermediate data using chunked output.
 
 :- if(current_predicate(is_dict/1)).
-http_client:post_data_hook(json(Dict), Out, HdrExtra) :-
+http:post_data_hook(json(Dict), Out, HdrExtra) :-
 	is_dict(Dict), !,
-	http_client:post_data_hook(json(Dict, [json_object(dict)]),
-				   Out, HdrExtra).
+	http:post_data_hook(json(Dict, [json_object(dict)]),
+			    Out, HdrExtra).
 :- endif.
-http_client:post_data_hook(json(Term), Out, HdrExtra) :-
-	http_client:post_data_hook(json(Term, []), Out, HdrExtra).
-http_client:post_data_hook(json(Term, Options), Out, HdrExtra) :-
+http:post_data_hook(json(Term), Out, HdrExtra) :-
+	http:post_data_hook(json(Term, []), Out, HdrExtra).
+http:post_data_hook(json(Term, Options), Out, HdrExtra) :-
 	option(content_type(Type), HdrExtra, 'application/json'),
 	setup_call_cleanup(
 	    ( new_memory_file(MemFile),

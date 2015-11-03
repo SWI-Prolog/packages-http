@@ -69,6 +69,10 @@
 :- use_module(mimetype).
 :- use_module(mimepack).
 
+:- multifile
+	http:status_page/3,		% +Status, +Context, -HTML
+	http:post_data_hook/3.		% +Data, +Out, +HdrExtra
+
 
 % see http_update_transfer/4.
 
@@ -463,11 +467,8 @@ status_reply(busy, Out, HdrExtra, Context, Code) :- !,
 		  'please try again later']),
 	http_status_reply(unavailable(HTML), Out, HdrExtra, Context, Code).
 
-:-multifile(http:status_page/3).
-
-status_page_hook(Status, Context, HTML):-
+status_page_hook(Status, Context, HTML) :-
         http:status_page(Status, Context, HTML), !.
-
 status_page_hook(401, _, HTML):-
         phrase(page([ title('401 Authorization Required')
 		    ],
@@ -557,11 +558,13 @@ mime_type_encoding('application/jsonrequest', utf8).
 %	Merge keep-alive information from  Request   and  CGIHeader into
 %	Header.
 
-http_update_connection(CgiHeader, Request, Connect, [connection(Connect)|Rest]) :-
+http_update_connection(CgiHeader, Request, Connect,
+		       [connection(Connect)|Rest]) :-
 	select(connection(CgiConn), CgiHeader, Rest), !,
 	connection(Request, ReqConnection),
 	join_connection(ReqConnection, CgiConn, Connect).
-http_update_connection(CgiHeader, Request, Connect, [connection(Connect)|CgiHeader]) :-
+http_update_connection(CgiHeader, Request, Connect,
+		       [connection(Connect)|CgiHeader]) :-
 	connection(Request, Connect).
 
 join_connection(Keep1, Keep2, Connection) :-
@@ -730,11 +733,8 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  multipart/mixed and packed using mime_pack/3. See mime_pack/3
 %	  for details on the argument format.
 
-:- multifile
-	http_client:post_data_hook/3.
-
 http_post_data(Data, Out, HdrExtra) :-
-	http_client:post_data_hook(Data, Out, HdrExtra), !.
+	http:post_data_hook(Data, Out, HdrExtra), !.
 http_post_data(html(HTML), Out, HdrExtra) :- !,
 	phrase(post_header(html(HTML), HdrExtra), Header),
 	format(Out, '~s', [Header]),
