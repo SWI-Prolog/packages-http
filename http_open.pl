@@ -233,9 +233,9 @@ user_agent('SWI-Prolog').
 %	  AtomValue is unified to the empty atom ('').
 %
 %	  * headers(-List)
-%	  If provided, List is unified with a list of Name-Value pairs
-%	  corresponding to fields in the reply header.  Name and Value
-%	  follow the same conventions used by the header(Name,Value)
+%	  If provided, List is unified with  a list of Name(Value) pairs
+%	  corresponding to fields in the reply   header.  Name and Value
+%	  follow the same conventions  used   by  the header(Name,Value)
 %	  option.
 %
 %	  * method(+Method)
@@ -761,19 +761,19 @@ return_headers([headers(Headers)|_], Lines) :- !,
 return_headers([_|T], Lines) :-
 	return_headers(T, Lines).
 
-%%	parse_headers(+Lines, -HeaderPairs) is det.
+%%	parse_headers(+Lines, -Headers:list(compound)) is det.
 %
-%	Parse the header lines for the  headers(-Pairs) option. If there
-%	are invalid header lines, we skip them.
+%	Parse the header lines for   the  headers(-List) option. Invalid
+%	header   lines   are   skipped,   printing   a   warning   using
+%	pring_message/2.
 
 parse_headers([], []) :- !.
 parse_headers([Line|Lines], Headers) :-
 	catch(http_parse_header(Line, [Header]), Error, true),
 	(   var(Error)
-	->  Header =.. [Name,Value],
-	    Headers = [Name-Value|More]
+	->  Headers = [Header|More]
 	;   print_message(warning, Error),
-	    More = Headers
+	    Headers = More
 	),
 	parse_headers(Lines, More).
 
