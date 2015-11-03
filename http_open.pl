@@ -543,17 +543,16 @@ method(Options, MNAME) :-
 	option(method(M), Options, get),
 	(   map_method(M, MNAME0)
 	->  MNAME = MNAME0
+	;   map_method(_, M)
+	->  MNAME = M
 	;   domain_error(method, M)
 	).
 
 map_method(delete, 'DELETE').
-map_method(get,  'GET').
-map_method(head, 'HEAD').
-map_method(post, 'POST') :-
-	current_predicate(http_header:http_post_data/3).
-map_method(put, 'PUT') :-
-	current_predicate(http_header:http_post_data/3).
-
+map_method(get,	   'GET').
+map_method(head,   'HEAD').
+map_method(post,   'POST').
+map_method(put,	   'PUT').
 
 %%	x_headers(+Options, +Out) is det.
 %
