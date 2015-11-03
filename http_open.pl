@@ -167,7 +167,7 @@ Title = 'Free Online Version - Learn Prolog
 		       header(+atom, -atom),
 		       headers(-list),
 		       connection(+atom),
-		       method(oneof([delete,get,head,post])),
+		       method(oneof([delete,get,put,head,post])),
 		       size(-integer),
 		       status_code(-integer),
 		       output(-stream),
