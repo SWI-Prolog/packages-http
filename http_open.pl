@@ -257,6 +257,13 @@ user_agent('SWI-Prolog').
 %	  Version is a _pair_ `Major-Minor`, where `Major` and `Minor`
 %	  are integers representing the HTTP version in the reply header.
 %
+%	  * range(+Range)
+%	  Ask for partial content. Range   is  a term _|Unit(From,To)|_,
+%	  where `From` is an integer and `To`   is  either an integer or
+%	  the atom `end`. HTTP 1.1 only   supports Unit = `bytes`. E.g.,
+%	  to   ask   for    bytes    1000-1999,     use    the    option
+%	  range(bytes(1000,1999))
+%
 %	  * status_code(-Code)
 %	  If this option is  present  and   Code  unifies  with the HTTP
 %	  status code, do *not* translate errors (4xx, 5xx) into an
@@ -566,6 +573,14 @@ x_header(proxy_authorization(ProxyAuthorization), Out) :- !,
 	auth_header(ProxyAuthorization, 'Proxy-Authorization', Out).
 x_header(authorization(Authorization), Out) :- !,
 	auth_header(Authorization, 'Authorization', Out).
+x_header(range(Spec), Out) :- !,
+        Spec =.. [Unit, From, To],
+        (   To == end
+        ->  ToT = ''
+        ;   must_be(integer, To),
+            ToT = To
+        ),
+        format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
 x_header(_, _).
 
 auth_header(basic(User, Password), Header, Out) :- !,
