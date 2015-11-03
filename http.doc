@@ -105,147 +105,19 @@ convert the data based on the \texttt{Content-Type} of the reply.
 
 \paragraph{Status}
 
-The two libraries use a distinct code base that largely overlaps while
-both libraries both provide and lack vital functionality. Notably
-http_open/3 cannot deal with \jargon{Keep-alive} connections while
-http_get/3 and http_post/4 poorly deal with proxies and cannot deal with
-HTTPS. In the future, http_get/3 and http_post/4 will be based on
-http_open/3 and http_open/3 will support all vital HTTP client
-functions.
+Starting with version 7.3.11, \pllib{http/http_client} is based on
+\pllib{http/http_open}. Before that, \pllib{http/http_client} managed
+keep-alive connections. This functionality is now provided by
+http_open/3. The hooks for controlling keep-alive have been removed from
+\pllib{http/http_client}. The new implementation of keep-alive handling
+is part of \pllib{http/http_open}. Whether or not keep-alive is used can
+be controlled with the connection('Keep-alive') option or the
+http:open_options/2 hook.
 
 \input{httpopen.tex}
-
-\subsection{The \pllib{http/http_client} library}
-\label{sec:httpclient}
-
-The \pllib{http/http_client} library provides http_get/3 and
-http_post/4, both of which process the reply using plugins to deal
-convert the data based on the \texttt{Content-Type} of the reply.
-
-For most tasks, http_open/3 is superior to this library because it
-allows for streaming processing of large documents and provides better
-control on how the data is processed by examining the reply headers
-and/or the content\footnote{See peek_string/3.} before deciding how
-process the reply.
+\input{httpclient.tex}
 
 \begin{description}
-    \predicate{http_get}{3}{+URL, -Reply, +Options}
-Performs a HTTP GET request on the given URL and then reads the
-reply using http_read_data/3.  Defined options are:
-
-    \begin{description}
-	\termitem{connection}{ConnectionType}
-If \const{close} (default) a new connection is created for this request
-and closed after the request has completed.  If \const{'Keep-Alive'} the
-library checks for an open connection on the requested host and port
-and re-uses this connection.  The connection is left open if the other
-party confirms the keep-alive and closed otherwise.
-
-	\termitem{http_version}{Major-Minor}
-Indicate the HTTP protocol version used for the connection.  Default is
-\const{1.1}.
-
-	\termitem{proxy}{+Host, +Port}
-Use an HTTP proxy to connect to the outside world.
-
-	\termitem{proxy_authorization}{+Authorization}
-Send authorization to the proxy.  Otherwise the same as the
-\const{authorization} option.
-
-	\termitem{status_code}{-Code}
-If this option is present and \arg{Code} unifies with the HTTP status
-code, do \emph{not} translate errors (4xx, 5xx) into an exception.
-Instead, http_get/3 behaves as if 200 (success) is returned,
-providing the application to read the error document from the returned
-stream.
-
-	\termitem{timeout}{+Timeout}
-If provided, set a timeout on the stream using set_stream/2. With this
-option if no new data arrives within \arg{Timeout} seconds the stream
-raises an exception. This option also affects data being written by the
-server: if the client does not process the next block of data (4096
-bytes using the default setup) within \arg{Timeout}, the connection
-is terminated.  Default is to wait forever (\const{infinite}).
-
-	\termitem{user_agent}{+Agent}
-Defines the value of the \const{User-Agent} field of the HTTP header.
-Default is \const{SWI-Prolog (http://www.swi-prolog.org)}.
-
-	\termitem{range}{+Range}
-Ask for partial content. \arg{Range} is a term \term{\arg{Unit}}{From,
-To}, where \arg{From} is an integer and \arg{To} is either an integer
-or the atom \const{end}. HTTP 1.1 only supports \arg{Unit} =
-\const{bytes}.  E.g., to ask for bytes 1000-1999, use the option
-\exam{range(bytes(1000,1999))}.
-
-	\termitem{request_header}{Name = Value}
-Add a line "\arg{Name}: \arg{Value}" to the HTTP request header. Both
-name and value are added uninspected and literally to the request
-header. This may be used to specify accept encodings, languages, etc.
-Please check the RFC2616 (HTTP) document for available fields and their
-meaning.
-
-	\termitem{reply_header}{Header}
-Unify \arg{Header} with a list of \arg{Name(Value)} terms expressing all
-header fields of the reply. See http_read_request/2 for the result
-format.
-    \end{description}
-
-Remaining options are passed to http_read_data/3.
-
-    \predicate{http_post}{4}{+URL, +In, -Reply, +Options}
-Performs a HTTP POST request on the given URL.  It is equivalent to
-http_get/3, except for providing an \jargon{input document}, which is
-posted using http_post_data/3.
-
-    \predicate{http_read_data}{3}{+Header, -Data, +Options}
-Read data from an HTTP stream. Normally called from http_get/3 or
-http_post/4. When dealing with HTTP POST in a server this predicate can
-be used to retrieve the posted data. \arg{Header} is the parsed header.
-\arg{Options} is a list of \term{\arg{Name}}{Value} pairs to guide the
-translation of the data.  The following options are supported:
-
-\begin{description}
-    \termitem{to}{Target}
-Do not try to interpret the data according to the MIME-type, but return
-it literally according to \arg{Target}, which is one of:
-    \begin{description}
-        \termitem{stream}{Output}
-Append the data to the given stream, which must be a Prolog stream open
-for writing. This can be used to save the data in a (memory-)file,
-forward it to process using a pipe, etc.
-
-	\termitem{atom}{}
-Return the result as an atom.  Though SWI-Prolog has no limit on the
-size of atoms and provides atom-garbage collection, this options should
-be used with care.%
-    \footnote{Currently atom-garbage collection is activated after
-	      the creation of 10,000 atoms.}
-
-	\termitem{codes}{}
-Return the page as a list of character-codes.  This is especially useful
-for parsing it using grammar rules.
-    \end{description}
-    \termitem{content_type}{Type}
-Overrule the \const{Content-Type} as provided by the HTTP reply header.
-Intended as a work-around for badly configured servers.
-\end{description}
-
-If no \term{to}{Target} option is provided the library tries the
-registered plug-in conversion filters.  If none of these succeed it
-tries the built-in content-type handlers or returns the content as an
-atom. The builtin content filters are described below.  The provided
-plug-ins are described in the following sections.
-
-\begin{description}
-    \termitem{application/x-www-form-urlencoded}{}
-This is the default encoding mechanism for POST requests issued by
-a web-browser.  It is broken down to a list of \arg{Name} = \arg{Value}
-terms.
-\end{description}
-
-Finally, if all else fails the content is returned as an atom.
-
     \predicate{http_post_data}{3}{+Data, +Stream, +ExtraHeader}
 Write an HTTP POST request to \arg{Stream} using data from \arg{Data}
 and passing the additional extra headers from \arg{ExtraHeader}.
