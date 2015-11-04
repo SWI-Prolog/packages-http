@@ -163,6 +163,12 @@ http_read_reply_header(In, [input(In)|Reply]) :-
 %		* tmp_file(+MimeType, +FileName)
 %		Same as =file=, but do not include modification time
 %
+%		* bytes(+MimeType, +Bytes)
+%		Send a sequence of Bytes with the indicated MimeType.
+%		Bytes is either a string of character codes 0..255 or
+%		list of integers in the range 0..255. Out-of-bound codes
+%		result in a representation error exception.
+%
 %		* stream(+In, +Len)
 %		Reply content of stream.
 %
@@ -233,6 +239,9 @@ http_reply_data(file(Type, File, Range), Out, HdrExtra, Code) :- !,
 http_reply_data(tmp_file(Type, File), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(tmp_file(Type, File), HdrExtra, Code), Header),
 	reply_file(Out, File, Header).
+http_reply_data(bytes(Type, Bytes), Out, HdrExtra, Code) :- !,
+	phrase(reply_header(bytes(Type, Bytes), HdrExtra, Code), Header),
+	format(Out, '~s~s', [Header, Bytes]).
 http_reply_data(stream(In, Len), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(cgi_data(Len), HdrExtra, Code), Header),
 	copy_stream(Out, In, Header, 0, end).
@@ -708,6 +717,12 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  * codes(+Type, +Codes)
 %	  Send Codes using the indicated MIME-type.
 %
+%	  * bytes(+Type, +Bytes)
+%	  Send Bytes using the indicated MIME-type.  Bytes is either a
+%	  string of character codes 0..255 or list of integers in the
+%	  range 0..255.  Out-of-bound codes result in a representation
+%	  error exception.
+%
 %	  * atom(+Atom)
 %	  As atom(text/plain, Atom).
 %
@@ -782,6 +797,9 @@ http_post_data(codes(Type, Codes), Out, HdrExtra) :- !,
 	    set_stream(Out, encoding(utf8)),
 	    format(Out, '~s', [Codes]),
 	    set_stream(Out, encoding(octet))).
+http_post_data(bytes(Type, Bytes), Out, HdrExtra) :- !,
+	phrase(post_header(bytes(Type, Bytes), HdrExtra), Header),
+	format(Out, '~s~s', [Header, Bytes]).
 http_post_data(atom(Atom), Out, HdrExtra) :- !,
 	http_post_data(atom(text/plain, Atom), Out, HdrExtra).
 http_post_data(atom(Type, Atom), Out, HdrExtra) :- !,
@@ -889,6 +907,11 @@ post_header(codes(Type, Codes), HdrExtra) -->
 	content_length(codes(Codes, utf8), Len),
 	content_type(Type, utf8),
 	"\r\n".
+post_header(bytes(Type, Bytes), HdrExtra) -->
+	header_fields(HdrExtra, Len),
+	content_length(bytes(Bytes), Len),
+	content_type(Type),
+	"\r\n".
 post_header(atom(Type, Atom), HdrExtra) -->
 	header_fields(HdrExtra, Len),
 	content_length(atom(Atom, utf8), Len),
@@ -935,6 +958,13 @@ reply_header(string(Type, String), HdrExtra, Code) -->
 	header_fields(HdrExtra, CLen),
 	content_length(codes(String, utf8), CLen),
 	content_type(Type, utf8),
+	"\r\n".
+reply_header(bytes(Type, Bytes), HdrExtra, Code) -->
+	vstatus(ok, Code, HdrExtra),
+	date(now),
+	header_fields(HdrExtra, CLen),
+	content_length(bytes(Bytes), CLen),
+	content_type(Type),
 	"\r\n".
 reply_header(html(Tokens), HdrExtra, Code) -->
 	vstatus(ok, Code, HdrExtra),
@@ -1326,6 +1356,11 @@ length_of(memory_file(Handle), Len) :- !,
 	size_memory_file(Handle, Len, octet).
 length_of(html(Tokens), Len) :- !,
 	html_print_length(Tokens, Len).
+length_of(bytes(Bytes), Len) :- !,
+	(   string(Bytes)
+	->  string_length(Bytes, Len)
+	;   length(Bytes, Len)		% assuming a list of 0..255
+	).
 length_of(Len, Len).
 
 
