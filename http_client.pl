@@ -94,10 +94,17 @@ stream.
 %	method(+Method) option and ---for  http_post/4 and http_put/4---
 %	a post(+Data) option.
 %
-%	Options are passed to http_open/3 and http_read_data/3.
+%	Options are passed to http_open/3   and  http_read_data/3. Other
+%	options:
+%
+%	  - reply_header(-Fields)
+%	  Synonym for headers(Fields) from http_open/3.  Provided for
+%	  backward compatibility.  Note that http_version(Major-Minor)
+%	  is missing in the new version.
 
 http_get(URL, Data, Options) :-
 	headers_option(Options, Options1, Headers),
+	option(reply_header(Headers), Options, _),
 	http_open(URL, In, Options1),
 	delete(Headers, transfer_encoding(_), Headers1),
 	call_cleanup(
