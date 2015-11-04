@@ -322,7 +322,7 @@ user_agent('SWI-Prolog').
 %	interfaces that commonly return status   codes  other than `200`
 %	that need to be be processed by the client code.
 %
-%	@param	URL is either an atom (url) or a list of _parts_.
+%	@param URL is either an atom or string (url) or a list of _parts_.
 %		If this list is provided, it may contain the fields
 %		=scheme=, =user=, =password=, =host=, =port=, =path= and
 %		=search= (where the argument of the latter is a list of

@@ -36,6 +36,7 @@ json.tex
 httplog.tex
 httppath.tex
 htmlhead.tex
+httpheader.tex
 httpsession.tex
 httpdispatch.tex
 httpdirindex.tex

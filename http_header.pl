@@ -740,8 +740,30 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %	  ListOfParameter is a list of Name=Value or Name(Value).
 %
 %	  * form_data(+ListOfData)
-%	  Send data of the MIME type multipart/form-data.  ListOfData is the same
-%	  as for the List alternative described below.
+%	  Send data of the MIME type =|multipart/form-data|= as produced
+%	  by browsers issuing a POST request from an HTML form using
+%	  enctype =|multipart/form-data|=. ListOfData is the same as for
+%	  the List alternative described below. Below is an example.
+%	  Repository, etc. are atoms providing the value, while the last
+%	  argument provides a value from a file.
+%
+%	    ==
+%	    ...,
+%	    http_post([ protocol(http),
+%			host(Host),
+%			port(Port),
+%			path(ActionPath)
+%		      ],
+%		      form_data([ repository = Repository,
+%				  dataFormat = DataFormat,
+%				  baseURI    = BaseURI,
+%				  verifyData = Verify,
+%				  data       = file(File)
+%				]),
+%		      _Reply,
+%		      []),
+%	    ...,
+%	    ==
 %
 %	  * List
 %	  If the argument is a plain list, it is sent using the MIME type

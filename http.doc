@@ -28,11 +28,8 @@
 This article documents the package HTTP, a series of libraries for
 accessing data on HTTP servers as well as providing HTTP server
 capabilities from SWI-Prolog. Both server and client are modular
-libraries. The server can be operated from the Unix \program{inetd}
-super-daemon as well as as a stand-alone server that runs on all
-platforms supported by SWI-Prolog.
-
-Further reading:
+libraries.  Further reading material is available from the locations
+below.
 \begin{shortlist}
     \item \url[HOWTO collection]{http://www.swi-prolog.org/howto/http/}
     \item \url[Tutorial by Anne Ogborn]{http://www.pathwayslms.com/swipltuts/html}
@@ -54,7 +51,7 @@ Further reading:
 \label{sec:http-intro}
 
 The HTTP (HyperText Transfer Protocol) is the W3C standard protocol for
-transferring information between a web-client (browser) and a
+transferring information between a web-client (e.g., a browser) and a
 web-server. The protocol is a simple \emph{envelope} protocol where
 standard name/value pairs in the header are used to split the stream
 into messages and communicate about the connection-status. Many
@@ -100,8 +97,10 @@ for the connection.}
 \end{code}
 
 The second, \pllib{http/http_client} provides http_get/3 and
-http_post/4, both of which process the reply using plugins to deal
-convert the data based on the \texttt{Content-Type} of the reply.
+http_post/4, both of which process the reply using plugins to convert
+the data based on the \texttt{Content-Type} of the reply.  This library
+supports a plugin infrastructure that can register hooks for converting
+additional document types.
 
 \paragraph{Status}
 
@@ -117,124 +116,9 @@ http:open_options/2 hook.
 \input{httpopen.tex}
 \input{httpclient.tex}
 
-\begin{description}
-    \predicate{http_post_data}{3}{+Data, +Stream, +ExtraHeader}
-Write an HTTP POST request to \arg{Stream} using data from \arg{Data}
-and passing the additional extra headers from \arg{ExtraHeader}.
-\arg{Data} is one of:
-
-    \begin{description}
-	\termitem{html}{+HTMLTokens}
-Send an HTML token string as produced by the library \pllib{html_write}
-described in section \secref{htmlwrite}.
-
-	\termitem{xml}{+XMLTerm}
-Send an XML document created by passing XMLTerm to xml_write/3.	 The
-MIME type is \const{text/xml}.
-
-	\termitem{xml}{+Type, +XMLTerm}
-As \term{xml}{XMLTerm}, using the provided MIME type.
-
-	\termitem{file}{+File}
-Send the contents of \arg{File}.  The MIME type is derived from the
-filename extension using file_mime_type/2.
-
-	\termitem{file}{+Type, +File}
-Send the contents of \arg{File} using the provided MIME type,
-i.e.\ claiming the \const{Content-type} equals \arg{Type}.
-
-	\termitem{codes}{+Codes}
-Same as string(text/plain, Codes).
-
-	\termitem{codes}{+Type, +Codes}
-Send string (list of character codes) using the indicated MIME-type.
-
-	\termitem{cgi_stream}{+Stream, +Len}
-Read the input from \arg{Stream} which, like CGI data starts with a
-partial HTTP header.  The fields of this header are merged with the
-provided \arg{ExtraHeader} fields.  The first \arg{Len} characters
-of \arg{Stream} are used.
-
-	\termitem{form}{+ListOfParameter}
-Send data of the MIME type \const{application/x-www-form-urlencoded}
-as produced by browsers issuing a POST request from an HTML form.
-\arg{ListOfParameter} is a list of \arg{Name}=\arg{Value} or
-\mbox{\arg{Name}(\arg{Value})}.
-
-	\termitem{form_data}{+ListOfData}
-Send data of the MIME type \const{multipart/form-data} as produced by
-browsers issuing a POST request from an HTML form using \const{enctype}
-\const{multipart/form-data}.  This is a somewhat simplified MIME
-\const{multipart/mixed} encoding used by browser forms including
-file input fields. \arg{ListOfData} is the same as for the \arg{List}
-alternative described below.  Below is an example from the SWI-Prolog
-\url[Sesame]{http://www.openrdf.org} interface.  \arg{Repository}, etc.\
-are atoms providing the value, while the last argument provides a value
-from a file.
-
-\begin{code}
-	...,
-	http_post([ protocol(http),
-		    host(Host),
-		    port(Port),
-		    path(ActionPath)
-		  ],
-		  form_data([ repository = Repository,
-			      dataFormat = DataFormat,
-			      baseURI    = BaseURI,
-			      verifyData = Verify,
-			      data       = file(File)
-			    ]),
-		  _Reply,
-		  []),
-	...,
-\end{code}
-
-	\termitem{List}{}
-If the argument is a plain list, it is sent using the MIME type
-\const{multipart/mixed} and packed using mime_pack/3.  See
-mime_pack/3 for details on the argument format.
-    \end{description}
-\end{description}
-
-
-\subsubsection{The MIME client plug-in}		\label{sec:httpmimeplugin}
-
-This plug-in library \pllib{http/http_mime_plugin} breaks multipart
-documents that are recognised by the \exam{Content-Type:
-multipart/form-data} or \exam{Mime-Version: 1.0} in the header into a
-list of \arg{Name} = \arg{Value} pairs. This library deals with data
-from web-forms using the \const{multipart/form-data} encoding as well as
-the \url[FIPA]{http://www.fipa.org} agent-protocol messages.
-
-
-\subsubsection{The SGML client plug-in}		\label{sec:httpsgmlplugin}
-
-This plug-in library \pllib{http/http_sgml_plugin} provides a bridge
-between the SGML/XML/HTML parser provided by \pllib{sgml} and the http
-client library. After loading this hook the following mime-types are
-automatically handled by the SGML parser.
-
-\begin{description}
-    \termitem{text/html}{}
-Handed to \pllib{sgml} using W3C HTML 4.0 DTD, suppressing and
-ignoring all HTML syntax errors.  \arg{Options} is passed to
-load_structure/3.
-
-    \termitem{text/xml}{}
-Handed to \pllib{sgml} using dialect \const{xmlns} (XML + namespaces).
-\arg{Options} is passed to load_structure/3.  In particular,
-\term{dialect}{xml} may be used to suppress namespace handling.
-
-    \termitem{text/x-sgml}{}
-Handled to \pllib{sgml} using dialect \const{sgml}. \arg{Options}
-is passed to load_structure/3.
-\end{description}
-
-
 \section{The HTTP server libraries}		\label{sec:httpserver}
 
-The HTTP server library consists of two parts obligatory and one
+The HTTP server library consists of two obligatory parts and one
 optional part. The first deals with connection management and has three
 different implementation depending on the desired type of server. The
 second implements a generic wrapper for decoding the HTTP request,
@@ -245,6 +129,30 @@ optional \file{http_dispatch} module can be used to assign HTTP
 
 \postscriptfig[width=0.8\linewidth]{httpserver}{Design of the HTTP
 server}
+
+In practice, library(http/thread_httpd) is the most versatile,
+performant and stable version of the server type implementations. A
+typical skeleton for building a server is given below, where
+\nopredref{server}{1} creates a number of Prolog \jargon{threads}
+that handle the HTTP requests.  The \nopredref{server}{1} predicate
+itself succeeds as soon as the server is initialized.
+
+\begin{code}
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
+
+server(Port) :-
+        http_server(http_dispatch,
+                    [ port(Port)
+                    ]).
+
+:- http_handler(root(.), entry_page, []).
+:- http_handler(root(home), home_page, []).
+...
+
+entry_page(Request) :-
+	...	% writes reply as CGI document
+\end{code}
 
 The functional body of the user's code is independent from the selected
 server-type, making it easy to switch between the supported server
@@ -1144,76 +1052,7 @@ this file by default.
 The example program \file{calc.pl} has the error handler loaded which
 can be triggered by forcing a divide-by-zero in the calculator.
 
-
-\subsection{Handling HTTP headers}			\label{sec:httpheader}
-
-The library \pllib{http/http_header} provides primitives for parsing and
-composing HTTP headers. Its functionality is normally hidden by the
-other parts of the HTTP server and client libraries. We provide a brief
-overview of http_reply/3 which can be accessed from the reply body using
-an exception as explain in \secref{httpspecials}.
-
-
-\begin{description}
-    \predicate{http_reply}{3}{+Type, +Stream, +HdrExtra}
-Compose a complete HTTP reply from the term \arg{Type} using additional
-headers from \arg{HdrExtra} to the output stream \arg{Stream}.
-\arg{ExtraHeader} is a list of \term{Field}{Value}.  \arg{Type} is
-one of:
-
-    \begin{description}
-        \termitem{html}{+HTML}
-Produce a HTML page using print_html/1, normally generated using the
-\pllib{http/html_write} described in \secref{htmlwrite}.
-
-        \termitem{file}{+MimeType, +Path}
-Reply the content of the given file, indicating the given MIME type.
-
-        \termitem{tmp_file}{+MimeType, +Path}
-Similar to \term{File}{+MimeType, +Path}, but do not include a
-modification time header.
-
-        \termitem{stream}{+Stream, +Len}
-Reply using the next \arg{Len} characters from \arg{Stream}.  The
-user must provides the MIME type and other attributes through the
-\arg{ExtraHeader} argument.
-
-	\termitem{cgi_stream}{+Stream, +Len}
-Similar to \term{stream}{+Stream, +Len}, but the data on \arg{Stream}
-must contain an HTTP header.
-
-	\termitem{moved}{+URL}
-Generate a ``301 Moved Permanently'' page with the given target
-\arg{URL}.
-
-	\termitem{moved_temporary}{+URL}
-Generate a ``302 Moved Temporary'' page with the given target
-\arg{URL}.
-
-	\termitem{see_other}{+URL}
-Generate a ``303 See Other'' page with the given target \arg{URL}.
-
-	\termitem{not_found}{+URL}
-Generate a ``404 Not Found'' page.
-
-        \termitem{forbidden}{+URL}
-Generate a ``403 Forbidden'' page, denying access without challenging
-the client.
-
-        \termitem{authorise}{+Method, +Realm}
-Generate a ``401 Authorization Required'', requesting the client to
-retry using proper credentials (i.e.\ user and password).
-
-        \termitem{not_modified}{}
-Generate a ``304 Not Modified'' page, indicating the requested resource
-has not changed since the indicated time.
-
-        \termitem{server_error}{+Error}
-Generate a ``500 Internal server error'' page with a message generated
-from a Prolog exception term (see print_message/2).
-    \end{description}
-\end{description}
-
+\input{httpheader}
 
 \subsection{The \pllib{http/html_write} library}	\label{sec:htmlwrite}
 

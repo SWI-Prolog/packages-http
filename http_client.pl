@@ -1,7 +1,7 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
     Copyright (C): 1985-2015, University of Amsterdam,
 			      VU University Amsterdam
@@ -77,7 +77,27 @@ which is used by library(http/http_parameters) to  decode =POST= data in
 server applications.
 
 This library is based on http_open/3,  which   opens  a  URL as a Prolog
-stream.
+stream. The reply  is  processed   by  http_read_data/3.  The  following
+content-types are supported. Options passed   to  http_get/3 and friends
+are passed to  http_read_data/3,  which  in   turn  passes  them  to the
+conversion predicates. Support for additional content types can be added
+by extending the multifile predicate http_client:http_convert_data/4.
+
+  - 'application/x-www-form-urlencoded'
+  Built in.  Converts form-data into a list of `Name=Value` terms.
+  - 'application/x-prolog'
+  Built in.  Reads a single Prolog term.
+  - 'multipart/form-data'
+  Processed if library(http/http_multipart_plugin) is loaded.  This
+  format should be used to handle web forms that upload a file.
+  - 'text/html' | 'text/xml'
+  Processed if library(http/http_sgml_plugin) is loaded. See load_html/3
+  for details and load_xml/3 for details.  The output is often processed
+  using xpath/3.
+  - 'application/json' | 'application/jsonrequest'
+  Processed if library(http/http_json) is loaded.  The option
+  json_object(As) can be used to return a term json(Attributes)
+  (`As` is `term`) or a dict (`As` is `json`).
 */
 
 		 /*******************************
@@ -119,12 +139,41 @@ headers_option(Options, [headers(Headers)|Options], Headers).
 
 %%	http_delete(+URL, -Data, +Options) is det.
 %
-%	Execute a DELETE method on the server.
+%	Execute a =DELETE= method on the  server. Arguments are the same
+%	as  for  http_get/3.  Typically  one   should  pass  the  option
+%	status_code(-Code) to assess and evaluate   the  returned status
+%	code. Without, codes other than 200 are interpreted as an error.
 %
 %	@tbd Properly map the 201, 202 and 204 replies.
+%	@see Implemented on top of http_get/3.
 
 http_delete(URL, Data, Options) :-
 	http_get(URL, Data, [method(delete)|Options]).
+
+
+%%	http_post(+URL, +Data, -Reply, +Options) is det.
+%
+%	Issue  an  HTTP   =POST=   request.    Data   is   posted  using
+%	http_post_data/3. The HTTP server reply   is  returned in Reply,
+%	using the same rules as for http_get/3.
+%
+%	@see Implemented on top of http_get/3.
+
+http_post(URL, Data, Reply, Options) :-
+	http_get(URL, Reply,
+		 [ post(Data)
+		 | Options
+		 ]).
+
+%%	http_put(+URL, +Data, -Reply, +Options)
+%
+%	Issue an HTTP =PUT=  request.  Arguments   are  the  same as for
+%	http_put/4.
+%
+%	@see Implemented on top of http_post/4.
+
+http_put(URL, In, Out, Options) :-
+	http_post(URL, In, Out, [method(put)|Options]).
 
 
 %%	http_read_data(+Request, -Data, +Options) is det.
@@ -262,30 +311,6 @@ http_convert_data(In, Fields, Data, Options) :-
 	;   set_stream(In, encoding(utf8)),
 	    read_term(In, Data, Options)
 	).
-
-		 /*******************************
-		 *	       POST		*
-		 *******************************/
-
-%%	http_put(+URL, +In, -Out, +Options)
-%
-%	Issue an HTTP PUT request.
-
-http_put(URL, In, Out, Options) :-
-	http_post(URL, In, Out, [method(put)|Options]).
-
-
-%%	http_post(+URL, +Data, -Reply, +Options) is det.
-%
-%	Issue   an   HTTP   POST   request.   Data   is   posted   using
-%	http_post_data/3. The HTTP server reply   is  returned in Reply,
-%	using the same rules as http_get/3.
-
-http_post(URL, Data, Reply, Options) :-
-	http_get(URL, Reply,
-		 [ post(Data)
-		 | Options
-		 ]).
 
 %%	http_disconnect(+Connections) is det.
 %

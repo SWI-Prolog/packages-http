@@ -86,7 +86,8 @@ TEXEXTRA=	post.tex json.tex httplog.tex httppath.tex htmlhead.tex \
 		httpsession.tex httpdispatch.tex httpdirindex.tex httppwp.tex \
 		httpopen.tex httphost.tex httpopenid.tex jswrite.tex \
 		httpfiles.tex httpcors.tex mimepack.tex httpunixdaemon.tex \
-		websocket.tex hub.tex httpauthenticate.tex httpclient.tex
+		websocket.tex hub.tex httpauthenticate.tex httpclient.tex \
+		httpheader.tex
 $(TEX):		$(TEXEXTRA)
 
 json.tex:	json.pl json_convert.pl http_json.pl
@@ -114,6 +115,9 @@ httpfiles.tex:	http_files.pl
 
 htmlhead.tex:	html_head.pl
 		$(PLTOTEX) --subsection 'library(http/html_head)'
+
+httpheader.tex:	http_header.pl
+		$(PLTOTEX) --subsection 'library(http/http_header)'
 
 httpsession.tex: http_session.pl
 		$(PLTOTEX) --subsection 'library(http/http_session)'
