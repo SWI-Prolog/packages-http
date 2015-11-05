@@ -85,6 +85,10 @@ map_exception_to_http_status(error(existence_error(http_location, Location), _),
 	      not_found(Location),
 	      [connection(close)],
               []) :- !.
+map_exception_to_http_status(error(permission_error(http_method, Method, Location), _),
+	      method_not_allowed(Method, Location),
+	      [connection(close)],
+              []) :- !.
 map_exception_to_http_status(error(permission_error(_, http_location, Location), _),
 	      forbidden(Location),
 	      [connection(close)],

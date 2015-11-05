@@ -286,24 +286,25 @@ copy_stream(Out, In, Header, From, To) :-
 %	Emit HTML non-200 status reports. Such  requests are always sent
 %	as UTF-8 documents.
 %
-% Status can be one of the following:
-%   - authorise(Method)
-%   - authorise(basic,Realm)
-%   - bad_request(ErrorTerm)
-%   - `busy`
-%   - created(Location)
-%   - forbidden(Url)
-%   - moved(To)
-%   - moved_temporarily(To)
-%   - `no_content`
-%   - not_acceptable(WhyHtml)
-%   - not_found(Url)
-%   - `not_modified`
-%   - resource_error(ErrorTerm)
-%   - see_other(To)
-%   - switching_protocols(Goal,Options)
-%   - server_error(ErrorTerm)
-%   - unavailable(WhyHtml)
+%	Status can be one of the following:
+%	   - authorise(Method)
+%	   - authorise(basic,Realm)
+%	   - bad_request(ErrorTerm)
+%	   - busy
+%	   - created(Location)
+%	   - forbidden(Url)
+%	   - moved(To)
+%	   - moved_temporarily(To)
+%	   - no_content
+%	   - not_acceptable(WhyHtml)
+%	   - not_found(Path)
+%	   - method_not_allowed(Method, Path)
+%	   - not_modified
+%	   - resource_error(ErrorTerm)
+%	   - see_other(To)
+%	   - switching_protocols(Goal,Options)
+%	   - server_error(ErrorTerm)
+%	   - unavailable(WhyHtml)
 
 http_status_reply(Status, Out, HdrExtra, Code) :-
         http_status_reply(Status, Out, HdrExtra, [], Code).
@@ -403,6 +404,21 @@ status_reply(not_found(URL), Out, HdrExtra, _Context, Code) :- !,
 		    ]),
 	       HTML),
 	phrase(reply_header(status(not_found, HTML), HdrExtra, Code), Header),
+	format(Out, '~s', [Header]),
+	print_html(Out, HTML).
+status_reply(method_not_allowed(Method, URL), Out, HdrExtra, _Context, Code) :- !,
+	upcase_atom(Method, UMethod),
+	phrase(page([ title('405 Method not allowed')
+		    ],
+		    [ h1('Method not allowed'),
+		      p(['The requested URL ', tt(URL),
+			 ' does not support method ', tt(UMethod), '.'
+			]),
+		      \address
+		    ]),
+	       HTML),
+	phrase(reply_header(status(method_not_allowed, HTML),
+			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
 status_reply(forbidden(URL), Out, HdrExtra, _Context, Code) :- !,
