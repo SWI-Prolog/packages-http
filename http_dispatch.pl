@@ -381,6 +381,7 @@ path_to_list(Atom) -->
 http_dispatch(Request) :-
 	memberchk(path(Path), Request),
 	find_handler(Path, Pred, Options),
+	supports_method(Request, Options),
 	authentication(Options, Request, Fields),
 	append(Fields, Request, AuthRequest),
 	action(Pred, AuthRequest, Options).
@@ -647,6 +648,29 @@ path_info(0, _, Options,
 path_info(After, Path, Options,
 	  [path_info(PathInfo),prefix(true)|Options]) :-
 	sub_atom(Path, _, After, 0, PathInfo).
+
+
+%%	supports_method(+Request, +Options) is det.
+%
+%	Verify that the asked http method   is supported by the handler.
+%	If not, raise an error that will be  mapped to a 405 page by the
+%	http wrapper.
+%
+%	@error permission_error(http_method, Method, Location).
+
+supports_method(Request, Options) :-
+	(   option(methods(Methods), Options)
+	->  (   Methods == '*'
+	    ->  true
+	    ;   memberchk(method(Method), Request),
+		memberchk(Method, Methods)
+	    )
+	;   true
+	), !.
+supports_method(Request, _Options) :-
+	memberchk(path(Location), Request),
+	memberchk(method(Method), Request),
+	permission_error(http_method, Method, Location).
 
 
 %%	action(+Action, +Request, +Options) is det.
