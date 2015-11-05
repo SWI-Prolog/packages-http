@@ -1,9 +1,10 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 2007-2009, University of Amsterdam
+    Copyright (C): 2007-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -48,6 +49,7 @@
 :- use_module(library(error)).
 :- use_module(library(settings)).
 :- use_module(library(uri)).
+:- use_module(library(apply)).
 :- use_module(library(http/mimetype)).
 :- use_module(library(http/http_path)).
 :- use_module(library(http/http_header)).
@@ -120,6 +122,16 @@ write_index(Request) :-
 %		If =true= on a prefix-handler (see prefix), possible
 %		children are masked.  This can be used to (temporary)
 %		overrule part of the tree.
+%
+%		* method(+Method)
+%		Declare that the handler processes Method.  This is
+%		equivalent to methods([Method]).  Using method(*)
+%		allows for all methods.
+%
+%		* methods(+ListOfMethods)
+%		Declare that the handler processes all of the given
+%		methods.  If this option appears multiple times, the
+%		methods are combined.
 %
 %		* prefix
 %		Call Pred on any location that is a specialisation of
@@ -252,11 +264,61 @@ compile_handler(prefix(Path), Pred, Options,
 compile_handler(Path, Pred, Options0,
 		http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
 	check_path(Path, Path1),
-	(   select(prefix, Options0, Options)
+	(   select(prefix, Options0, Options1)
 	->  IsPrefix = true
 	;   IsPrefix = false,
-	    Options = Options0
+	    Options1 = Options0
+	),
+	combine_methods(Options1, Options).
+
+%%	combine_methods(+OptionsIn, -Options) is det.
+%
+%	Combine method(M) and  methods(MList)  options   into  a  single
+%	methods(MList) option.
+
+combine_methods(Options0, Options) :-
+	collect_methods(Options0, Options1, Methods),
+	(   Methods == []
+	->  Options = Options0
+	;   append(Methods, Flat),
+	    sort(Flat, Unique),
+	    (	memberchk('*', Unique)
+	    ->	Final = '*'
+	    ;	Final = Unique
+	    ),
+	    Options = [methods(Final)|Options1]
 	).
+
+collect_methods([], [], []).
+collect_methods([method(M)|T0], T, [[M]|TM]) :- !,
+	(   M == '*'
+	->  true
+	;   must_be_method(M)
+	),
+	collect_methods(T0, T, TM).
+collect_methods([methods(M)|T0], T, [M|TM]) :- !,
+	must_be(list, M),
+	maplist(must_be_method, M),
+	collect_methods(T0, T, TM).
+collect_methods([H|T0], [H|T], TM) :- !,
+	collect_methods(T0, T, TM).
+
+must_be_method(M) :-
+	must_be(atom, M),
+	(   method(M)
+	->  true
+	;   domain_error(http_method, M)
+	).
+
+method(get).
+method(put).
+method(head).
+method(post).
+method(delete).
+method(patch).
+method(options).
+method(trace).
+
 
 %%	check_path(+PathSpecIn, -PathSpecOut) is det.
 %
