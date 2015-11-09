@@ -278,5 +278,6 @@ log(Code, Status, Bytes, Id, CPU, Stream) :-
 map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
         string_length(Bytes, L).	% also does lists
 map_exception(http_reply(Reply), Reply).
+map_exception(http_reply(Reply, _), Reply).
 map_exception(error(existence_error(http_location, Location), _Stack),
 	      error(404, Location)).
