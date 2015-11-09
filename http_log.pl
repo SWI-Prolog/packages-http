@@ -272,8 +272,19 @@ log(Code, Status, Bytes, Id, CPU, Stream) :-
 	;   message_to_string(Status, String),
 	    Term = error(String)
 	),
-	format(Stream, 'completed(~q, ~q, ~q, ~q, ~q).~n',
-	       [ Id, CPU, Bytes, Code, Term ]).
+	format(Stream, 'completed(~q, ~q, ~q, ~q, ~W).~n',
+	       [ Id, CPU, Bytes, Code,
+		 Term, [ quoted(true),
+			 ignore_ops(true),
+			 blobs(portray),
+			 portray_goal(write_blob)
+		       ]
+	       ]).
+
+:- public write_blob/2.
+write_blob(Blob, _Options) :-
+	format(string(S), '~q', [Blob]),
+	writeq(blob(S)).
 
 map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
         string_length(Bytes, L).	% also does lists
