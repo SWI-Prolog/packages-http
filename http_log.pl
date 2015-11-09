@@ -275,6 +275,8 @@ log(Code, Status, Bytes, Id, CPU, Stream) :-
 	format(Stream, 'completed(~q, ~q, ~q, ~q, ~q).~n',
 	       [ Id, CPU, Bytes, Code, Term ]).
 
+map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
+        string_length(Bytes, L).	% also does lists
 map_exception(http_reply(Reply), Reply).
 map_exception(error(existence_error(http_location, Location), _Stack),
 	      error(404, Location)).
