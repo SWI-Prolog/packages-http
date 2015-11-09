@@ -57,10 +57,6 @@ additional modules that act as plugins:
     Loading this library causes http_open/3 to support chunked
     transfer encoding.
 
-    * library(http/http_header)
-    Loading this library adds support for the =POST= and =PUT= methods
-    to http_open/3.
-
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 to handle HTTPS connections.
     Relevant options for SLL certificate handling are handed to
@@ -239,15 +235,14 @@ user_agent('SWI-Prolog').
 %	  option.
 %
 %	  * method(+Method)
-%	  One of =get= (default), =head= or =delete=.
+%	  One of =get= (default), =head=, =delete=, =post= or =put=.
 %	  The  =head= message can be
 %	  used in combination with  the   header(Name,  Value) option to
 %	  access information on the resource   without actually fetching
 %	  the resource itself.  The  returned   stream  must  be  closed
 %	  immediately.
 %
-%	  If  library(http/http_header)  is  loaded,   http_open/3  also
-%	  supports =post= and =put=. See the post(Data) option.
+%	  If post(Data) is provided, the default is =post=.
 %
 %	  * size(-Size)
 %	  Size is unified with the   integer value of =|Content-Length|=
@@ -282,7 +277,7 @@ user_agent('SWI-Prolog').
 %	  (=infinite=).
 %
 %	  * post(+Data)
-%	  Provided if library(http/http_header) is also loaded.  Data is
+%	  Issue a =POST= request on the HTTP server.  Data is
 %	  handed to http_post_data/3.
 %
 %	  * proxy(+Host:Port)
