@@ -449,7 +449,8 @@ status_reply(not_modified, Out, HdrExtra, _Context, Code) :- !,
 	format(Out, '~s', [Header]),
 	flush_output(Out).
 status_reply(server_error(ErrorTerm), Out, HdrExtra, _Context, Code) :-
-	'$messages':translate_message(ErrorTerm, Lines, []),
+	in_or_exclude_backtrace(ErrorTerm, ErrorTerm1),
+	'$messages':translate_message(ErrorTerm1, Lines, []),
 	phrase(page([ title('500 Internal server error')
 		    ],
 		    [ h1('Internal server error'),

@@ -29,7 +29,9 @@
 */
 
 :- module(http_exception,
-	  [ map_exception_to_http_status/4
+	  [ map_exception_to_http_status/4,	% +Exception, -Reply,
+						% -HdrExtra, -Context
+	    in_or_exclude_backtrace/2		% +Error, -CleanedError
 	  ]).
 
 /** <module> Map Prolog exceptions to HTTP errors
@@ -138,6 +140,19 @@ default_bad_request_error(syntax_error(_), in_http_request).
 
 discard_stack_trace(error(Formal, context(_,Msg)),
 		    error(Formal, context(_,Msg))).
+
+%%	in_or_exclude_backtrace(+ErrorIn, -ErrorOut)
+%
+%	Remove  the  stacktrace  from  the   exception,  unless  setting
+%	`http:client_backtrace` is `true`.
+
+in_or_exclude_backtrace(Error, Error) :-
+	current_setting(http:client_backtrace),
+	setting(http:client_backtrace, true), !.
+in_or_exclude_backtrace(Error0, Error) :-
+	discard_stack_trace(Error0, Error), !.
+in_or_exclude_backtrace(Exception, Exception).
+
 
 %%	http:bad_request_error(+Formal, -ContextTemplate) is semidet.
 %

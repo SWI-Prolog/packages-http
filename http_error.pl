@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2005, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -33,20 +32,73 @@
 	  [
 	  ]).
 :- use_module(library(prolog_stack)).
+:- use_module(library(settings)).
+:- use_module(library(broadcast)).
+:- use_module(library(debug)).
 
 /** <module> Decorate uncaught HTTP exceptions with stack-trace
 
 This module decorates uncaught exceptions of the   user code with a full
-stack-trace. It is based  on  a   hook  introduced  in SWI-Prolog 5.6.5.
-Please  note  that  although  loading  this  module  greatly  simplifies
-debugging, it also provides clues for hackers  on how to compromise your
-site. The more information you give them, the easier it is to break into
-your server!
+stack-trace and sends error reports to the Prolog console. The behaviour
+can be controlled by
 
-To use this file, simply load it.
-
-@author	Jan Wielemaker
+  - nodebug(http(error))
+    After disabling the http(error) debug channal, errors are only sent
+    to the client.  See nodebug/1 and debug/1.
+  - set_setting(http:client_backtrace, false)
+    Stop sending stack traces to the client. Note that sending the stack
+    trace to the client simplifies debugging, it also provides clues to
+    hackers on how to compromise your site. The more information you
+    give them, the easier it is to break into your server!  See
+    set_setting/2 and set_setting_default/2.
 */
+
+:- setting(http:client_backtrace, boolean, true,
+	   'Make backtrace visible to the client').
+
+
+		 /*******************************
+		 *     LOG ERRORS TO STDERR	*
+		 *******************************/
+
+:- debug(http(error)).
+
+:- listen(http(Message),
+	  http_listen(Message)).
+
+:- dynamic
+	saved_request/2.
+
+http_listen(_) :-
+	\+ debugging(http(error)), !.
+http_listen(request_start(Id, Request)) :- !,
+	asserta(saved_request(Id, Request)).
+http_listen(request_finished(Id, Code, Status, _CPU, _Bytes)) :-
+	retract(saved_request(Id, Request)), !,
+	Code >= 400,
+	memberchk(path(Path), Request),
+	memberchk(method(Method), Request),
+	upcase_atom(Method, UMethod),
+	reply_status(Status, Reply),
+	debug(http(error),
+	      '~w ~w: [~w] ~w', [UMethod, Path, Code, Reply]).
+
+reply_status(Status, Reply) :-
+	map_exception(Status, Reply), !.
+reply_status(Status, Message) :-
+	message_to_string(Status, Message).
+
+map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
+        string_length(Bytes, L).	% also does lists
+map_exception(http_reply(Reply), Reply).
+map_exception(http_reply(Reply, _), Reply).
+map_exception(error(existence_error(http_location, Location), _Stack),
+	      error(404, Location)).
+
+
+		 /*******************************
+		 *     DECORATE STACK TRACES	*
+		 *******************************/
 
 :- dynamic prolog_stack:stack_guard/1.
 :- multifile prolog_stack:stack_guard/1.
