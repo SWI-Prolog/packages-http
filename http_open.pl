@@ -657,7 +657,7 @@ do_open(_Version, Code, Comment, _,  _, Parts, _, _, _) :-
 redirect_limit_exceeded(Options, Max) :-
 	aggregate_all(count, member(visited(_), Options), N),
 	option(max_redirect(Max), Options, 10),
-	(Max == infinite -> fail ; N >= Max).
+	(Max == infinite -> fail ; N > Max).
 
 
 %%	redirect_loop(Parts, Options) is semidet.
