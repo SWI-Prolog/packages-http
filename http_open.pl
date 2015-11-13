@@ -259,6 +259,13 @@ user_agent('SWI-Prolog').
 %	  to   ask   for    bytes    1000-1999,     use    the    option
 %	  range(bytes(1000,1999))
 %
+%	  * redirect(+Boolean)
+%	  If `false` (default `true`), do _not_ automatically redirect
+%	  if a 3XX code is received.  Must be combined with
+%	  status_code(Code) and one of the header options to read the
+%	  redirect reply. In particular, without status_code(Code) a
+%	  redirect is mapped to an exception.
+%
 %	  * status_code(-Code)
 %	  If this option is  present  and   Code  unifies  with the HTTP
 %	  status code, do *not* translate errors (4xx, 5xx) into an
@@ -601,6 +608,7 @@ user_agent(Agent, Options) :-
 					% Redirections
 do_open(_, Code, _, Lines, Options0, Parts, _, In, Stream) :-
 	redirect_code(Code),
+	option(redirect(true), Options0, true),
 	location(Lines, RequestURI), !,
 	debug(http(redirect), 'http_open: redirecting to ~w', [RequestURI]),
 	close(In),
