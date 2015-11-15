@@ -294,7 +294,7 @@ copy_stream(Out, In, Header, From, To) :-
 %	   - created(Location)
 %	   - forbidden(Url)
 %	   - moved(To)
-%	   - moved_temporarily(To)
+%	   - moved_temporary(To)
 %	   - no_content
 %	   - not_acceptable(WhyHtml)
 %	   - not_found(Path)
