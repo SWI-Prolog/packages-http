@@ -230,7 +230,7 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
 
   while(PL_get_list(tail, head, tail))
   { atom_t name;
-    int arity;
+    size_t arity;
     term_t arg = PL_new_term_ref();
 
     if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )

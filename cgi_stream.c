@@ -272,7 +272,7 @@ cgi_property(term_t cgi, term_t prop)
   cgi_context *ctx;
   term_t arg = PL_new_term_ref();
   atom_t name;
-  int arity;
+  size_t arity;
   int rc = TRUE;
 
   if ( !get_cgi_stream(cgi, &s, &ctx) )
@@ -373,7 +373,7 @@ cgi_set(term_t cgi, term_t prop)
   cgi_context *ctx;
   term_t arg = PL_new_term_ref();
   atom_t name;
-  int arity;
+  size_t arity;
   int rc = TRUE;
 
   if ( !get_cgi_stream(cgi, &s, &ctx) )
@@ -702,7 +702,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
 
   while(PL_get_list(tail, head, tail))
   { atom_t name;
-    int arity;
+    size_t arity;
     term_t arg = PL_new_term_ref();
 
     if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
