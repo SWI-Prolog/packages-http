@@ -317,9 +317,28 @@ write_data(Out, passwd(User, Hash, Fields)) :-
 :- multifile
 	http:authenticate/3.
 
-http:authenticate(basic(File, Realm), Request, User) :-
-	(   http_authenticate(basic(File), Request, User)
-	->  true
+%%	http:authenticate(+Basic, +Request, -Fields)
+%
+%	Plugin  for  library(http_dispatch)  to    perform   basic  HTTP
+%	authentication.
+%
+%	@arg	Basic is a term basic(File, Realm)
+%	@arg	Request is the HTTP request
+%	@arg	Fields describes the authenticated user with the option
+%		user(User) and with the option user_details(Fields) if
+%		the password file contains additional fields after the
+%		user and password.
+%	@throw	http_reply(authorise(basic, Realm)
+
+http:authenticate(basic(File, Realm), Request,
+		  [ user(User)
+		  | Details
+		  ]) :-
+	(   http_authenticate(basic(File), Request, [User|Fields])
+	->  (   Fields == []
+	    ->	Details = []
+	    ;	Details = [user_details(Fields)]
+	    )
 	;   throw(http_reply(authorise(basic, Realm)))
 	).
 
