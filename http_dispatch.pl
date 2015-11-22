@@ -37,7 +37,7 @@
 	    http_404/2,			% +Options, +Request
 	    http_switch_protocol/2,	% :Goal, +Options
 	    http_current_handler/2,	% ?Path, ?Pred
-	    http_current_handler/3,	% ?Path, ?Pred
+	    http_current_handler/3,	% ?Path, ?Pred, -Options
 	    http_location_by_id/2,	% +ID, -Location
 	    http_link_to_id/3,		% +ID, +Parameters, -HREF
 	    http_reload_with_parameters/3, % +Request, +Parameters, -HREF
