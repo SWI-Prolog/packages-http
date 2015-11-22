@@ -180,11 +180,17 @@ validate(File, User, Password, Fields) :-
 %
 %	True when User is present in the htpasswd file File and Fields
 %	provides the additional fields.
+%
+%	@arg1	Fields are the fields from the password file File,
+%		converted using name/2, which means that numeric values
+%		are passed as numbers and other fields as atoms.  The
+%		password hash is the first element of Fields and is
+%		a string.
 
 http_current_user(File, User, Fields) :-
 	update_passwd(File, Path),
 	passwd(User, Path, Hash, Fields0),
-	Fields = [hash(Hash)|Fields0].
+	Fields = [Hash|Fields0].
 
 %%	update_passwd(+File, -Path) is det.
 %
