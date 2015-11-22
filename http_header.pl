@@ -1321,8 +1321,8 @@ authenticate(basic(Realm)) -->
 
 authenticate(digest) --> !,
 	"WWW-Authenticate: Digest\r\n".
-authenticate(digest(Realm)) -->
-        "WWW-Authenticate: Digest Realm=\"", atom(Realm), "\"\r\n".
+authenticate(digest(Details)) -->
+        "WWW-Authenticate: Digest ", atom(Details).
 
 
 date(Time) -->
