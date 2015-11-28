@@ -334,7 +334,7 @@ write_data(Out, passwd(User, Hash, Fields)) :-
 %		user(User) and with the option user_details(Fields) if
 %		the password file contains additional fields after the
 %		user and password.
-%	@throw	http_reply(authorise(basic, Realm)
+%	@throws	http_reply(authorise(basic, Realm)
 
 http:authenticate(basic(File, Realm), Request,
 		  [ user(User)
