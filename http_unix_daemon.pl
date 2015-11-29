@@ -137,7 +137,7 @@ events:
 %
 %	  $ --output=File :
 %	  Send output of the process to File.  By default, all
-%	  Prolog console output` is discarded.
+%	  Prolog console output is discarded.
 %
 %	  $ --fork[=Bool] :
 %	  If given as =|--no-fork|= or =|--fork=false|=, the process
