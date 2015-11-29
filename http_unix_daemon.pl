@@ -13,6 +13,11 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 
+% For HTTPS, the SSL library must be available.
+:- if(exists_source(library('http/http_ssl_plugin'))).
+:- use_module(library('http/http_ssl_plugin')).
+:- endif.
+
 :- multifile
 	http_server_hook/1.			% +Options
 
@@ -84,7 +89,7 @@ events:
   - http(post_server_start)
   Run _after_ starting the HTTP server.
 
-@tbd	Make it work with SSL
+@tbd	Provide options for client certificates with SSL.
 @tbd	Cleanup issues wrt. loading and initialization of xpce.
 @see	The file <swi-home>/doc/packages/examples/http/linux-init-script
 	provides a /etc/init.d script for controlling a server as a normal
@@ -142,6 +147,19 @@ events:
 %	  $ --fork[=Bool] :
 %	  If given as =|--no-fork|= or =|--fork=false|=, the process
 %	  runs in the foreground.
+%
+%         $ --https[=Bool]:
+%         If =true= (default =false=), use HTTPS.  This requires SSL.
+%         See also =|--cert-file|=, =|--key-file|= and =|--password|=.
+%
+%         $ --certfile=File :
+%         The server certificate for HTTPS.
+%
+%         $ --keyfile=File :
+%         The server private key for HTTPS.
+%
+%         $ --password=PW :
+%         The password for accessing the private key.
 %
 %	  $ --interactive[=Bool] :
 %	  If =true= (default =false=) implies =|--no-fork|= and presents
@@ -213,32 +231,49 @@ http_daemon(Options) :-
 	option(help(true), Options), !,
 	print_message(information, http_daemon(help)),
 	halt.
-http_daemon(Options) :-
-	setup_debug(Options),
-	option(port(Port), Options, 80),
-	merge_options([port(Port)], Options, Options1),
-	make_socket(Options1, Socket),
+http_daemon(Options0) :-
+	setup_debug(Options0),
+	option(port(Port), Options0, 80),
+	merge_options([port(Port)], Options0, Options1),
+	merge_https_options(Options1, Options),
+	make_socket(Options, Socket),
 	debug(daemon(socket),
 	      'Created socket ~q, listening to port ~q', [Socket, Port]),
-	(   option(fork(true), Options1, true),
+	(   option(fork(true), Options, true),
 	    option(interactive(false), Options, false)
 	->  fork(Who),
 	    (   Who \== child
 	    ->  halt
 	    ;   disable_development_system,
-	        setup_syslog(Options1),
-		write_pid(Options1),
-		setup_output(Options1),
-	        switch_user(Options1),
+	        setup_syslog(Options),
+		write_pid(Options),
+		setup_output(Options),
+	        switch_user(Options),
 		setup_signals,
-		start_server([tcp_socket(Socket)|Options1]),
-		wait(Options1)
+		start_server([tcp_socket(Socket)|Options]),
+		wait(Options)
 	    )
-	;   write_pid(Options1),
-	    switch_user(Options1),
-	    start_server([tcp_socket(Socket)|Options1]),
-	    wait(Options1)
+	;   write_pid(Options),
+	    switch_user(Options),
+	    start_server([tcp_socket(Socket)|Options]),
+	    wait(Options)
 	).
+
+merge_https_options(Options, [SSL|Options]) :-
+	option(https(true), Options), !,
+	(   option(certfile(CertFile), Options) -> true
+	;   print_message(information, http_daemon(no_cert_file)),
+	    halt
+	),
+	(   option(keyfile(KeyFile), Options) -> true
+	;   print_message(information, http_daemon(no_key_file)),
+	    halt
+	),
+	option(password(Password), Options, none),
+	SSL = ssl([certificate_file(CertFile),
+		   key_file(KeyFile),
+		   password(Password)]).
+merge_https_options(Options, Options).
 
 %%	start_server(+Options) is det.
 %
@@ -440,8 +475,17 @@ prolog:message(http_daemon(help)) -->
 	  '  --pidfile=path     Write PID to path'-[], nl,
 	  '  --output=file      Send output to file (instead of syslog)'-[], nl,
 	  '  --fork=bool        Do/do not fork'-[], nl,
+	  '  --https=bool       Use HTTPS (requires SSL)'-[], nl,
+	  '  --certfile=file    The server certificate'-[], nl,
+	  '  --keyfile=file     The server private key'-[], nl,
+	  '  --password=pw      Password for accessing the private key'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
 	  'Boolean options may be written without value (true) or as --no-name (false)'-[]
 	].
+
+prolog:message(http_daemon(no_cert_file)) -->
+	[ 'HTTPS requires the --certfile option'-[]].
+prolog:message(http_daemon(no_key_file)) -->
+	[ 'HTTPS requires the --keyfile option'-[]].
