@@ -15,4 +15,4 @@ scalable embedded HTTP server.
 
     * ../../packages/http.pdf
     * ../../packages/examples/http contains some demos.
-    * http://www.swi-prolog.org/packages/http.html
+    * http://www.swi-prolog.org/pldoc/package/http.html
