@@ -908,37 +908,45 @@ To be done.
 \subsubsection{Using a reverse proxy}
 \label{sec:proxy}
 
-There are three options for public deployment of a service. One is to
-run it on a dedicated machine on port 80, the standard HTTP port. The
-machine may be a virtual machine running ---for example--- under
-\url[VMWARE]{http://www.vmware.com} or
-\url[XEN]{http://www.cl.cam.ac.uk/research/srg/netos/xen/}. The
-(virtual) machine approach isolates security threads and allows for
-using a standard port. The server can also be hosted on a non-standard
-port such as 8000, or 8080. Using non-standard ports however may cause
-problems with intermediate proxy- and/or firewall policies.  Isolation
-can be achieved using a Unix \jargon{chroot} environment.  Another
-option, also recommended for \jargon{Tomcat} servers, is the use of
-Apache \jargon{reverse proxies}.  This causes the main web-server to
-relay requests below a given URL location to our Prolog based server.
-This approach has several advantages:
+There are several options for public deployment of a web service. The
+main decision is whether to run it on a standard port (port 80 for HTTP,
+port 443 for HTTPS) or a non-standard port such as for example 8000 or
+8080. Using a standard port below 1000 requires root access to the
+machine, and prevents other web services from using the same port. On
+the other hand, using a non-stardard port may cause problems with
+intermediate proxy- and/or firewall policies that may block the port
+on your end when you try to access the service. In both cases, you can
+either use a physical or a virtual virtual machine running ---for
+example--- under \url[VMWARE]{http://www.vmware.com} or
+\url[XEN]{http://www.cl.cam.ac.uk/research/srg/netos/xen/} to host the
+service. The (virtual) machine approach isolates security threats.
+Isolation can be achieved using a Unix \jargon{chroot} environment,
+which is however not a security feature.
+
+To make several different web services reachable on the same (either
+standard or non-standard) port, you can use a so-called
+\jargon{reverse proxy}. This causes the main web server to relay
+requests below a given URL location to different web servers that
+use their own dedicated ports. This approach has several advantages:
 
 \begin{itemize}
-    \item We can access the server on port 80, just as for a dedicated
-          machine.  We do not need a machine though and we only need
-	  access to the Apache configuration.
-    \item As Apache is doing the front-line service, the Prolog server
-	  is normally protected from malformed HTTP requests that could
-	  result in denial of service or otherwise compromise the
-	  server.  In addition, Apache can provide encodings such as
-	  compression to the outside world.
+    \item We can run the service on a non-standard port, but still access
+	  it (via the proxy) on a standard port, just as for a dedicated
+	  machine. We do not need a separate machine though:
+	  We only need to configure the reverse proxy to relay requests
+	  to the intended target servers.
+    \item As the main web server is doing the front-line service, the
+	  Prolog server is normally protected from malformed HTTP requests
+	  that could result in denial of service or otherwise compromise the
+	  server. In addition, the main web server can transparently provide
+	  encodings such as compression to the outside world.
 \end{itemize}
 
 Note that the proxy technology can be combined with isolation methods
 such as dedicated machines, virtual machines and chroot jails.  The
 proxy can also provide load balancing.
 
-\paragraph{Setting up a reverse proxy}
+\paragraph{Setting up an Apache reverse proxy}
 
 The Apache reverse proxy setup is really simple. Ensure the modules
 \const{proxy} and \const{proxy_http} are loaded. Then add two simple
