@@ -112,7 +112,7 @@ events:
 %	  $ --port=Port :
 %	  Start HTTP server at Port. It requires root permission and the
 %	  option =|--user=User|= to open ports below 1000.  The default
-%	  port is 80.
+%	  port is 80. If =|--https|= is used, the default port is 443.
 %
 %	  $ --ip=IP :
 %	  Only listen to the given IP address.  Typically used as
