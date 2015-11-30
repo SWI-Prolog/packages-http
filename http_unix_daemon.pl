@@ -13,9 +13,8 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 
-% For HTTPS, the SSL library must be available.
-:- if(exists_source(library('http/http_ssl_plugin'))).
-:- use_module(library('http/http_ssl_plugin')).
+:- if(exists_source(library(http/http_ssl_plugin))).
+:- use_module(library(http/http_ssl_plugin)).
 :- endif.
 
 :- multifile
@@ -158,6 +157,13 @@ events:
 %         $ --keyfile=File :
 %         The server private key for HTTPS.
 %
+%         $ --pwfile=File :
+%	  File holding the password for accessing  the private key. This
+%	  is preferred over using =|--password=PW|=   as it allows using
+%	  file protection to avoid leaking the password.  The file is
+%	  read _before_ the server drops privilages when started with
+%	  the =|--user|= option.
+%
 %         $ --password=PW :
 %         The password for accessing the private key.
 %
@@ -203,11 +209,8 @@ argv_options([H0|T0], R, [H|T]) :-
 	(   sub_atom(H0, B, _, A, =)
 	->  B2 is B-2,
 	    sub_atom(H0, 2, B2, _, Name),
-	    sub_atom(H0, _, A,  0, Value0),
-	    (	atom_number(Value0, Number)
-	    ->	Value = Number
-	    ;	Value = Value0
-	    )
+	    sub_string(H0, _, A,  0, Value0),
+	    convert_option(Name, Value0, Value)
 	;   sub_atom(H0, 2, _, 0, Name0),
 	    (	sub_atom(Name0, 0, _, _, 'no-')
 	    ->	sub_atom(Name0, 3, _, 0, Name),
@@ -221,6 +224,11 @@ argv_options([H0|T0], R, [H|T]) :-
 argv_options([H|T0], [H|R], T) :-
 	argv_options(T0, R, T).
 
+convert_option(password, String, String) :- !.
+convert_option(_, String, Number) :-
+	number_string(Number, String), !.
+convert_option(_, String, Atom) :-
+	atom_string(Atom, String).
 
 %%	http_daemon(+Options)
 %
@@ -233,10 +241,10 @@ http_daemon(Options) :-
 	halt.
 http_daemon(Options0) :-
 	setup_debug(Options0),
-	option(port(Port), Options0, 80),
-	merge_options([port(Port)], Options0, Options1),
+	merge_port_option(Options0, Port, Options1),
 	merge_https_options(Options1, Options),
 	make_socket(Options, Socket),
+	store_password(Options),
 	debug(daemon(socket),
 	      'Created socket ~q, listening to port ~q', [Socket, Port]),
 	(   option(fork(true), Options, true),
@@ -259,21 +267,54 @@ http_daemon(Options0) :-
 	    wait(Options)
 	).
 
+merge_port_option(Options0, Port, Options) :-
+	(   option(https(true), Options0)
+	->  DefaultPort = 443
+	;   DefaultPort = 80
+	),
+	option(port(Port), Options0, DefaultPort),
+	merge_options([port(Port)], Options0, Options).
+
 merge_https_options(Options, [SSL|Options]) :-
 	option(https(true), Options), !,
-	(   option(certfile(CertFile), Options) -> true
-	;   print_message(information, http_daemon(no_cert_file)),
-	    halt
-	),
-	(   option(keyfile(KeyFile), Options) -> true
-	;   print_message(information, http_daemon(no_key_file)),
-	    halt
-	),
-	option(password(Password), Options, none),
-	SSL = ssl([certificate_file(CertFile),
-		   key_file(KeyFile),
-		   password(Password)]).
+	need_option(certfile(CertFile), Options),
+	need_option(keyfile(KeyFile), Options),
+	SSL = ssl([ certificate_file(CertFile),
+		    key_file(KeyFile),
+		    pem_password_hook(http_unix_daemon:ssl_passwd)
+		  ]).
 merge_https_options(Options, Options).
+
+need_option(Option, Options) :-
+	option(Option, Options), !.
+need_option(Option, Options) :-
+	throw(error(existence_error(option, Option, Options), _)).
+
+%%	store_password(+Options) is det.
+%%	ssl_passwd(+SSL, -Passwd) is det.
+%
+%	Store the password provided by the options to a global variable.
+%	When the password is fetched,  it   is  deleted  from the global
+%	variables to minimise the risc for exposing the predicate.
+
+store_password(Options) :-
+	option(password(Passwd), Options), !,
+	nb_setval(ssl_passwd, Passwd).
+store_password(Options) :-
+	option(pwfile(File), Options), !,
+	setup_call_cleanup(
+		open(File, read, In),
+		read_string(In, _, String),
+		close(In)),
+	    split_string(String, "", "\r\n\t ", [Passwd]),
+	nb_setval(ssl_passwd, Passwd).
+store_password(_).
+
+:- public ssl_passwd/2.
+
+ssl_passwd(_SSL, Passwd) :-
+	nb_getval(ssl_passwd, Passwd),
+	nb_delete(ssl_passwd).
 
 %%	start_server(+Options) is det.
 %
@@ -478,14 +519,10 @@ prolog:message(http_daemon(help)) -->
 	  '  --https=bool       Use HTTPS (requires SSL)'-[], nl,
 	  '  --certfile=file    The server certificate'-[], nl,
 	  '  --keyfile=file     The server private key'-[], nl,
-	  '  --password=pw      Password for accessing the private key'-[], nl,
+	  '  --pwfile=file      File holding password for the private key'-[], nl,
+	  '  --password=pw      Password for the private key'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
 	  'Boolean options may be written without value (true) or as --no-name (false)'-[]
 	].
-
-prolog:message(http_daemon(no_cert_file)) -->
-	[ 'HTTPS requires the --certfile option'-[]].
-prolog:message(http_daemon(no_key_file)) -->
-	[ 'HTTPS requires the --keyfile option'-[]].
