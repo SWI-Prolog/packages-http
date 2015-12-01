@@ -288,7 +288,11 @@ copy_stream(Out, In, Header, From, To) :-
 %
 %	Status can be one of the following:
 %	   - authorise(Method)
+%	     Challenge authorization.  Method is one of
+%	     - basic(Realm)
+%	     - digest(Digest)
 %	   - authorise(basic,Realm)
+%	     Same as authorise(basic(Realm)).  Deprecated.
 %	   - bad_request(ErrorTerm)
 %	   - busy
 %	   - created(Location)
@@ -1322,7 +1326,7 @@ authenticate(basic(Realm)) -->
 authenticate(digest) --> !,
 	"WWW-Authenticate: Digest\r\n".
 authenticate(digest(Details)) -->
-        "WWW-Authenticate: Digest ", atom(Details).
+        "WWW-Authenticate: Digest ", atom(Details), "\r\n".
 
 
 date(Time) -->
