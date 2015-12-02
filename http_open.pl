@@ -152,6 +152,7 @@ Title = 'Free Online Version - Learn Prolog
 	http:open_options/2,		  % +Parts, -Options
 	http:write_cookies/3,		  % +Out, +Parts, +Options
 	http:update_cookies/3,		  % +CookieLine, +Parts, +Options
+	http:authenticate_client/2,	  % +URL, +Action
 	http:http_connection_over_proxy/6.
 
 :- meta_predicate
@@ -511,7 +512,8 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 	       User-Agent: ~w\r\n\c
 	       Connection: ~w\r\n',
 	       [MNAME, RequestURI, Version, Host, Agent, Connection]),
-	x_headers(Options, StreamPair),
+	parts_uri(Parts, URI),
+	x_headers(Options, URI, StreamPair),
 	write_cookies(StreamPair, Parts, Options),
         (   option(post(PostData), Options)
         ->  http_header:http_post_data(PostData, StreamPair, [])
@@ -563,18 +565,18 @@ map_method(put,	   'PUT').
 %
 %	@tbd Use user/password fields
 
-x_headers([], _).
-x_headers([H|T], Out) :- !,
-	x_header(H, Out),
-	x_headers(T, Out).
+x_headers([], _, _).
+x_headers([H|T], URI, Out) :- !,
+	x_header(H, URI, Out),
+	x_headers(T, URI, Out).
 
-x_header(request_header(Name=Value), Out) :- !,
+x_header(request_header(Name=Value), _, Out) :- !,
 	format(Out, '~w: ~w\r\n', [Name, Value]).
-x_header(proxy_authorization(ProxyAuthorization), Out) :- !,
-	auth_header(ProxyAuthorization, 'Proxy-Authorization', Out).
-x_header(authorization(Authorization), Out) :- !,
-	auth_header(Authorization, 'Authorization', Out).
-x_header(range(Spec), Out) :- !,
+x_header(proxy_authorization(ProxyAuthorization), URI, Out) :- !,
+	auth_header(ProxyAuthorization, URI, 'Proxy-Authorization', Out).
+x_header(authorization(Authorization), URI, Out) :- !,
+	auth_header(Authorization, URI, 'Authorization', Out).
+x_header(range(Spec), _, Out) :- !,
         Spec =.. [Unit, From, To],
         (   To == end
         ->  ToT = ''
@@ -582,13 +584,15 @@ x_header(range(Spec), Out) :- !,
             ToT = To
         ),
         format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
-x_header(_, _).
+x_header(_, _, _).
 
-auth_header(basic(User, Password), Header, Out) :- !,
+auth_header(basic(User, Password), _, Header, Out) :- !,
 	format(codes(Codes), '~w:~w', [User, Password]),
 	phrase(base64(Codes), Base64Codes),
 	format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
-auth_header(Auth, _, _) :-
+auth_header(Auth, URL, _, Out) :-
+	http:authenticate_client(URL, send_auth_header(Auth, Out)), !.
+auth_header(Auth, _, _, _) :-
 	domain_error(authorization, Auth).
 
 user_agent(Agent, Options) :-
@@ -626,6 +630,16 @@ do_open(_, Code, _, Lines, Options0, Parts, _, In, Stream) :-
 	),
 	redirect_options(Options0, Options),
 	http_open(RedirectedParts, Stream, Options).
+					% Need authentication
+do_open(_Version, Code, _Comment, Lines, Options0, Parts, _Host, In0, Stream) :-
+	authenticate_code(Code),
+	parts_uri(Parts, URI),
+	parse_headers(Lines, Headers),
+	http:authenticate_client(
+		 URI,
+		 auth_reponse(Headers, Options0, Options)), !,
+	close(In0),
+	http_open(Parts, Stream, Options).
 					% Accepted codes
 do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
 	(   option(status_code(Code), Options),
@@ -633,14 +647,15 @@ do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
 	->  true
 	;   Code == 200
 	), !,
+	parts_uri(Parts, URI),
+	parse_headers(Lines, Headers),
 	return_version(Options, Version),
-	return_size(Options, Lines),
-	return_fields(Options, Lines),
-	return_headers(Options, Lines),
+	return_size(Options, Headers),
+	return_fields(Options, Headers),
+	return_headers(Options, Headers),
 	consider_keep_alive(Lines, Parts, Host, In0, In1, Options),
 	transfer_encoding_filter(Lines, In1, In),
 					% properly re-initialise the stream
-	parts_uri(Parts, URI),
 	set_stream(In, file_name(URI)),
 	set_stream(In, record_position(true)).
 do_open(_, _, _, [], Options, _, _, _, _) :-
@@ -729,6 +744,8 @@ redirect_code(301).			% moved permanently
 redirect_code(302).			% moved temporary
 redirect_code(303).			% see also
 
+authenticate_code(401).
+
 %%	open_socket(+Address, -StreamPair, +Options) is det.
 %
 %	Create and connect a client socket to Address.  Options
@@ -753,30 +770,27 @@ open_socket(Address, StreamPair, Options) :-
 
 
 return_version(Options, Major-Minor) :-
-	option(version(Major-Minor), Options), !.
-return_version(_, _).
+	option(version(Major-Minor), Options, _).
 
-return_size(Options, Lines) :-
-	option(size(Size), Options), !,
-	content_length(Lines, Size).
-return_size(_, _).
+return_size(Options, Headers) :-
+	(   memberchk(content_length(Size), Headers)
+	->  option(size(Size), Options, _)
+	;   true
+	).
 
 return_fields([], _).
-return_fields([header(Name, Value)|T], Lines) :- !,
-	(   member(Line, Lines),
-	    phrase(atom_field(Name, Value), Line)
+return_fields([header(Name, Value)|T], Headers) :- !,
+	(   Term =.. [Name,Value],
+	    memberchk(Term, Headers)
 	->  true
 	;   Value = ''
 	),
-	return_fields(T, Lines).
+	return_fields(T, Headers).
 return_fields([_|T], Lines) :-
 	return_fields(T, Lines).
 
-return_headers([], _).
-return_headers([headers(Headers)|_], Lines) :- !,
-	parse_headers(Lines, Headers).
-return_headers([_|T], Lines) :-
-	return_headers(T, Lines).
+return_headers(Options, Headers) :-
+	option(headers(Headers), Options, _).
 
 %%	parse_headers(+Lines, -Headers:list(compound)) is det.
 %
