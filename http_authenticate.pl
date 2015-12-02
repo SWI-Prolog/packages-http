@@ -181,7 +181,7 @@ validate(File, User, Password, Fields) :-
 %	True when User is present in the htpasswd file File and Fields
 %	provides the additional fields.
 %
-%	@arg1	Fields are the fields from the password file File,
+%	@arg	Fields are the fields from the password file File,
 %		converted using name/2, which means that numeric values
 %		are passed as numbers and other fields as atoms.  The
 %		password hash is the first element of Fields and is
@@ -323,18 +323,19 @@ write_data(Out, passwd(User, Hash, Fields)) :-
 :- multifile
 	http:authenticate/3.
 
-%%	http:authenticate(+Basic, +Request, -Fields)
+%%	http:authenticate(+AuthData, +Request, -Fields)
 %
 %	Plugin  for  library(http_dispatch)  to    perform   basic  HTTP
 %	authentication.
 %
-%	@arg	Basic is a term basic(File, Realm)
+%	This predicate throws http_reply(authorise(basic, Realm)).
+%
+%	@arg	AuthData must be a term basic(File, Realm)
 %	@arg	Request is the HTTP request
 %	@arg	Fields describes the authenticated user with the option
 %		user(User) and with the option user_details(Fields) if
 %		the password file contains additional fields after the
 %		user and password.
-%	@throws	http_reply(authorise(basic, Realm)
 
 http:authenticate(basic(File, Realm), Request,
 		  [ user(User)
