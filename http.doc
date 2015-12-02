@@ -264,6 +264,7 @@ handle_request(Request) :-
 \input{httpsession.tex}
 \input{httpcors.tex}
 \input{httpauthenticate.tex}
+\input{httpdigest.tex}
 
 \subsection{Custom Error Pages}
 \label{sec:http-custom-error-page}
