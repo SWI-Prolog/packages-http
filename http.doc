@@ -913,21 +913,22 @@ main decision is whether to run it on a standard port (port 80 for HTTP,
 port 443 for HTTPS) or a non-standard port such as for example 8000 or
 8080. Using a standard port below 1000 requires root access to the
 machine, and prevents other web services from using the same port. On
-the other hand, using a non-stardard port may cause problems with
+the other hand, using a non-standard port may cause problems with
 intermediate proxy- and/or firewall policies that may block the port
-on your end when you try to access the service. In both cases, you can
-either use a physical or a virtual virtual machine running ---for
+when you try to access the service from some networks. In both cases,
+you can either use a physical or a virtual machine running ---for
 example--- under \url[VMWARE]{http://www.vmware.com} or
 \url[XEN]{http://www.cl.cam.ac.uk/research/srg/netos/xen/} to host the
-service. The (virtual) machine approach isolates security threats.
-Isolation can be achieved using a Unix \jargon{chroot} environment,
-which is however not a security feature.
+service. Using a dedicated (physical or virtual) machine to host a
+service isolates security threats. Isolation can also be achieved using
+a Unix \jargon{chroot} environment, which is however not a security
+feature.
 
 To make several different web services reachable on the same (either
-standard or non-standard) port, you can use a so-called
-\jargon{reverse proxy}. This causes the main web server to relay
-requests below a given URL location to different web servers that
-use their own dedicated ports. This approach has several advantages:
+standard or non-standard) port, you can use a so-called \jargon{reverse
+proxy}. A reverse proxy uses rules to relay requests to other web
+services that use their own dedicated ports. This approach has several
+advantages:
 
 \begin{itemize}
     \item We can run the service on a non-standard port, but still access
@@ -942,9 +943,9 @@ use their own dedicated ports. This approach has several advantages:
 	  encodings such as compression to the outside world.
 \end{itemize}
 
-Note that the proxy technology can be combined with isolation methods
-such as dedicated machines, virtual machines and chroot jails.  The
-proxy can also provide load balancing.
+Proxy technology can be combined with isolation methods such as
+dedicated machines, virtual machines and chroot jails. The proxy can
+also provide load balancing.
 
 \paragraph{Setting up an Apache reverse proxy}
 
