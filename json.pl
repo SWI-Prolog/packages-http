@@ -698,6 +698,9 @@ space_if_not_at_left_margin(Stream, _) :-
 %
 %	@tbd	Escape sequences in strings are not considered.
 
+json_print_length(Var, _, _, _, _) :-
+	var(Var), !,
+	instantiation_error(Var).
 json_print_length(json(Pairs), Options, Max, Len0, Len) :- !,
 	Len1 is Len0 + 2,
 	Len1 =< Max,
