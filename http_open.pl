@@ -404,7 +404,8 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
 	->  parts_request_uri(Parts, RequestURI)
 	;   parts_uri(Parts, RequestURI)
 	),
-        Options = [visited(Parts)|Options0],
+	select_option(visited(Visited0), Options0, OptionsV, []),
+	Options = [visited([Parts|Visited0])|OptionsV],
         parts_scheme(Parts, Scheme),
         default_port(Scheme, DefPort),
         url_part(port(Port), Parts, DefPort),
@@ -678,12 +679,13 @@ do_open(_Version, Code, Comment, _,  _, Parts, _, _, _) :-
 %	True if we have exceeded the maximum redirection length (default 10).
 
 redirect_limit_exceeded(Options, Max) :-
-	aggregate_all(count, member(visited(_), Options), N),
+	option(visited(Visited), Options, []),
+	length(Visited, N),
 	option(max_redirect(Max), Options, 10),
 	(Max == infinite -> fail ; N > Max).
 
 
-%%	redirect_loop(Parts, Options) is semidet.
+%%	redirect_loop(+Parts, +Options) is semidet.
 %
 %	True if we are in  a  redirection   loop.  Note  that some sites
 %	redirect once to the same place using  cookies or similar, so we
@@ -691,17 +693,10 @@ redirect_limit_exceeded(Options, Max) :-
 %	authorization or cookie headers have changed.
 
 redirect_loop(Parts, Options) :-
-	rloop(Options, visited(Parts), 0).
-
-rloop([H|T], V, N) :-
-	(   H == V
-	->  (   N == 1
-	    ->	true
-	    ;	N2 is N + 1,
-		rloop(T, V, N2)
-	    )
-	;   rloop(T, V, N)
-	).
+	option(visited(Visited), Options, []),
+	include(==(Parts), Visited, Same),
+	length(Same, Count),
+	Count > 2.
 
 
 %%	redirect_options(+Options0, -Options) is det.
