@@ -56,14 +56,14 @@ Now,  the  server  may  be  started    using   the  command  below.  See
 http_daemon/0 for supported options.
 
   ==
-  % [sudo] swipl -s mainfile.pl -- [option ...]
+  % [sudo] swipl mainfile.pl -- [option ...]
   ==
 
 Below are some examples. Our first example is completely silent, running
 on port 80 as user =www=.
 
   ==
-  % swipl -s mainfile.pl -- --user=www --pidfile=/var/run/http.pid
+  % swipl mainfile.pl -- --user=www --pidfile=/var/run/http.pid
   ==
 
 Our second example logs HTTP  interaction   with  the  syslog daemon for
@@ -72,7 +72,7 @@ term and must often be escaped to   avoid  misinterpretation by the Unix
 shell.   The debug option can be repeated to log multiple debug topics.
 
   ==
-  % swipl -s mainfile.pl -- --user=www --pidfile=/var/run/http.pid \
+  % swipl mainfile.pl -- --user=www --pidfile=/var/run/http.pid \
 	  --debug='http(request)' --syslog=http
   ==
 
