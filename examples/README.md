@@ -1,7 +1,9 @@
+# HTTP example files
+
 This is a simple demo of the  HTTP server facilities, providing a simple
 body and the three documented server instantiations.
 
----+ The server main programs are:
+## The server main programs are:
 
 	$ demo_threads.pl :
 	Run threaded server. Requires SWI-Prolog with thread-support.
@@ -20,7 +22,7 @@ body and the three documented server instantiations.
 
 	4001 stream tcp nowait nobody /usr/sbin/tcpd /usr/lib/pl-5.1.4/library/http/demo/demo_inetd
 
----+ Unix services demo:
+## Unix services demo:
 
 	$ demo_daemon.pl :
 	Demo script to run the SWI-Prolog HTTP server as a Unix
@@ -30,26 +32,35 @@ body and the three documented server instantiations.
 	/etc/init.d script for Debian and Redhat based Unix systems.
 	Must be configured.
 
----+ Session management demo:
+	$ upstart-script.conf :
+	Ubuntu `upstart` script.  Must be configured and placed in
+	`/etc/init`
+
+	$ systemd-script.service :
+	Linux `systemd` script.  Must be configured and placed in
+	`/etc/systemd/system` and installed using `systemctl`. See
+	https://coreos.com/docs/launching-containers/launching/getting-started-with-systemd/
+
+## Session management demo:
 
 	$ calc.pl :
 	Multi-threaded server with session management using the
 	html_write.pl library.  See source for usage.
 
----+ File serving demo:
+## File serving demo:
 
 	$ demo_files.pl :
 	Is a multi-threaded server that serves static files and
 	directory indices.
 
----+ Client demo
+## Client demo
 
 	$ demo_client.pl :
 	Simple multi-threaded client to test the server under
 	different conditions.  Requires SWI-Prolog with thread-support.
 	See source for usage.
 
----+ Performance testing
+## Performance testing
 
 A very early start of some  routines   to  validate the server platform.
 Eventually, stress_server.pl will serve different   tests  from multiple

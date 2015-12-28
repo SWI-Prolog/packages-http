@@ -15,8 +15,10 @@ LIBPL=		html_write.pl http_client.pl http_header.pl \
 		yadis.pl ax.pl html_quasiquotations.pl http_load.pl \
 		websocket.pl hub.pl http_multipart_plugin.pl jquery.pl \
 		http_digest.pl
-EXAMPLES=	demo_body.pl demo_client.pl demo_threads.pl demo_xpce.pl \
+EXAMPLES=	README.md \
+		demo_body.pl demo_client.pl demo_threads.pl demo_xpce.pl \
 		calc.pl demo_files.pl demo_pwp.pl demo_openid.pl \
-		demo_daemon.pl
+		demo_daemon.pl \
+		upstart-script.conf systemd-script.service
 EXAMPLEEXE=	demo_inetd linux-init-script
 XPCEPL=		http_image.pl
