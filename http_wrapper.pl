@@ -87,7 +87,7 @@ applications:
 %		* peer(+Peer)
 %		IP address of client
 %
-%	@param Close	Unified to one of =close=, =|Keep-Alife|= or
+%	@param Close	Unified to one of =close=, =|Keep-Alive|= or
 %			spawned(ThreadId).
 
 http_wrapper(Goal, In, Out, Close, Options) :-

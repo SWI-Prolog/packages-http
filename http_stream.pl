@@ -254,7 +254,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 %	    * transfer_encoding(-Tranfer)
 %	    One of =chunked= or =none=.
 %	    * connection(-Connection)
-%	    One of =Keep-Alife= or =close=
+%	    One of =Keep-Alive= or =close=
 %	    * content_length(-ContentLength)
 %	    Total byte-size of the content.  Available in the close
 %	    handler if the transfer_encoding is =none=.
@@ -275,7 +275,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 %	    from the =send_header= hook to send the reply header to the
 %	    client.
 %	    * connection(-Connection)
-%	    One of =Keep-Alife= or =close=.
+%	    One of =Keep-Alive= or =close=.
 %	    * transfer_encoding(-Tranfer)
 %	    One of =chunked= or =none=.  Initially set to =none=.  When
 %	    switching to =chunked= from the =header= hook, it calls the
