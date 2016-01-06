@@ -183,6 +183,7 @@ keep_alive(Reply, Connection) :-
 	).
 
 keep_alive(not_modified).
+keep_alive(bytes(_Type, _Bytes)).
 keep_alive(file(_Type, _File)).
 keep_alive(tmp_file(_Type, _File)).
 keep_alive(stream(_In, _Len)).
