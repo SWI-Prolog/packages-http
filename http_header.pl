@@ -241,7 +241,8 @@ http_reply_data(tmp_file(Type, File), Out, HdrExtra, Code) :- !,
 	reply_file(Out, File, Header).
 http_reply_data(bytes(Type, Bytes), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(bytes(Type, Bytes), HdrExtra, Code), Header),
-	format(Out, '~s~s', [Header, Bytes]).
+	format(Out, '~s~s', [Header, Bytes]),
+	flush_output(Out).
 http_reply_data(stream(In, Len), Out, HdrExtra, Code) :- !,
 	phrase(reply_header(cgi_data(Len), HdrExtra, Code), Header),
 	copy_stream(Out, In, Header, 0, end).
