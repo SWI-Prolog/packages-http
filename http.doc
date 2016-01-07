@@ -724,7 +724,7 @@ Keep-Alive is bad for performance if the clients request multiple
 documents for a single page. This may ---for example-- be caused by HTML
 frames, HTML pages with images, associated CSS files, etc.  Keeping
 a connection open in the threaded model however prevents the thread
-servicing the client servicing other clients.  The default is 5 seconds.
+servicing the client servicing other clients.  The default is 2 seconds.
 
     \termitem{local}{+KBytes}
 Size of the local-stack for the workers. Default is taken from the
@@ -739,7 +739,7 @@ Size of the trail-stack for the workers. Default is taken from the
 commandline option.
 
     \termitem{ssl}{+SSLOptions}
-Use SSL (Secure Socket Layer) rather than plan TCP/IP. A server created
+Use SSL (Secure Socket Layer) rather than plain TCP/IP. A server created
 this way is accessed using the \const{https://} protocol. SSL allows for
 encrypted communication to avoid others from tapping the wire as well as
 improved authentication of client and server. The \arg{SSLOptions}
