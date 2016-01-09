@@ -47,15 +47,11 @@
 :- use_module(library(http/http_header), [http_parse_header/2]).
 :- use_module(library(http/http_stream)).
 
-/** <module> Simple HTTP client
+/** <module> HTTP client library
 
 This library defines http_open/3, which opens a  URL as a Prolog stream.
 The functionality of the  library  can   be  extended  by  loading three
 additional modules that act as plugins:
-
-    * library(http/http_chunked)
-    Loading this library causes http_open/3 to support chunked
-    transfer encoding.
 
     * library(http/http_ssl_plugin)
     Loading this library causes http_open/3 to handle HTTPS connections.

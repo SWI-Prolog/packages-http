@@ -2282,7 +2282,7 @@ read_header_data(_, Fd, Tail) :-
 
 http_parse_header(Text, Header) :-
 	phrase(header(Header), Text),
-	debug(http(header), 'Fields: ~w~n', [Header]).
+	debug(http(header), 'Field: ~p', [Header]).
 
 header(List) -->
 	header_field(Name, Value), !,
