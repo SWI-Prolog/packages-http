@@ -50,7 +50,7 @@
 /** <module> HTTP client library
 
 This library defines http_open/3, which opens a  URL as a Prolog stream.
-The functionality of the  library  can   be  extended  by  loading three
+The functionality of the  library  can   be  extended  by  loading two
 additional modules that act as plugins:
 
     * library(http/http_ssl_plugin)
@@ -527,7 +527,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 %%	http_version(-Version:atom) is det.
 %
 %	HTTP version we publish. We  can  only   use  1.1  if we support
-%	chunked encoding, which means http_chunked.pl must be loaded.
+%	chunked encoding.
 
 http_version('1.1') :-
 	http:current_transfer_encoding(chunked), !.
