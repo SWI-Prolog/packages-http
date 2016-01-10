@@ -601,15 +601,15 @@ report_error(E) :-
 check_keep_alife_connection(In, TMO, Peer, In, Out) :-
 	stream_property(In, timeout(Old)),
 	set_stream(In, timeout(TMO)),
-	debug(http(keep_alife), 'Waiting for keep-alife ...', []),
+	debug(http(keep_alive), 'Waiting for keep-alive ...', []),
 	catch(peek_code(In, Code), E, true),
 	(   var(E),			% no exception
 	    Code \== -1			% no end-of-file
 	->  set_stream(In, timeout(Old)),
-	    debug(http(keep_alife), '\tre-using keep-alife connection', [])
+	    debug(http(keep_alive), '\tre-using keep-alive connection', [])
 	;   (   Code == -1
-	    ->	debug(http(keep_alife), '\tRemote closed keep-alife connection', [])
-	    ;	debug(http(keep_alife), '\tTimeout on keep-alife connection', [])
+	    ->	debug(http(keep_alive), '\tRemote closed keep-alive connection', [])
+	    ;	debug(http(keep_alive), '\tTimeout on keep-alive connection', [])
 	    ),
 	    close_connection(Peer, In, Out),
 	    fail
