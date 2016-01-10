@@ -4,10 +4,12 @@
 :- asserta(user:file_search_path(foreign, '.')).
 :- asserta(user:file_search_path(foreign, '../clib')).
 :- asserta(user:file_search_path(foreign, '../sgml')).
+:- asserta(user:file_search_path(foreign, '../zlib')).
 :- asserta(user:file_search_path(library, '..')).
 :- asserta(user:file_search_path(library, '../sgml')).
 :- asserta(user:file_search_path(library, '../plunit')).
 :- asserta(user:file_search_path(library, '../clib')).
+:- asserta(user:file_search_path(library, '../zlib')).
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
@@ -16,9 +18,9 @@
 :- use_module(library(http/http_stream)).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
-:- use_module(library(socket)).
 :- use_module(library(debug)).
 :- use_module(library(lists)).
+:- use_module(library(zlib), []).		% plugin
 
 test_http :-
 	run_tests([ http_open,
