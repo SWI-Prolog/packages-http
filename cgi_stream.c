@@ -35,7 +35,7 @@ client.  In particular, we want to deal with:
 
     * Separating the header from the body of the reply
     * Chunked or traditional transfer encoding
-    * Connection management (Keep-alife)
+    * Connection management (Keep-alive)
     * Thread management
 
 The original HTTP infrastructure has an `accept thread' that accepts new
@@ -55,7 +55,7 @@ with the request, deciding on:
     * The final header
     * The transfer encoding (chunked/none)
     * The content encoding (octet/utf8)
-    * The connection (Keep-Alife/close)
+    * The connection (Keep-Alive/close)
 
 Now, the stream is placed in  full   buffering  mode  (SIO_FBUF). If the
 transfer encoding is 'chunked'  it  immediately   calls  the  hook using
@@ -133,7 +133,7 @@ typedef struct cgi_context
   record_t	    request;		/* Associated request term */
   record_t	    header;		/* Associated reply header term */
   atom_t	    transfer_encoding;	/* Current transfer encoding */
-  atom_t	    connection;		/* Keep alife? */
+  atom_t	    connection;		/* Keep alive? */
 					/* state */
   cgi_state	    state;		/* Current state */
 					/* data buffering */
