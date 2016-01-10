@@ -563,7 +563,7 @@ open_client(requeue(In, Out, Goal, ClOpts),
 	    _, Goal, In, Out, Opts, ClOpts) :- !,
 	memberchk(peer(Peer), ClOpts),
 	option(keep_alive_timeout(KeepAliveTMO), Opts, 2),
-	check_keep_alife_connection(In, KeepAliveTMO, Peer, In, Out).
+	check_keep_alive_connection(In, KeepAliveTMO, Peer, In, Out).
 open_client(Message, Queue, Goal, In, Out, Opts,
 	    [ pool(client(Queue, Goal, In, Out)),
 	      timeout(Timeout)
@@ -592,13 +592,13 @@ report_error(E) :-
 	fail.
 
 
-%%	check_keep_alife_connection(+In, +TimeOut, +Peer, +In, +Out) is semidet.
+%%	check_keep_alive_connection(+In, +TimeOut, +Peer, +In, +Out) is semidet.
 %
 %	Wait for the client for at most  TimeOut seconds. Succeed if the
 %	client starts a new request within   this  time. Otherwise close
 %	the connection and fail.
 
-check_keep_alife_connection(In, TMO, Peer, In, Out) :-
+check_keep_alive_connection(In, TMO, Peer, In, Out) :-
 	stream_property(In, timeout(Old)),
 	set_stream(In, timeout(TMO)),
 	debug(http(keep_alive), 'Waiting for keep-alive ...', []),
@@ -680,7 +680,7 @@ current_message_level(Term, Level) :-
 %%	http_requeue(+Header)
 %
 %	Re-queue a connection to  the  worker   pool.  This  deals  with
-%	processing additional requests on keep-alife connections.
+%	processing additional requests on keep-alive connections.
 
 http_requeue(Header) :-
 	requeue_header(Header, ClientOptions),
