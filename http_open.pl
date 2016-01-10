@@ -837,7 +837,7 @@ transfer_encoding_filter(_, In, In).
 %	True if Encoding is the value   of  the =|Transfer-encoding|= or
 %	=|Content-encoding|= header. Note that this   should  only cover
 %	=|Transfer-encoding|=, but in practice  the =|Content-encoding|=
-%	header is used -incorrectly- as a synonym.
+%	header is used -incorrectly- as a synonym by many servers.
 
 transfer_encoding(Lines, Encoding) :-
 	member(Line, Lines),
