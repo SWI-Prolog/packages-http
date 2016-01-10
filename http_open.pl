@@ -834,8 +834,10 @@ transfer_encoding_filter(_, In, In).
 
 %%	transfer_encoding(+Lines, -Encoding) is semidet.
 %
-%	True if Encoding is the value of the =|Transfer-encoding|=
-%	header.
+%	True if Encoding is the value   of  the =|Transfer-encoding|= or
+%	=|Content-encoding|= header. Note that this   should  only cover
+%	=|Transfer-encoding|=, but in practice  the =|Content-encoding|=
+%	header is used -incorrectly- as a synonym.
 
 transfer_encoding(Lines, Encoding) :-
 	member(Line, Lines),
@@ -844,7 +846,9 @@ transfer_encoding(Lines, Encoding) :-
 	Encoding = Encoding0.
 
 transfer_encoding(Encoding) -->
-	field('transfer-encoding'),
+	(   field('transfer-encoding')
+	;   field('content-encoding')
+	), !,
 	rest(Encoding).
 
 %%	read_header(+In:stream, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
