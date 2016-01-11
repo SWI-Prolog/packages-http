@@ -99,7 +99,7 @@ profile :-
 
 ping(_Request) :-
 	format('Content-type: text/plain~n~n'),
-	format('alife~n').
+	format('alive~n').
 
 wait(Request) :-
 	http_parameters(Request,

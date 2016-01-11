@@ -92,7 +92,7 @@ static atom_t ATOM_none;		/* none */
 static atom_t ATOM_state;		/* state */
 static atom_t ATOM_transfer_encoding;	/* transfer_encoding */
 static atom_t ATOM_connection;		/* connection */
-static atom_t ATOM_keep_alife;		/* keep_alife */
+static atom_t ATOM_keep_alive;		/* keep_alive */
 static atom_t ATOM_close;		/* close */
 static atom_t ATOM_content_length;	/* content_length */
 static atom_t ATOM_id;			/* id */
@@ -776,7 +776,7 @@ install_cgi_stream()
   ATOM_none		 = PL_new_atom("none");
   ATOM_transfer_encoding = PL_new_atom("transfer_encoding");
   ATOM_close             = PL_new_atom("close");
-  ATOM_keep_alife        = PL_new_atom("keep_alife");
+  ATOM_keep_alive        = PL_new_atom("keep_alive");
   ATOM_connection        = PL_new_atom("connection");
   ATOM_content_length    = PL_new_atom("content_length");
   ATOM_id	         = PL_new_atom("id");
