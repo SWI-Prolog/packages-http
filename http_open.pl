@@ -815,11 +815,27 @@ return_final_url(_).
 
 %%	transfer_encoding_filter(+Lines, +In0, -In) is det.
 %
-%	Install  filters  depending  on  the  encoding.   If  In0  is  a
-%	stream-pair, we close the output side.
+%	Install filters depending on the transfer encoding. If In0 is
+%	a stream-pair, we close the output side. If transfer-encoding
+%	is not specified, the content-encoding is interpreted as a
+%	synonym for transfer-encoding, because many servers
+%	incorrectly depend on this. Exceptions to this are
+%	content-types for which disable_encoding_filter/1 holds.
 
 transfer_encoding_filter(Lines, In0, In) :-
 	transfer_encoding(Lines, Encoding), !,
+	transfer_encoding_filter_(Encoding, In0, In).
+transfer_encoding_filter(Lines, In0, In) :-
+	% lower priority: interpret content-encoding as transfer-encoding
+	content_encoding(Lines, Encoding),
+	content_type(Lines, Type),
+	% exception: content-types where such an encoding is expected
+	\+ disable_encoding_filter(Type),
+	!,
+	transfer_encoding_filter_(Encoding, In0, In).
+transfer_encoding_filter(_, In, In).
+
+transfer_encoding_filter_(Encoding, In0, In) :-
 	stream_pair(In0, In1, Out),
 	(   nonvar(Out)
 	->  close(Out)
@@ -829,8 +845,21 @@ transfer_encoding_filter(Lines, In0, In) :-
 	->  true
 	;   domain_error(http_encoding, Encoding)
 	).
-transfer_encoding_filter(_, In, In).
 
+content_type(Lines, Type) :-
+	member(Line, Lines),
+	phrase((field('content-type'), rest(Type0)), Line), !,
+	Type = Type0.
+
+disable_encoding_filter('application/x-gzip').
+disable_encoding_filter('application/x-tar').
+disable_encoding_filter('x-world/x-vrml').
+disable_encoding_filter('application/zip').
+disable_encoding_filter('application/x-gzip').
+disable_encoding_filter('application/x-zip-compressed').
+disable_encoding_filter('application/x-compress').
+disable_encoding_filter('application/x-compressed').
+disable_encoding_filter('application/x-spoon').
 
 %%	transfer_encoding(+Lines, -Encoding) is semidet.
 %
@@ -973,10 +1002,10 @@ digits([]) -->
 %
 %	Get rest of input as an atom.
 
-rest(Atom) --> call(rest_).
+rest(Atom) --> call(rest_(Atom)).
 
 rest_(Atom, L, []) :-
-	atom_codes(A, L).
+	atom_codes(Atom, L).
 
 
 		 /*******************************
