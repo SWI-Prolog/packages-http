@@ -838,14 +838,26 @@ transfer_encoding_filter(_, In, In).
 %	header.
 
 transfer_encoding(Lines, Encoding) :-
+	what_encoding(transfer_encoding, Lines, Encoding).
+
+what_encoding(What, Lines, Encoding) :-
 	member(Line, Lines),
-	phrase(transfer_encoding(Encoding0), Line), !,
-	debug(http(transfer_encoding), 'Transfer-encoding: ~w', [Encoding0]),
+	phrase((encoding_(What, Debug),rest(Encoding0)), Line), !,
+	debug(http(What), '~w: ~w', [Debug,Encoding0]),
 	Encoding = Encoding0.
 
-transfer_encoding(Encoding) -->
-	field('transfer-encoding'),
-	rest(Encoding).
+encoding_(content_encoding, 'Content-encoding') -->
+	field('content-encoding').
+encoding_(transfer_encoding, 'Transfer-encoding') -->
+	field('transfer-encoding').
+
+%%	content_encoding(+Lines, -Encoding) is semidet.
+%
+%	True if Encoding is the value of the =|Content-encoding|=
+%	header.
+
+content_encoding(Lines, Encoding) :-
+	what_encoding(content_encoding, Lines, Encoding).
 
 %%	read_header(+In:stream, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
 %
