@@ -961,7 +961,9 @@ digits([]) -->
 %
 %	Get rest of input as an atom.
 
-rest(A,L,[]) :-
+rest(Atom) --> call(rest_).
+
+rest_(Atom, L, []) :-
 	atom_codes(A, L).
 
 
