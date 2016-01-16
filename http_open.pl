@@ -141,8 +141,9 @@ Title = 'Free Online Version - Learn Prolog
 */
 
 :- multifile
-	http:encoding_filter/3,		  % +Encoding, +In0,  -In
+	http:encoding_filter/3,		  % +Encoding, +In0, -In
 	http:current_transfer_encoding/1, % ?Encoding
+	http:disable_encoding_filter/1,   % +ContentType
 	http:http_protocol_hook/5,	  % +Protocol, +Parts, +StreamPair,
 					  % -NewStreamPair, +Options
 	http:open_options/2,		  % +Parts, -Options
@@ -815,23 +816,20 @@ return_final_url(_).
 
 %%	transfer_encoding_filter(+Lines, +In0, -In) is det.
 %
-%	Install filters depending on the transfer encoding. If In0 is
-%	a stream-pair, we close the output side. If transfer-encoding
-%	is not specified, the content-encoding is interpreted as a
-%	synonym for transfer-encoding, because many servers
-%	incorrectly depend on this. Exceptions to this are
-%	content-types for which disable_encoding_filter/1 holds.
+%	Install filters depending on the transfer  encoding. If In0 is a
+%	stream-pair, we close the output   side. If transfer-encoding is
+%	not specified, the content-encoding is  interpreted as a synonym
+%	for transfer-encoding, because many   servers incorrectly depend
+%	on  this.  Exceptions  to  this   are  content-types  for  which
+%	disable_encoding_filter/1 holds.
 
 transfer_encoding_filter(Lines, In0, In) :-
 	transfer_encoding(Lines, Encoding), !,
 	transfer_encoding_filter_(Encoding, In0, In).
 transfer_encoding_filter(Lines, In0, In) :-
-	% lower priority: interpret content-encoding as transfer-encoding
 	content_encoding(Lines, Encoding),
 	content_type(Lines, Type),
-	% exception: content-types where such an encoding is expected
-	\+ disable_encoding_filter(Type),
-	!,
+	\+ http:disable_encoding_filter(Type), !,
 	transfer_encoding_filter_(Encoding, In0, In).
 transfer_encoding_filter(_, In, In).
 
@@ -848,22 +846,28 @@ transfer_encoding_filter_(Encoding, In0, In) :-
 
 content_type(Lines, Type) :-
 	member(Line, Lines),
-	phrase((field('content-type'), rest(Type0)), Line), !,
-	Type = Type0.
+	phrase(field('content-type'), Line, Rest), !,
+	atom_codes(Type, Rest).
 
-disable_encoding_filter('application/x-gzip').
-disable_encoding_filter('application/x-tar').
-disable_encoding_filter('x-world/x-vrml').
-disable_encoding_filter('application/zip').
-disable_encoding_filter('application/x-gzip').
-disable_encoding_filter('application/x-zip-compressed').
-disable_encoding_filter('application/x-compress').
-disable_encoding_filter('application/x-compressed').
-disable_encoding_filter('application/x-spoon').
+%%	http:disable_encoding_filter(+ContentType) is semidet.
+%
+%	Do not use  the   =|Content-encoding|=  as =|Transfer-encoding|=
+%	encoding for specific values of   ContentType. This predicate is
+%	multifile and can this be extended by the user.
+
+http:disable_encoding_filter('application/x-gzip').
+http:disable_encoding_filter('application/x-tar').
+http:disable_encoding_filter('x-world/x-vrml').
+http:disable_encoding_filter('application/zip').
+http:disable_encoding_filter('application/x-gzip').
+http:disable_encoding_filter('application/x-zip-compressed').
+http:disable_encoding_filter('application/x-compress').
+http:disable_encoding_filter('application/x-compressed').
+http:disable_encoding_filter('application/x-spoon').
 
 %%	transfer_encoding(+Lines, -Encoding) is semidet.
 %
-%	True if Encoding is the value of the =|Transfer-encoding|=
+%	True if Encoding  is  the   value  of  the =|Transfer-encoding|=
 %	header.
 
 transfer_encoding(Lines, Encoding) :-
@@ -871,9 +875,9 @@ transfer_encoding(Lines, Encoding) :-
 
 what_encoding(What, Lines, Encoding) :-
 	member(Line, Lines),
-	phrase((encoding_(What, Debug),rest(Encoding0)), Line), !,
-	debug(http(What), '~w: ~w', [Debug,Encoding0]),
-	Encoding = Encoding0.
+	phrase(encoding_(What, Debug), Line, Rest), !,
+	atom_codes(Encoding, Rest),
+	debug(http(What), '~w: ~p', [Debug, Rest]).
 
 encoding_(content_encoding, 'Content-encoding') -->
 	field('content-encoding').
