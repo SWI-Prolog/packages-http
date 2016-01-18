@@ -81,7 +81,7 @@ json_write_string(term_t stream, term_t text)
   size_t len;
   int rc = TRUE;
 
-  if ( !PL_get_stream_handle(stream, &out) )
+  if ( !PL_get_stream(stream, &out, SIO_OUTPUT) )
     return FALSE;
 
   if ( PL_get_nchars(text, &len, &a, CVT_ATOM|CVT_STRING|CVT_LIST) )
@@ -134,7 +134,7 @@ json_write_indent(term_t stream, term_t indent, term_t tab)
        !PL_get_integer(tab, &t) )
     return FALSE;
 
-  if ( PL_get_stream_handle(stream, &out) )
+  if ( PL_get_stream(stream, &out, SIO_OUTPUT) )
   { int rc = TRUE;
 
     if ( !out->position || out->position->linepos > 0 )
