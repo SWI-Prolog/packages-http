@@ -704,6 +704,7 @@ json_print_length(Var, _, _, _, _) :-
 json_print_length(json(Pairs), Options, Max, Len0, Len) :- !,
 	Len1 is Len0 + 2,
 	Len1 =< Max,
+	must_be(list, Pairs),
 	pairs_print_length(Pairs, Options, Max, Len1, Len).
 :- if(current_predicate(is_dict/1)).
 json_print_length(Dict, Options, Max, Len0, Len) :-
@@ -759,11 +760,13 @@ pairs_print_length([H|T], Options, Max, Len0, Len) :-
 	).
 
 pair_len(Pair, Options, Max, Len0, Len) :-
-	pair_nv(Pair, Name, Value),
+	pair_nv(Pair, Name, Value), !,
 	string_len(Name, Len0, Len1),
 	Len2 is Len1+2,
 	Len2 =< Max,
 	json_print_length(Value, Options, Max, Len2, Len).
+pair_len(Pair, _Options, _Max, _Len0, _Len) :-
+	type_error(pair, Pair).
 
 pair_nv(Name=Value, Name, Value).
 pair_nv(Name-Value, Name, Value).
