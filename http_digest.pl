@@ -588,9 +588,11 @@ http:authenticate(digest(File, Realm, Options), Request,
 		  [ user(User)
 		  | Details
 		  ]) :-
-	(   http_digest_authenticate(Request, [User|Fields],
+	(   option(method(Method), Request, get),
+	    http_digest_authenticate(Request, [User|Fields],
 				     [ passwd_file(File),
-				       stale(Stale)
+				       stale(Stale),
+				       method(Method)
 				     ])
 	->  (   Stale == false
 	    ->  (   Fields == []
