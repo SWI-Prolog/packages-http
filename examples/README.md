@@ -60,6 +60,11 @@ body and the three documented server instantiations.
 	different conditions.  Requires SWI-Prolog with thread-support.
 	See source for usage.
 
+## HTTP digest authentication
+
+	$ demo_digest.pl :
+	Simple demo showing HTTP digest authentication at work.
+
 ## Performance testing
 
 A very early start of some  routines   to  validate the server platform.
