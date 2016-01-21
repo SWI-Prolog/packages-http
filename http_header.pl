@@ -2342,7 +2342,8 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 	prolog:error_message//1.
 
 prolog:error_message(http_write_short(Data, Sent)) -->
-	[ '~p: remote hangup after ~D bytes'-[Data, Sent] ].
+	data(Data),
+	[ ': remote hangup after ~D bytes'-[Data, Sent] ].
 prolog:error_message(syntax_error(http_request(Request))) -->
 	[ 'Illegal HTTP request: ~s'-[Request] ].
 prolog:error_message(syntax_error(http_parameter(Line))) -->
@@ -2350,3 +2351,8 @@ prolog:error_message(syntax_error(http_parameter(Line))) -->
 
 prolog:message(http(skipped_cookie(S))) -->
 	[ 'Skipped illegal cookie: ~s'-[S] ].
+
+data(bytes(MimeType, _Bytes)) --> !,
+	[ 'bytes(~p, ...)'-[MimeType] ].
+data(Data) -->
+	[ '~p'-[Data] ].
