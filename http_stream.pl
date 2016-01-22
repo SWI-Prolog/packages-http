@@ -263,6 +263,9 @@ bytes, dispite the fact that the underlying stream may be longer.
 %	    header handler.
 %	    * state(-State)
 %	    One of =header=, =data= or =discarded=
+%	    * id(-ID)
+%	    Request sequence number.  This number is guaranteed to be
+%	    unique.
 
 %%	cgi_set(+CGIStream, ?Property) is det.
 %
