@@ -156,7 +156,7 @@ nonce_not_timed_out(Nonce, Now, Stale) :-
 nonce_nc_ok(Nonce, NC, _Now) :-
 	(   nonce_nc(Nonce, NC, _)
 	;   nonce_nc_first(Nonce, First),
-	    NC =< First
+	    NC @=< First
 	), !,
 	debug(http(nonce), 'Nonce replay attempt: ~q@~q', [Nonce, NC]),
 	fail.
@@ -201,7 +201,8 @@ nonce_timed_out(Nonce, Before) :-
 	Created < Before.
 
 gc_nonce_nc(Nonce, Before) :-
-	aggregate_all(max(NC), gc_nonce_nc(Nonce, Before, NC), Max), !,
+	findall(NC, gc_nonce_nc(Nonce, Before, NC), List),
+	sort(0, @>, List, [Max|_]), !,
 	asserta(nonce_nc_first(Nonce, Max)),
 	forall(( nonce_nc_first(Nonce, NC),
 		 NC \== Max
