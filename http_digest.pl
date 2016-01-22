@@ -36,6 +36,7 @@
 					   % -Reply +Opts
 	  ]).
 :- use_module(library(http/http_authenticate)).
+:- use_module(library(http/http_stream)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(md5)).
 :- use_module(library(error)).
@@ -46,7 +47,7 @@
 :- use_module(library(broadcast)).
 :- use_module(library(uri)).
 :- use_module(library(apply)).
-:- use_module(library(aggregate)).
+
 
 /** <module> HTTP Digest authentication
 
@@ -572,7 +573,9 @@ http_digest_password_hash(User, Realm, Password, HA1) :-
 %%	http:authenticate(+Digest, +Request, -Fields)
 %
 %	Plugin  for  library(http_dispatch)  to    perform   basic  HTTP
-%	authentication.
+%	authentication.  Note that we keep the authentication details
+%	cached to avoid a `nonce-replay' error in the case that the
+%	application tries to verify multiple times.
 %
 %	This predicate throws http_reply(authorise(digest(Digest)))
 %
@@ -585,10 +588,19 @@ http_digest_password_hash(User, Realm, Password, HA1) :-
 
 http:authenticate(digest(File, Realm), Request, Details) :-
 	http:authenticate(digest(File, Realm, []), Request, Details).
-http:authenticate(digest(File, Realm, Options), Request,
-		  [ user(User)
-		  | Details
-		  ]) :-
+http:authenticate(digest(File, Realm, Options), Request, Details) :-
+	current_output(CGI),
+	cgi_property(CGI, id(Id)),
+	(   nb_current('$http_digest_user', Id-Details)
+	->  true
+	;   authenticate(digest(File, Realm, Options), Request, Details),
+	    nb_setval('$http_digest_user', Id-Details)
+	).
+
+authenticate(digest(File, Realm, Options), Request,
+	     [ user(User)
+	     | Details
+	     ]) :-
 	(   option(method(Method), Request, get),
 	    http_digest_authenticate(Request, [User|Fields],
 				     [ passwd_file(File),
