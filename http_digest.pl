@@ -148,7 +148,7 @@ nonce_not_timed_out(Nonce, Now, Stale) :-
 		debug(http(nonce), 'Nonce timed out: ~q', [Nonce]),
 		Stale = true
 	    )
-	;   our_nonce(Nonce, _Created)
+	;   our_nonce(Nonce, _Stamp)
 	->  Stale = true
 	;   debug(http(nonce), 'Unknown nonce: ~q', [Nonce]),
 	    fail
@@ -234,9 +234,12 @@ private_key_sync(PrivateKey) :-
 	PrivateKey is random(1<<63-1),
 	assertz(nonce_key(PrivateKey)).
 
-%%	our_nonce(+Nonce, -Stamp) is semidet.
+%%	our_nonce(+Nonce, -Stamp:string) is semidet.
 %
 %	True if we created Nonce at time Stamp.
+%
+%	@arg  Stamp  is  the  stamp  as  created  by  nonce//1:  a  time
+%	stamp*1000+sequence number.
 
 our_nonce(Nonce64, Stamp) :-
 	base64(Nonce, Nonce64),
@@ -295,9 +298,19 @@ uri(URI) -->
 	{ no_dquote(uri, URI) },
 	atom(URI).
 
+%%	nonce(+Options)
+%
+%	Compute the server _nonce_ value.  Note   that  we  should never
+%	generate the same nonce twice for   the  same client. The client
+%	_may_ issue multiple requests without   an  authorization header
+%	for resources appearing on a page. As long as we return distinct
+%	nonce values, this is ok. If we do not, the server will reuse NC
+%	counters on the same nonce, which will break the authentication.
+
 nonce(Options) -->
 	{ get_time(Now),
-	  Stamp is floor(Now),
+	  flag(http_digest_nonce_seq, Seq, Seq+1),
+	  Stamp is floor(Now)*1000+(Seq mod 1000),
 	  private_key(PrivateKey),
 	  atomics_to_string([Stamp,PrivateKey], ":", NonceContent),
 	  hash(NonceContent, HNonceContent),
