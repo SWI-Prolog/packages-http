@@ -398,44 +398,20 @@ status_reply(bad_request(ErrorTerm), Out, HdrExtra, _Context, Code) :- !,
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(not_found(URL), Out, HdrExtra, _Context, Code) :- !,
-	phrase(page([ title('404 Not Found')
-		    ],
-		    [ h1('Not Found'),
-		      p(['The requested URL ', tt(URL),
-			 ' was not found on this server'
-			]),
-		      \address
-		    ]),
-	       HTML),
+status_reply(not_found(URL), Out, HdrExtra, Context, Code) :- !,
+	status_page_hook(not_found(URL), 404, Context, HTML),
 	phrase(reply_header(status(not_found, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(method_not_allowed(Method, URL), Out, HdrExtra, _Context, Code) :- !,
+status_reply(method_not_allowed(Method, URL), Out, HdrExtra, Context, Code) :- !,
 	upcase_atom(Method, UMethod),
-	phrase(page([ title('405 Method not allowed')
-		    ],
-		    [ h1('Method not allowed'),
-		      p(['The requested URL ', tt(URL),
-			 ' does not support method ', tt(UMethod), '.'
-			]),
-		      \address
-		    ]),
-	       HTML),
+	status_page_hook(method_not_allowed(UMethod,URL), 405, Context, HTML),
 	phrase(reply_header(status(method_not_allowed, HTML),
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
-status_reply(forbidden(URL), Out, HdrExtra, _Context, Code) :- !,
-	phrase(page([ title('403 Forbidden')
-		    ],
-		    [ h1('Forbidden'),
-		      p(['You don\'t have permission to access ', URL,
-			 ' on this server'
-			]),
-		      \address
-		    ]),
-	       HTML),
+status_reply(forbidden(URL), Out, HdrExtra, Context, Code) :- !,
+	status_page_hook(forbidden(URL), 403, Context, HTML),
 	phrase(reply_header(status(forbidden, HTML), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
 	print_html(Out, HTML).
@@ -444,7 +420,7 @@ status_reply(authorise(basic, ''), Out, HdrExtra, Context, Code) :- !,
 status_reply(authorise(basic, Realm), Out, HdrExtra, Context, Code) :- !,
         status_reply(authorise(basic(Realm)), Out, HdrExtra, Context, Code).
 status_reply(authorise(Method), Out, HdrExtra, Context, Code) :- !,
-        status_page_hook(401, Context, HTML),
+        status_page_hook(authorise(Method), 401, Context, HTML),
 	phrase(reply_header(authorise(Method, HTML),
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
@@ -498,9 +474,20 @@ status_reply(busy, Out, HdrExtra, Context, Code) :- !,
 		  'please try again later']),
 	http_status_reply(unavailable(HTML), Out, HdrExtra, Context, Code).
 
-status_page_hook(Status, Context, HTML) :-
-        http:status_page(Status, Context, HTML), !.
-status_page_hook(401, _, HTML):-
+%%	status_page_hook(+Term, +Code, +Context, -HTMLTokens) is det.
+%
+%	Calls the following two hooks to generate an HTML page from a
+%	status reply.
+%
+%	  - http:status_page(Term, Context, HTML)
+%	  - http:status_page(Status, Context, HTML)
+
+status_page_hook(Term, Status, Context, HTML) :-
+        (   http:status_page(Term, Context, HTML)
+	;   http:status_page(Status, Context, HTML) % deprecated
+	), !.
+
+status_page_hook(authorise(_Method), 401, _Context, HTML):-
         phrase(page([ title('401 Authorization Required')
 		    ],
 		    [ h1('Authorization Required'),
@@ -510,6 +497,36 @@ status_page_hook(401, _, HTML):-
 			 'credentials (e.g., bad password), or your ',
 			 'browser doesn\'t understand how to supply ',
 			 'the credentials required.'
+			]),
+		      \address
+		    ]),
+	       HTML).
+status_page_hook(forbidden(URL), 403, _Context, HTML) :-
+	phrase(page([ title('403 Forbidden')
+		    ],
+		    [ h1('Forbidden'),
+		      p(['You don\'t have permission to access ', URL,
+			 ' on this server'
+			]),
+		      \address
+		    ]),
+	       HTML).
+status_page_hook(not_found(URL), 404, _Context, HTML) :-
+	phrase(page([ title('404 Not Found')
+		    ],
+		    [ h1('Not Found'),
+		      p(['The requested URL ', tt(URL),
+			 ' was not found on this server'
+			]),
+		      \address
+		    ]),
+	       HTML).
+status_page_hook(method_not_allowed(UMethod,URL), 405, _Context, HTML) :-
+	phrase(page([ title('405 Method not allowed')
+		    ],
+		    [ h1('Method not allowed'),
+		      p(['The requested URL ', tt(URL),
+			 ' does not support method ', tt(UMethod), '.'
 			]),
 		      \address
 		    ]),
@@ -2331,6 +2348,28 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 %	HTML-rule that emits the location of  the HTTP server. This hook
 %	is called from address//0 to customise   the server address. The
 %	server address is emitted on non-200-ok replies.
+
+%%	http:status_page(+Status, +Context, -HTMLTokens) is semidet.
+%
+%	Hook called by http_status_reply/4  and http_status_reply/5 that
+%	allows for emitting custom error pages   for  the following HTTP
+%	page types:
+%
+%	  - 401 - authorise(AuthMethod)
+%	  - 403 - forbidden(URL)
+%	  - 404 - not_found(URL)
+%	  - 405 - method_not_allowed(Method,URL)
+%
+%	The hook is tried twice,  first   using  the  status term, e.g.,
+%	not_found(URL) and than with the code,   e.g.  `404`. The second
+%	call is deprecated and only exists for compatibility.
+%
+%	@arg	Context is the 4th argument of http_status_reply/5, which
+%		is invoked after raising an exception of the format
+%		http_reply(Status, HeaderExtra, Context).  The default
+%		context is `[]` (the empty list).
+%	@arg	HTMLTokens is a list of tokens as produced by html//1.
+%		It is passed to print_html/2.
 
 
 		 /*******************************
