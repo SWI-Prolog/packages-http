@@ -809,7 +809,8 @@ parse_headers([Line|Lines], Headers) :-
 return_final_url(Options) :-
 	option(final_url(URL), Options),
 	var(URL), !,
-	option(visited(Parts), Options),
+	option(visited(Visited), Options),
+	Visited = [Parts|_],
 	parts_uri(Parts, URL).
 return_final_url(_).
 
