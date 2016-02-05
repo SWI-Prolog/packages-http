@@ -1049,7 +1049,10 @@ check_authorization(Var) :-
 	instantiation_error(Var).
 check_authorization(basic(User, Password)) :-
 	must_be(atom, User),
-	must_be(atom, Password).
+	must_be(text, Password).
+check_authorization(digest(User, Password)) :-
+	must_be(atom, User),
+	must_be(text, Password).
 
 %%	authorization(+URL, -Authorization) is semidet.
 %
