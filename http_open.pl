@@ -504,6 +504,10 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 	method(Options, MNAME),
 	http_version(Version),
 	option(connection(Connection), Options, close),
+	debug(http(request), "~w ~w HTTP/~w", [MNAME, RequestURI, Version]),
+	debug(http(request), "Host: ~w", [Host]),
+	debug(http(request), "User-Agent: ~w", [Agent]),
+	debug(http(request), "Connection: ~w", [Connection]),
 	format(StreamPair,
 	       '~w ~w HTTP/~w\r\n\c
 	       Host: ~w\r\n\c
@@ -520,6 +524,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 	flush_output(StreamPair),
 					% read the reply header
 	read_header(StreamPair, ReplyVersion, Code, Comment, Lines),
+	ignore(option(raw_headers(Lines), Options)),
 	update_cookies(Lines, Parts, Options),
 	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, Host,
 		StreamPair, Stream).
@@ -569,6 +574,7 @@ x_headers([H|T], URI, Out) :- !,
 	x_headers(T, URI, Out).
 
 x_header(request_header(Name=Value), _, Out) :- !,
+	debug(http(request), "~w: ~w", [Name, Value]),
 	format(Out, '~w: ~w\r\n', [Name, Value]).
 x_header(proxy_authorization(ProxyAuthorization), URI, Out) :- !,
 	auth_header(ProxyAuthorization, URI, 'Proxy-Authorization', Out).
@@ -581,12 +587,14 @@ x_header(range(Spec), _, Out) :- !,
         ;   must_be(integer, To),
             ToT = To
         ),
+        debug(http(request), "Range: ~w=~d-~w", [Unit, From, ToT]),
         format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
 x_header(_, _, _).
 
 auth_header(basic(User, Password), _, Header, Out) :- !,
 	format(codes(Codes), '~w:~w', [User, Password]),
 	phrase(base64(Codes), Base64Codes),
+	debug(http(request), "~w: Basic ~s", [Header, Base64Codes]),
 	format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
 auth_header(Auth, URL, _, Out) :-
 	http:authenticate_client(URL, send_auth_header(Auth, Out)), !.
