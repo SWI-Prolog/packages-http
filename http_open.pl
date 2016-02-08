@@ -1426,7 +1426,7 @@ keep_alive_error(Error) :-
 %	to http_open.  The predicate is called as if using ignore/1.
 %
 %	@see complements http:update_cookies/3.
-%	@see library(http/http_cookies) implements cookie handling on
+%	@see library(http/http_cookie) implements cookie handling on
 %	top of these hooks.
 
 %%	http:update_cookies(+CookieData, +Parts, +Options) is semidet.
