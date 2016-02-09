@@ -241,6 +241,7 @@ http_daemon(Options) :-
 	halt.
 http_daemon(Options0) :-
 	setup_debug(Options0),
+	kill_x11(Options0),
 	merge_port_option(Options0, Port, Options1),
 	merge_https_options(Options1, Options),
 	make_socket(Options, Socket),
@@ -458,6 +459,19 @@ enable_debug([debug(Topic)|T]) :- !,
 	enable_debug(T).
 enable_debug([_|T]) :-
 	enable_debug(T).
+
+%%	kill_x11(+Options) is det.
+%
+%	Get rid of X11 access if interactive is false.
+
+kill_x11(Options) :-
+	getenv('DISPLAY', Display),
+	Display \== '',
+	option(interactive(false), Options, false), !,
+	setenv('DISPLAY', ''),
+	set_prolog_flag(gui, false).
+kill_x11(_).
+
 
 %%	setup_signals
 %
