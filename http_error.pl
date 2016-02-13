@@ -103,7 +103,6 @@ map_exception(error(existence_error(http_location, Location), _Stack),
 :- dynamic prolog_stack:stack_guard/1.
 :- multifile prolog_stack:stack_guard/1.
 
-prolog_stack:stack_guard(httpd_wrapper:call_handler/6).	% old version
 prolog_stack:stack_guard(httpd_wrapper:wrapper/5).
 prolog_stack:stack_guard(httpd_wrapper:handler_with_output_to/5).
 
