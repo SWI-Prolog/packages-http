@@ -446,7 +446,9 @@ multipart_parser_execute(multipart_context* p,
           break;
         }
         if (c != p->boundary[p->index]) {
-          return i;
+           /* Skip anything before the first boundary
+              RFC-1341 refers to this as the 'preamble' and says we should ignore it */
+           p->index = -1;
         }
         p->index++;
         break;
