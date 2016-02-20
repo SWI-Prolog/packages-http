@@ -56,12 +56,12 @@
 
 This library finds the public address of the running server. This can be
 used to construct URLs that are visible   from anywhere on the internet.
-This module was introduced to  deal  with   OpenID,  where  a  reques is
+This module was introduced to  deal  with  OpenID,  where  a  request is
 redirected to the OpenID server, which in   turn redirects to our server
 (see http_openid.pl).
 
-The address is  established  from   the  settings  http:public_host  and
-http:public_port if provided. Otherwise it is deduced from the request.
+The address is  established  from   the  settings `http:public_host` and
+`http:public_port` if provided. Otherwise it is deduced from the request.
 */
 
 %%	http_public_url(+Request, -URL) is det.
