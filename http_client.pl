@@ -34,6 +34,7 @@
 	    http_delete/3,		% +URL, -Reply, +Options
 	    http_post/4,		% +URL, +In, -Reply, +Options
 	    http_put/4,			% +URL, +In, -Reply, +Options
+	    http_patch/4,		% +URL, +In, -Reply, +Options
 	    http_read_data/3,		% +Header, -Data, :Options
 	    http_disconnect/1		% +What
 	  ]).
@@ -168,13 +169,22 @@ http_post(URL, Data, Reply, Options) :-
 %%	http_put(+URL, +Data, -Reply, +Options)
 %
 %	Issue an HTTP =PUT=  request.  Arguments   are  the  same as for
-%	http_put/4.
+%	http_post/4.
 %
 %	@see Implemented on top of http_post/4.
 
 http_put(URL, In, Out, Options) :-
 	http_post(URL, In, Out, [method(put)|Options]).
 
+%%	http_patch(+URL, +Data, -Reply, +Options)
+%
+%	Issue an HTTP =PATCH=  request.  Arguments   are  the  same as for
+%	http_post/4.
+%
+%	@see Implemented on top of http_post/4.
+
+http_patch(URL, In, Out, Options) :-
+	http_post(URL, In, Out, [method(patch)|Options]).
 
 %%	http_read_data(+Request, -Data, +Options) is det.
 %
