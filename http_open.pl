@@ -161,7 +161,7 @@ Title = 'Free Online Version - Learn Prolog
 		       header(+atom, -atom),
 		       headers(-list),
 		       connection(+atom),
-		       method(oneof([delete,get,put,head,post])),
+		       method(oneof([delete,get,put,head,post,patch])),
 		       size(-integer),
 		       status_code(-integer),
 		       output(-stream),
@@ -233,7 +233,8 @@ user_agent('SWI-Prolog').
 %	  option.
 %
 %	  * method(+Method)
-%	  One of =get= (default), =head=, =delete=, =post= or =put=.
+%	  One of =get= (default), =head=, =delete=, =post=,   =put=   or
+%	  =patch=.
 %	  The  =head= message can be
 %	  used in combination with  the   header(Name,  Value) option to
 %	  access information on the resource   without actually fetching
@@ -551,10 +552,11 @@ method(Options, MNAME) :-
 	).
 
 map_method(delete, 'DELETE').
-map_method(get,	   'GET').
+map_method(get,    'GET').
 map_method(head,   'HEAD').
 map_method(post,   'POST').
-map_method(put,	   'PUT').
+map_method(put,    'PUT').
+map_method(patch,  'PATCH').
 
 %%	x_headers(+Options, +Out) is det.
 %
