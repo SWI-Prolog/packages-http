@@ -295,16 +295,16 @@ copy_stream(Out, In, Header, From, To) :-
 %	   - authorise(basic,Realm)
 %	     Same as authorise(basic(Realm)).  Deprecated.
 %	   - bad_request(ErrorTerm)
-%	   - busy
+%	   - `busy`
 %	   - created(Location)
 %	   - forbidden(Url)
 %	   - moved(To)
 %	   - moved_temporary(To)
-%	   - no_content
+%	   - `no_content`
 %	   - not_acceptable(WhyHtml)
 %	   - not_found(Path)
 %	   - method_not_allowed(Method, Path)
-%	   - not_modified
+%	   - `not_modified`
 %	   - resource_error(ErrorTerm)
 %	   - see_other(To)
 %	   - switching_protocols(Goal,Options)
