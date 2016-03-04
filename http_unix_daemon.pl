@@ -2,7 +2,7 @@
 	  [ http_daemon/0,
 	    http_daemon/1			% +Options
 	  ]).
-:- use_module(library(lists)).
+:- use_module(library(error)).
 :- use_module(library(debug)).
 :- use_module(library(broadcast)).
 :- use_module(library(socket)).
@@ -174,6 +174,10 @@ events:
 %	  $ --gtrace=[Bool] :
 %	  Use the debugger to trace http_daemon/1.
 %
+%	  $ --sighup=Action
+%	  Action to perform on =|kill -HUP <pid>|=.  Default is `reload`
+%	  (running make/0).  Alternative is `quit`, stopping the server.
+%
 %	Other options are converted  by   argv_options/3  and  passed to
 %	http_server/1.  For example, this allows for:
 %
@@ -258,7 +262,7 @@ http_daemon(Options0) :-
 		write_pid(Options),
 		setup_output(Options),
 	        switch_user(Options),
-		setup_signals,
+		setup_signals(Options),
 		start_server([tcp_socket(Socket)|Options]),
 		wait(Options)
 	    )
@@ -473,18 +477,24 @@ kill_x11(Options) :-
 kill_x11(_).
 
 
-%%	setup_signals
+%%	setup_signals(+Options)
 %
 %	Kill the server on SIGINT, SIGHUP and SIGTERM.
 
-setup_signals :-
+setup_signals(Options) :-
 	on_signal(int,  _, quit),
-	on_signal(hup,  _, quit),
-	on_signal(term, _, quit).
+	on_signal(term, _, quit),
+	option(sighup(Action), Options, reload),
+	must_be(oneof([reload,quit]), Action),
+	on_signal(hup,  _, Action).
 
 quit(Signal) :-
 	debug(daemon, 'Dying on signal ~w', [Signal]),
 	thread_send_message(main, quit).
+
+reload(Signal) :-
+	debug(daemon, 'Reload on signal ~w', [Signal]),
+	thread_send_message(main, reload).
 
 %%	wait(+Options)
 %
@@ -497,8 +507,13 @@ wait(Options) :-
 wait(_) :-
 	repeat,
 	thread_get_message(Msg),
+	handle_message(Msg),
 	Msg == quit,
 	halt(0).
+
+handle_message(reload) :-
+	make.
+
 
 		 /*******************************
 		 *	      HOOKS		*
@@ -537,6 +552,7 @@ prolog:message(http_daemon(help)) -->
 	  '  --password=pw      Password for the private key'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
+	  '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
 	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
 	  'Boolean options may be written without value (true) or as --no-name (false)'-[]
 	].
