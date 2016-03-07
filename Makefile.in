@@ -1,7 +1,7 @@
 ################################################################
 # SWI-Prolog `HTTP' package
 # Author:    Jan Wielemaker. J.Wielemaker@cs.vu.nl
-# Copyright: LGPL (see COPYING or www.gnu.org
+# Copyright: Simplified BSD license
 ################################################################
 
 PACKAGE=http
