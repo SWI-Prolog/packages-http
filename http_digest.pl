@@ -666,11 +666,11 @@ add_stale(_, Options, Options).
 %	This hooks is called by http_open/3 with the following Action
 %	value:
 %
-%	  - send_auth_header(AuthData, Out)
+%	  - send_auth_header(+AuthData, +Out, +Options)
 %	  Called when sending the initial request.  AuthData contains
 %	  the value for the http_open/3 option authorization(AuthData)
 %	  and Out is a stream on which to write additional HTTP headers.
-%	  - auth_reponse(Headers, OptionsIn, Options)
+%	  - auth_reponse(+Headers, +OptionsIn, -Options)
 %	  Called if the server replies with a 401 code, challenging the
 %	  client.  Our implementation adds a
 %	  request_header(authorization=Digest) header to Options, causing
@@ -691,19 +691,22 @@ http:authenticate_client(URL, auth_reponse(Headers, OptionsIn, Options)) :-
 		      ],
 		      OptionsIn, Options),
 	keep_digest_credentials(URL, Fields).
-http:authenticate_client(URL, send_auth_header(Auth, Out)) :-
+http:authenticate_client(URL, send_auth_header(Auth, Out, Options)) :-
 	authorization_data(Auth, User, Password),
 	uri_components(URL, Components),
 	uri_data(authority, Components, Authority),
 	uri_data(path, Components, Path),
 	digest_credentials(Authority, Path, Nonce, Fields), !,
 	next_nonce_count(Nonce, NC),
+	debug(http(authenticate), "Continue ~p nc=~q", [URL, NC]),
 	http_digest_response(Fields, User, Password, Digest,
 			     [ nc(NC),
 			       path(Path)
+			     | Options
 			     ]),
 	format(Out, 'Authorization: ~w\r\n', [Digest]).
-http:authenticate_client(_URL, send_auth_header(Auth, _Out)) :-
+http:authenticate_client(URL, send_auth_header(Auth, _Out, _Options)) :-
+	debug(http(authenticate), "Failed ~p", [URL]),
 	authorization_data(Auth, _User, _Password).
 
 

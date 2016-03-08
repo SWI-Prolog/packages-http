@@ -556,24 +556,27 @@ map_method(head,   'HEAD').
 map_method(post,   'POST').
 map_method(put,	   'PUT').
 
-%%	x_headers(+Options, +Out) is det.
+%%	x_headers(+Options, +URI, +Out) is det.
 %
 %	Emit extra headers from   request_header(Name=Value)  options in
 %	Options.
 %
 %	@tbd Use user/password fields
 
-x_headers([], _, _).
-x_headers([H|T], URI, Out) :- !,
-	x_header(H, URI, Out),
-	x_headers(T, URI, Out).
+x_headers(Options, URI, Out) :-
+	x_headers_(Options, [url(URI)|Options], Out).
+
+x_headers_([], _, _).
+x_headers_([H|T], Options, Out) :-
+	x_header(H, Options, Out),
+	x_headers_(T, Options, Out).
 
 x_header(request_header(Name=Value), _, Out) :- !,
 	format(Out, '~w: ~w\r\n', [Name, Value]).
-x_header(proxy_authorization(ProxyAuthorization), URI, Out) :- !,
-	auth_header(ProxyAuthorization, URI, 'Proxy-Authorization', Out).
-x_header(authorization(Authorization), URI, Out) :- !,
-	auth_header(Authorization, URI, 'Authorization', Out).
+x_header(proxy_authorization(ProxyAuthorization), Options, Out) :- !,
+	auth_header(ProxyAuthorization, Options, 'Proxy-Authorization', Out).
+x_header(authorization(Authorization), Options, Out) :- !,
+	auth_header(Authorization, Options, 'Authorization', Out).
 x_header(range(Spec), _, Out) :- !,
         Spec =.. [Unit, From, To],
         (   To == end
@@ -584,12 +587,16 @@ x_header(range(Spec), _, Out) :- !,
         format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
 x_header(_, _, _).
 
+%%	auth_header(+AuthOption, +Options, +HeaderName, +Out)
+
 auth_header(basic(User, Password), _, Header, Out) :- !,
 	format(codes(Codes), '~w:~w', [User, Password]),
 	phrase(base64(Codes), Base64Codes),
 	format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
-auth_header(Auth, URL, _, Out) :-
-	http:authenticate_client(URL, send_auth_header(Auth, Out)), !.
+auth_header(Auth, Options, _, Out) :-
+	option(url(URL), Options),
+	add_method(Options, Options1),
+	http:authenticate_client(URL, send_auth_header(Auth, Out, Options1)), !.
 auth_header(Auth, _, _, _) :-
 	domain_error(authorization, Auth).
 
@@ -598,6 +605,15 @@ user_agent(Agent, Options) :-
 	->  true
 	;   user_agent(Agent)
 	).
+
+add_method(Options0, Options) :-
+	option(method(_), Options0), !,
+	Options = Options0.
+add_method(Options0, Options) :-
+	option(post(_), Options0), !,
+	Options = [method(post)|Options0].
+add_method(Options0, [method(get)|Options0]).
+
 
 %%	do_open(+HTTPVersion, +HTTPStatusCode, +HTTPStatusComment, +Header,
 %%		+Options, +Parts, +Host, +In, -FinalIn) is det.
