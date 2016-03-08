@@ -161,7 +161,7 @@ Title = 'Free Online Version - Learn Prolog
 		       header(+atom, -atom),
 		       headers(-list),
 		       connection(+atom),
-		       method(oneof([delete,get,put,head,post])),
+		       method(oneof([delete,get,put,head,post,options])),
 		       size(-integer),
 		       status_code(-integer),
 		       output(-stream),
@@ -550,11 +550,12 @@ method(Options, MNAME) :-
 	;   domain_error(method, M)
 	).
 
-map_method(delete, 'DELETE').
-map_method(get,	   'GET').
-map_method(head,   'HEAD').
-map_method(post,   'POST').
-map_method(put,	   'PUT').
+map_method(delete,  'DELETE').
+map_method(get,	    'GET').
+map_method(head,    'HEAD').
+map_method(post,    'POST').
+map_method(put,	    'PUT').
+map_method(options, 'OPTIONS').
 
 %%	x_headers(+Options, +URI, +Out) is det.
 %
