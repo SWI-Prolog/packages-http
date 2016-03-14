@@ -765,6 +765,7 @@ pairs_print_length([H|T], Options, Max, Len0, Len) :-
 	).
 
 pair_len(Pair, Options, Max, Len0, Len) :-
+	compound(Pair),
 	pair_nv(Pair, Name, Value), !,
 	string_len(Name, Len0, Len1),
 	Len2 is Len1+2,
@@ -773,8 +774,10 @@ pair_len(Pair, Options, Max, Len0, Len) :-
 pair_len(Pair, _Options, _Max, _Len0, _Len) :-
 	type_error(pair, Pair).
 
-pair_nv(Name=Value, Name, Value).
-pair_nv(Name-Value, Name, Value).
+pair_nv(Name=Value, Name, Value) :- !.
+pair_nv(Name-Value, Name, Value) :- !.
+pair_nv(Term, Name, Value) :-
+	compound_name_arguments(Term, Name, [Value]).
 
 array_print_length([], _, _, Len, Len).
 array_print_length([H|T], Options, Max, Len0, Len) :-
