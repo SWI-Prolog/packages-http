@@ -479,7 +479,9 @@ kill_x11(_).
 
 %%	setup_signals(+Options)
 %
-%	Kill the server on SIGINT, SIGHUP and SIGTERM.
+%	Prepare the server for signal handling.   By  default SIGINT and
+%	SIGTERM terminate the server. SIGHUP causes   the  server to run
+%	make/0.
 
 setup_signals(Options) :-
 	on_signal(int,  _, quit),
@@ -507,7 +509,7 @@ wait(Options) :-
 wait(_) :-
 	repeat,
 	thread_get_message(Msg),
-	handle_message(Msg),
+	ignore(handle_message(Msg)),
 	Msg == quit,
 	halt(0).
 
