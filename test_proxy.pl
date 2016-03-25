@@ -319,11 +319,11 @@ shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More]):-
             close(Control),
             throw(exit)
         ;   Stream == Pair
-	->  read_pending_input(Stream, Bytes, []),
+	->  read_pending_codes(Stream, Bytes, []),
             format(SlaveWrite, '~s', [Bytes]),
             flush_output(SlaveWrite)
         ;   Stream == SlaveRead
-	->  read_pending_input(Stream, Bytes, []),
+	->  read_pending_codes(Stream, Bytes, []),
             format(Pair, '~s', [Bytes]),
             flush_output(Pair)
         ;   Stream == Control
