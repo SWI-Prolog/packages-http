@@ -599,9 +599,10 @@ cgi_write(void *handle, char *buf, size_t size)
 static int
 cgi_control(void *handle, int op, void *data)
 { cgi_context *ctx = handle;
+  IOSTREAM *orig = ctx->stream;
 
-  if ( ctx->magic != CGI_MAGIC )
-  { DEBUG(0, Sdprintf("OOPS: cgi_control(%d): invalid handle\n", op));
+  if ( ctx->magic != CGI_MAGIC || orig->magic != SIO_MAGIC )
+  { DEBUG(1, Sdprintf("OOPS: cgi_control(%d): invalid handle\n", op));
     errno = EINVAL;
     return -1;
   }
@@ -611,9 +612,13 @@ cgi_control(void *handle, int op, void *data)
     case SIO_SETENCODING:
       return 0;				/* allow switching encoding */
     default:
-      if ( ctx->stream->functions->control )
-	return (*ctx->stream->functions->control)(ctx->stream->handle, op, data);
+    { IOFUNCTIONS *funcs = orig->functions;
+
+      if ( orig->magic == SIO_MAGIC && funcs->control )
+	return (*funcs->control)(orig->handle, op, data);
+
       return -1;
+    }
   }
 }
 
