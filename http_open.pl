@@ -524,7 +524,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
         ),
 	flush_output(StreamPair),
 					% read the reply header
-	read_header(StreamPair, ReplyVersion, Code, Comment, Lines),
+	read_header(StreamPair, Parts, ReplyVersion, Code, Comment, Lines),
 	update_cookies(Lines, Parts, Options),
 	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, Host,
 		StreamPair, Stream).
@@ -915,7 +915,7 @@ encoding_(transfer_encoding, 'Transfer-encoding') -->
 content_encoding(Lines, Encoding) :-
 	what_encoding(content_encoding, Lines, Encoding).
 
-%%	read_header(+In:stream, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
+%%	read_header(+In:stream, +Parts, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
 %
 %	Read the HTTP reply-header. If the replied header is invalid, it
 %	simulates a 500 error with the comment =|Invalid reply header|=.
@@ -925,9 +925,13 @@ content_encoding(Lines, Encoding) :-
 %	@param Comment	Comment of reply-code as atom
 %	@param Lines	Remaining header lines as code-lists.
 
-read_header(In, Major-Minor, Code, Comment, Lines) :-
+read_header(In, Parts, Major-Minor, Code, Comment, Lines) :-
 	read_line_to_codes(In, Line),
-	Line \== end_of_file,
+	(   Line == end_of_file
+	->  parts_uri(Parts, Uri),
+	    existence_error(http_reply,Uri)
+	;   true
+	),
 	phrase(first_line(Major-Minor, Code, Comment), Line),
 	debug(http(open), 'HTTP/~d.~d ~w ~w', [Major, Minor, Code, Comment]),
 	read_line_to_codes(In, Line2),
