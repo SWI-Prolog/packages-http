@@ -164,8 +164,12 @@ events:
 %	  read _before_ the server drops privilages when started with
 %	  the =|--user|= option.
 %
-%         $ --password=PW :
-%         The password for accessing the private key.
+%	  $ --password=PW :
+%	  The password for accessing the private key. See also `--pwfile`.
+%
+%	  $ --cipherlist=Ciphers
+%	  One or more cipher strings separated by colons. See the OpenSSL
+%	  documentation for more information. Default is `DEFAULT`.
 %
 %	  $ --interactive[=Bool] :
 %	  If =true= (default =false=) implies =|--no-fork|= and presents
@@ -284,7 +288,9 @@ merge_https_options(Options, [SSL|Options]) :-
 	option(https(true), Options), !,
 	need_option(certfile(CertFile), Options),
 	need_option(keyfile(KeyFile), Options),
+	option(cipherlist(CipherList), Options, 'DEFAULT'),
 	SSL = ssl([ certificate_file(CertFile),
+		    cipher_list(CipherList),
 		    key_file(KeyFile),
 		    pem_password_hook(http_unix_daemon:ssl_passwd)
 		  ]).
@@ -552,6 +558,7 @@ prolog:message(http_daemon(help)) -->
 	  '  --keyfile=file     The server private key'-[], nl,
 	  '  --pwfile=file      File holding password for the private key'-[], nl,
 	  '  --password=pw      Password for the private key'-[], nl,
+	  '  --cipherlist=cs    Cipher strings separated by colons'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
