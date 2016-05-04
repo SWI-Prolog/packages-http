@@ -535,7 +535,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
         ),
 	flush_output(StreamPair),
 					% read the reply header
-	read_header(StreamPair, ReplyVersion, Code, Comment, Lines),
+	read_header(StreamPair, Parts, ReplyVersion, Code, Comment, Lines),
 	update_cookies(Lines, Parts, Options),
 	do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, Host,
 		StreamPair, Stream).
@@ -930,18 +930,30 @@ encoding_(transfer_encoding, 'Transfer-encoding') -->
 content_encoding(Lines, Encoding) :-
 	what_encoding(content_encoding, Lines, Encoding).
 
-%%	read_header(+In:stream, -Version, -Code:int, -Comment:atom, -Lines:list) is det.
+%%	read_header(+In:stream, +Parts, -Version, -Code:int,
+%%	-Comment:atom, -Lines:list) is det.
 %
-%	Read the HTTP reply-header. If the replied header is invalid, it
-%	simulates a 500 error with the comment =|Invalid reply header|=.
+%	Read the HTTP reply-header.  If the reply is completely empty
+%	an existence error is thrown.  If the replied header is
+%	otherwise invalid a 500 HTTP error is simulated, having the
+%	comment =|Invalid reply header|=.
 %
+%	@param Parts	A list of compound terms that describe the
+%	                parsed request URI.
 %	@param Version	HTTP reply version as Major-Minor pair
 %	@param Code	Numeric HTTP reply-code
 %	@param Comment	Comment of reply-code as atom
 %	@param Lines	Remaining header lines as code-lists.
+%
+%	@error existence_error(http_reply, Uri)
 
-read_header(In, Major-Minor, Code, Comment, Lines) :-
+read_header(In, Parts, Major-Minor, Code, Comment, Lines) :-
 	read_line_to_codes(In, Line),
+	(   Line == end_of_file
+	->  parts_uri(Parts, Uri),
+	    existence_error(http_reply,Uri)
+	;   true
+	),
 	Line \== end_of_file,
 	phrase(first_line(Major-Minor, Code, Comment), Line),
 	debug(http(open), 'HTTP/~d.~d ~w ~w', [Major, Minor, Code, Comment]),
@@ -952,7 +964,7 @@ read_header(In, Major-Minor, Code, Comment, Lines) :-
 		   debug(http(open), '~s', [HL]))
 	;   true
 	).
-read_header(_, 1-1, 500, 'Invalid reply header', []).
+read_header(_, _, 1-1, 500, 'Invalid reply header', []).
 
 rest_header([], _, []) :- !.		% blank line: end of header
 rest_header(L0, In, [L0|L]) :-
