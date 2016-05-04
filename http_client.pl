@@ -112,7 +112,7 @@ by extending the multifile predicate http_client:http_convert_data/4.
 %%	http_get(+URL, -Data, +Options) is det.
 %
 %	Get data from a URL server and   convert it to a suitable Prolog
-%	representation based on the =|Content-type|= header and plugins.
+%	representation based on the =|Content-Type|= header and plugins.
 %	This predicate is the common implementation   of the HTTP client
 %	operations.  The  predicates  http_delete/3,    http_post/4  and
 %	http_put/4   call   this   predicate     with   an   appropriate
@@ -307,7 +307,7 @@ is_content_type(ContentType, Check) :-
 %%	http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
 %	Multi-file hook to convert  a  HTTP   payload  according  to the
-%	_Content-type_ header. The  default   implementation  deals with
+%	_Content-Type_ header. The  default   implementation  deals with
 %	application/x-prolog.    The    HTTP      framework     provides
 %	implementations  for  JSON  (library(http/http_json)),  HTML/XML
 %	(library(http/http_sgml_plugin))
@@ -349,7 +349,7 @@ http:post_data_hook(prolog(Term), Out, HdrExtra) :-
 	      open_memory_file(MemFile, write, Handle)
 	    ),
 	    ( format(Handle,
-		     'Content-type: application/x-prolog; charset=UTF-8~n~n',
+		     'Content-Type: application/x-prolog; charset=UTF-8~n~n',
 		     []),
 	      write_term(Handle, Term,
 			 [ quoted(true),
