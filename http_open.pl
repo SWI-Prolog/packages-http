@@ -65,7 +65,7 @@ additional modules that act as plugins:
     additional information regarding security.
 
     * library(http/http_cookie)
-    Loading this library adds tracking cookies to this library. Returned
+    Loading this library adds tracking cookies to http_open/3. Returned
     cookies are collected in the Prolog database and supplied for
     subsequent requests.
 
