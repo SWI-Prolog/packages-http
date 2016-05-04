@@ -200,6 +200,11 @@ user_agent('SWI-Prolog').
 %	stream must be  closed  using   the  built-in  Prolog  predicate
 %	close/1. Options provides additional options:
 %
+%	  * authenticate(+Boolean)
+%	  If `false` (default `true`), do _not_ try to automatically
+%	  authenticate the client if a 401 (Unauthorized) status code
+%	  is received.
+%
 %	  * authorization(+Term)
 %	  Send authorization.  Currently only supports basic(User,Password).
 %	  See also http_set_authorization/2.
@@ -663,6 +668,7 @@ do_open(_, Code, _, Lines, Options0, Parts, _, In, Stream) :-
 					% Need authentication
 do_open(_Version, Code, _Comment, Lines, Options0, Parts, _Host, In0, Stream) :-
 	authenticate_code(Code),
+	option(authenticate(true), Options0, true),
 	parts_uri(Parts, URI),
 	parse_headers(Lines, Headers),
 	http:authenticate_client(
