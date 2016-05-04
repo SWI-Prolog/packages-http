@@ -96,7 +96,7 @@ time-stamp for the resource. See also parse_time/2.
 
 Then next example uses Google search. It exploits library(uri) to manage
 URIs, library(sgml) to load  an  HTML   document  and  library(xpath) to
-navigate the parsed HTML. Note that  you   may  need to adjust the xpath
+navigate the parsed HTML. Note that  you   may  need to adjust the XPath
 queries if the data returned by Google changes.
 
   ==
