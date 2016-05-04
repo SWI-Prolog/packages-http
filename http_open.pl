@@ -511,6 +511,10 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
 	method(Options, MNAME),
 	http_version(Version),
 	option(connection(Connection), Options, close),
+	debug(http(send_request), "> ~w ~w HTTP/~w", [MNAME, RequestURI, Version]),
+	debug(http(send_request), "> Host: ~w", [Host]),
+	debug(http(send_request), "> User-Agent: ~w", [Agent]),
+	debug(http(send_request), "> Connection: ~w", [Connection]),
 	format(StreamPair,
 	       '~w ~w HTTP/~w\r\n\c
 	       Host: ~w\r\n\c
@@ -581,6 +585,7 @@ x_headers_([H|T], Options, Out) :-
 	x_headers_(T, Options, Out).
 
 x_header(request_header(Name=Value), _, Out) :- !,
+	debug(http(send_request), "> ~w: ~w", [Name, Value]),
 	format(Out, '~w: ~w\r\n', [Name, Value]).
 x_header(proxy_authorization(ProxyAuthorization), Options, Out) :- !,
 	auth_header(ProxyAuthorization, Options, 'Proxy-Authorization', Out).
@@ -593,6 +598,7 @@ x_header(range(Spec), _, Out) :- !,
         ;   must_be(integer, To),
             ToT = To
         ),
+        debug(http(send_request), "> Range: ~w=~d-~w", [Unit, From, ToT]),
         format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
 x_header(_, _, _).
 
@@ -601,6 +607,7 @@ x_header(_, _, _).
 auth_header(basic(User, Password), _, Header, Out) :- !,
 	format(codes(Codes), '~w:~w', [User, Password]),
 	phrase(base64(Codes), Base64Codes),
+	debug(http(send_request), "> ~w: Basic ~s", [Header, Base64Codes]),
 	format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
 auth_header(Auth, Options, _, Out) :-
 	option(url(URL), Options),
