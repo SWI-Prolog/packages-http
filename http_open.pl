@@ -1122,7 +1122,7 @@ add_authorization(_, Options, Options).
 
 %%	parse_url_ex(+URL, -Parts)
 %
-%	Parts:  Schema,  Host,  Port,    User:Password,  RequestURI  (no
+%	Parts:  Scheme,  Host,  Port,    User:Password,  RequestURI  (no
 %	fragment).
 
 parse_url_ex(URL, [uri(URL)|Parts]) :-
