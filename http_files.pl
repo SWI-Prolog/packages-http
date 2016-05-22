@@ -45,15 +45,14 @@
 
 /** <module> Serve plain files from a hierarchy
 
-Although the SWI-Prolog web-server is intended   to serve documents that
-needed to be computed dynamically,  serving   plain  files  is sometimes
-necessary.   This   small   module   combines   the   functionality   of
-http_reply_file/3  and  http_reply_dirindex/3  to  act    as   a  simple
-web-server. Such a server  can  be   created  using  the  following code
-sample, which starts a server at port   8080  that serves files from the
-current directory ('.'). Note that the   handler needs a =prefix= option
-to specify it must  handle  all  paths   that  begin  with  the registed
-location of the handler.
+Although the SWI-Prolog Web Server is intended to serve documents that
+are computed dynamically, serving plain files is sometimes necessary.
+This small module combines the functionality of http_reply_file/3 and
+http_reply_dirindex/3 to act as a simple web-server.  Such a server
+can be created using the following code sample, which starts a server
+at port 8080 that serves files from the current directory ('.').  Note
+that the handler needs a =prefix= option to specify that it must
+handle all paths that begin with the registed location of the handler.
 
   ==
   :- use_module(library(http/thread_httpd)).
@@ -132,5 +131,3 @@ locate_file(Dir, PathInfo, Result, IsFile, Options) :-
 		IsFile = false
 	    )
 	).
-
-
