@@ -446,14 +446,14 @@ digest_value(V) -->
 	{ atom_codes(Name, NameCodes) },
 	digest_value(Name, V).
 
-digest_value(stale, V) --> !,
-	boolean(V).
 digest_value(Name, V) -->
 	"\"", !,
 	string_without(`"`, ValueCodes), "\"",
 	{ parse_value(Name, ValueCodes, Value),
 	  V =.. [Name,Value]
 	}.
+digest_value(stale, stale(V)) --> !,
+	boolean(V).
 digest_value(Name, V) -->
 	string_without(`, `, ValueCodes),
 	{ parse_value(Name, ValueCodes, Value),
@@ -474,6 +474,7 @@ atom_value(realm).
 atom_value(username).
 atom_value(response).
 atom_value(nonce).
+atom_value(stale).		% for misbehaving servers that quote stale
 
 boolean(true) --> "true".
 boolean(false) --> "false".
