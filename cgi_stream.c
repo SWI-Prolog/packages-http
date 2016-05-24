@@ -108,6 +108,9 @@ static atom_t ATOM_keep_alive;		/* keep_alive */
 static atom_t ATOM_close;		/* close */
 static atom_t ATOM_content_length;	/* content_length */
 static atom_t ATOM_id;			/* id */
+static atom_t ATOM_get;			/* get */
+static atom_t ATOM_head;		/* head */
+static functor_t FUNCTOR_method1;	/* method(Method) */
 static predicate_t PREDICATE_call3;	/* Goal, Event, Handle */
 
 
@@ -146,6 +149,7 @@ typedef struct cgi_context
   record_t	    header;		/* Associated reply header term */
   atom_t	    transfer_encoding;	/* Current transfer encoding */
   atom_t	    connection;		/* Keep alive? */
+  atom_t	    method;		/* method of the request */
 					/* state */
   cgi_state	    state;		/* Current state */
 					/* data buffering */
@@ -570,11 +574,14 @@ cgi_write(void *handle, char *buf, size_t size)
   { size_t osize = ctx->datasize;
     size_t dstart;
 
-    if ( osize+size > ctx->dataallocated )
-    { if ( grow_data_buffer(ctx, osize+size) < 0 )
-	return -1;			/* no memory */
+    if ( ctx->state == CGI_HDR || ctx->method != ATOM_head )
+    { if ( osize+size > ctx->dataallocated )
+      { if ( grow_data_buffer(ctx, osize+size) < 0 )
+	  return -1;			/* no memory */
+      }
+      memcpy(&ctx->data[osize], buf, size);
     }
-    memcpy(&ctx->data[osize], buf, size);
+
     ctx->datasize = osize+size;
     osize = (osize > 4 ? osize-4 : 0);	/* 4 is max size of the separator */
 
@@ -656,8 +663,13 @@ cgi_close(void *handle)
 	{ rc = -1;
 	  goto out;
 	}
-	if ( Sfwrite(dstart, sizeof(char), clen, ctx->stream) != clen ||
-	     Sflush(ctx->stream) < 0 )
+	if ( ctx-> method != ATOM_head )
+	{ if ( Sfwrite(dstart, sizeof(char), clen, ctx->stream) != clen )
+	  { rc = -1;
+	    goto out;
+	  }
+	}
+	if ( Sflush(ctx->stream) < 0 )
 	{ rc = -1;
 	  goto out;
 	}
@@ -697,6 +709,24 @@ static IOFUNCTIONS cgi_functions =
 		 *	       OPEN		*
 		 *******************************/
 
+static atom_t
+request_method(term_t request)
+{ term_t tail = PL_copy_term_ref(request);
+  term_t head = PL_new_term_ref();
+
+  while(PL_get_list(tail, head, tail))
+  { if ( PL_is_functor(head, FUNCTOR_method1) )
+    { atom_t a;
+
+      _PL_get_arg(1, head, head);
+      if ( PL_get_atom(head, &a) )
+	return a;
+    }
+  }
+
+  return ATOM_get;
+}
+
 #define CGI_COPY_FLAGS (SIO_OUTPUT| \
 			SIO_TEXT| \
 			SIO_REPXML|SIO_REPPL|\
@@ -711,6 +741,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   module_t module = NULL;
   term_t hook = PL_new_term_ref();
   record_t request = 0;
+  atom_t method = ATOM_get;
 
   if ( !PL_strip_module(closure, &module, hook) )
     return FALSE;
@@ -727,6 +758,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
     _PL_get_arg(1, head, arg);
     if ( name == ATOM_request )
     { request = PL_record(arg);
+      method = request_method(arg);
     } else
       return existence_error(head, "cgi_open_option");
   }
@@ -745,6 +777,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   ctx->module = module;
   ctx->request = request;
   ctx->transfer_encoding = ATOM_none;
+  ctx->method = method;
   if ( !(s2 = Snew(ctx,
 		   (s->flags&CGI_COPY_FLAGS)|SIO_LBUF,
 		   &cgi_functions)) )
@@ -797,6 +830,9 @@ install_cgi_stream()
   ATOM_connection        = PL_new_atom("connection");
   ATOM_content_length    = PL_new_atom("content_length");
   ATOM_id	         = PL_new_atom("id");
+  ATOM_get	         = PL_new_atom("get");
+  ATOM_head	         = PL_new_atom("head");
+  FUNCTOR_method1	 = PL_new_functor(PL_new_atom("method"), 1);
 
   PREDICATE_call3   = PL_predicate("call", 3, "system");
 
