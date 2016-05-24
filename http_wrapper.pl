@@ -226,6 +226,7 @@ send_error(Out, Request, State0, Error, Close) :-
 			 | HdrExtra
 			 ],
                          Context,
+			 Request,
 			 Code),
 	      E, true),
 	(   var(E)
