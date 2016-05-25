@@ -274,7 +274,7 @@ http_reply_data_(cgi_stream(In, Len), Out, HdrExtra, Method, Code) :- !,
 	copy_stream(Out, In, Header, Method, 0, end).
 
 if_no_head(head, _) :- !.
-if_no_head(reply_file, Goal) :-
+if_no_head(_, Goal) :-
 	call(Goal).
 
 reply_file(Out, _File, Header, head) :- !,
