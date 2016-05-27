@@ -457,12 +457,12 @@ status_reply(authorise(basic, ''), Out, HdrExtra, Context, Method, Code) :- !,
 status_reply(authorise(basic, Realm), Out, HdrExtra, Context, Method, Code) :- !,
         status_reply(authorise(basic(Realm)), Out, HdrExtra, Context,
 		     Method, Code).
-status_reply(authorise(Method), Out, HdrExtra, Context, Method, Code) :- !,
+status_reply(authorise(Method), Out, HdrExtra, Context, QMethod, Code) :- !,
         status_page_hook(authorise(Method), 401, Context, HTML),
 	phrase(reply_header(authorise(Method, HTML),
 			    HdrExtra, Code), Header),
 	format(Out, '~s', [Header]),
-	print_html_if_no_head(Method, Out, HTML).
+	print_html_if_no_head(QMethod, Out, HTML).
 status_reply(not_modified, Out, HdrExtra, _Context, _Method, Code) :- !,
 	phrase(reply_header(status(not_modified), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]).
