@@ -296,7 +296,8 @@ http_write_passwd_file(File, Data) :-
 	setup_call_cleanup(
 	    open(File, write, Out, [encoding(utf8)]),
 	    maplist(write_data(Out), Data),
-	    close(Out)).
+	    close(Out)),
+	retractall(last_modified(File, _)). % flush cache
 
 valid_data(passwd(User, Hash, Fields)) :- !,
 	valid_field(User),
