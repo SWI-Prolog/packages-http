@@ -760,7 +760,7 @@ extend(G0, Extra, G) :-
 %
 %		* static_gzip(+Boolean)
 %		If true (default =false=) and, in addition to the plain
-%		file, there is a =.gz= file that is not older than the
+%		file, there is a =|.gz|= file that is not older than the
 %		plain file and the client acceps =gzip= encoding, send
 %		the compressed file with =|Transfer-encoding: gzip|=.
 %
