@@ -18,7 +18,8 @@
 :- endif.
 
 :- multifile
-	http_server_hook/1.			% +Options
+	http_server_hook/1,			% +Options
+	http_certificate_hook/3.		% +CertFile, +KeyFile, -Password
 
 /** <module> Run SWI-Prolog HTTP server as a Unix system daemon
 
@@ -286,9 +287,10 @@ merge_port_option(Options0, Port, Options) :-
 
 merge_https_options(Options, [SSL|Options]) :-
 	option(https(true), Options), !,
-	need_option(certfile(CertFile), Options),
-	need_option(keyfile(KeyFile), Options),
+	option(certfile(CertFile), Options, 'https/server.crt'),
+	option(keyfile(KeyFile), Options, 'https/server.key'),
 	option(cipherlist(CipherList), Options, 'DEFAULT'),
+	prepare_https_certificate(CertFile, KeyFile),
 	SSL = ssl([ certificate_file(CertFile),
 		    cipher_list(CipherList),
 		    key_file(KeyFile),
@@ -296,10 +298,21 @@ merge_https_options(Options, [SSL|Options]) :-
 		  ]).
 merge_https_options(Options, Options).
 
-need_option(Option, Options) :-
-	option(Option, Options), !.
-need_option(Option, Options) :-
-	throw(error(existence_error(option, Option, Options), _)).
+%%	http_certificate_hook(+CertFile, +KeyFile, -Password) is semidet.
+%
+%	Hook called before starting the server  if the --https option is
+%	used.  This  hook  may  be  used    to  create  or  refresh  the
+%	certificate. If the hook binds Password to a string, this string
+%	will be used to  decrypt  the  server   private  key  as  if the
+%	--password=Password option was given.
+
+prepare_https_certificate(CertFile, KeyFile) :-
+	http_certificate_hook(CertFile, KeyFile, Password), !,
+	(   string(Password)
+	->  store_password([password(Password)])
+	;   true
+	).
+prepare_https_certificate(_, _).
 
 %%	store_password(+Options) is det.
 %%	ssl_passwd(+SSL, -Passwd) is det.
