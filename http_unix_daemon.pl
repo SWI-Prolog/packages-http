@@ -608,10 +608,9 @@ switch_user(Options) :-
 	;   set_user_and_group(User)
 	),
 	prctl(set_dumpable(true)).	% re-enable core dumps on Linux
-switch_user(Options) :-
+switch_user(_Options) :-
 	geteuid(0), !,
-	option(port(Port), Options),
-	throw(error(permission_error(open, http_server, Port),
+	throw(error(permission_error(open, server, http),
 		    context('Refusing to run HTTP server as root', _))).
 switch_user(_).
 
