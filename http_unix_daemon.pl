@@ -1,8 +1,45 @@
+/*  Part of SWI-Prolog
+
+    Author:        Jan Wielemaker
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org
+    Copyright (c)  2013-2016, University of Amsterdam
+                              VU University Amsterdam
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
 :- module(http_unix_daemon,
 	  [ http_daemon/0,
 	    http_daemon/1			% +Options
 	  ]).
 :- use_module(library(error)).
+:- use_module(library(apply)).
+:- use_module(library(lists)).
 :- use_module(library(debug)).
 :- use_module(library(broadcast)).
 :- use_module(library(socket)).
@@ -108,7 +145,24 @@ events:
 %%	http_daemon
 %
 %	Start the HTTP server  as  a   daemon  process.  This  predicate
-%	processes the following commandline arguments:
+%	processes the following commandline arguments below. Commandline
+%	arguments that specify servers are processed  in order using the
+%	following schema:
+%
+%	  1. Arguments that act as default for all servers.
+%	  2. =|--http=Spec|= or =|--https=Spec|= is followed by
+%	     arguments for that server until the next =|--http=Spec|=
+%	     or =|--https=Spec|= or the end of the options.
+%	  3. If no =|--http=Spec|= or =|--https=Spec|= appears, one
+%	     HTTP server is created from the specified parameters.
+%
+%	  Examples:
+%
+%	    ==
+%	    --workers=10 --http --https
+%	    --http=8080 --https=8443
+%	    --http=localhost:8080 --workers=1 --https=8443 --workers=25
+%	    ==
 %
 %	  $ --port=Port :
 %	  Start HTTP server at Port. It requires root permission and the
@@ -148,9 +202,16 @@ events:
 %	  If given as =|--no-fork|= or =|--fork=false|=, the process
 %	  runs in the foreground.
 %
-%         $ --https[=Bool]:
-%         If =true= (default =false=), use HTTPS.  This requires SSL.
-%         See also =|--cert-file|=, =|--key-file|= and =|--password|=.
+%         $ --http[=Bool|=Port|=BindTo:Port] :
+%         Create a plain HTTP server.  If the argument is missing or
+%         =true=, create at the specified or default address.  Else
+%         use the given port and interface.
+%
+%         $ --https[=Bool|=Port|=BindTo:Port] :
+%         As =|--http|=, but creates an HTTPS server.
+%	  Use =|--certfile|=, =|--keyfile|=, =|-pwfile|=,
+%	  =|--password|= and =|--cipherlist|= to configure SSL for
+%	  this server.
 %
 %         $ --certfile=File :
 %         The server certificate for HTTPS.
@@ -248,15 +309,12 @@ http_daemon(Options) :-
 	option(help(true), Options), !,
 	print_message(information, http_daemon(help)),
 	halt.
-http_daemon(Options0) :-
-	setup_debug(Options0),
-	kill_x11(Options0),
-	merge_port_option(Options0, Port, Options1),
-	merge_https_options(Options1, Options),
-	make_socket(Options, Socket),
-	store_password(Options),
-	debug(daemon(socket),
-	      'Created socket ~q, listening to port ~q', [Socket, Port]),
+http_daemon(Options) :-
+	setup_debug(Options),
+	kill_x11(Options),
+	option_servers(Options, Servers0),
+	maplist(make_socket, Servers0, Servers),
+	maplist(store_password, Servers),
 	(   option(fork(true), Options, true),
 	    option(interactive(false), Options, false)
 	->  fork(Who),
@@ -268,25 +326,107 @@ http_daemon(Options0) :-
 		setup_output(Options),
 	        switch_user(Options),
 		setup_signals(Options),
-		start_server([tcp_socket(Socket)|Options]),
+		start_servers(Servers),
 		wait(Options)
 	    )
 	;   write_pid(Options),
 	    switch_user(Options),
-	    start_server([tcp_socket(Socket)|Options]),
+	    start_servers(Servers),
 	    wait(Options)
 	).
 
-merge_port_option(Options0, Port, Options) :-
-	(   option(https(true), Options0)
-	->  DefaultPort = 443
-	;   DefaultPort = 80
-	),
-	option(port(Port), Options0, DefaultPort),
-	merge_options([port(Port)], Options0, Options).
+%%	option_servers(+Options, -Sockets:list)
+%
+%	Find all sockets that must be created according to Options. Each
+%	socket is a term server(Scheme, Address, Opts), where Address is
+%	either a plain port (integer) or Host:Port. The latter binds the
+%	port  to  the  interface  belonging    to   Host.  For  example:
+%	socket(http, localhost:8080, Opts) creates an   HTTP socket that
+%	binds to the localhost  interface  on   port  80.  Opts  are the
+%	options specific for the given server.
+
+option_servers(Options, Sockets) :-
+	opt_sockets(Options, [], [], Sockets).
+
+opt_sockets([], Options, [], [Socket]) :- !,
+	make_server(http(true), Options, Socket).
+opt_sockets([], _, Sockets, Sockets).
+opt_sockets([H|T], OptsH, Sockets0, Sockets) :-
+	server_option(H), !,
+	append(OptsH, [H], OptsH1),
+	opt_sockets(T, OptsH1, Sockets0, Sockets).
+opt_sockets([H|T0], Opts, Sockets0, Sockets) :-
+	server_start_option(H), !,
+	server_options(T0, T, Opts, SOpts),
+	make_server(H, SOpts, Socket),
+	append(Sockets0, [Socket], Sockets1),
+	opt_sockets(T, Opts, Sockets1, Sockets).
+opt_sockets([_|T], Opts, Sockets0, Sockets) :-
+	opt_sockets(T, Opts, Sockets0, Sockets).
+
+server_options([], [], Options, Options).
+server_options([H|T], Rest, Options0, Options) :-
+	server_option(H), !,
+	generalise_option(H, G),
+	delete(Options0, G, Options1),
+	append(Options1, [H], Options2),
+	server_options(T, Rest, Options2, Options).
+server_options([H|T], [H|T], Options, Options) :-
+	server_start_option(H), !.
+server_options([_|T0], Rest, Options0, Options) :-
+	server_options(T0, Rest, Options0, Options).
+
+generalise_option(H, G) :-
+	H =.. [Name,_],
+	G =.. [Name,_].
+
+server_start_option(http(_)).
+server_start_option(https(_)).
+
+server_option(port(_)).
+server_option(ip(_)).
+server_option(certfile(_)).
+server_option(keyfile(_)).
+server_option(pwfile(_)).
+server_option(password(_)).
+server_option(cipherlist(_)).
+server_option(workers(_)).
+
+make_server(http(Address0), Options0, server(http, Address, Options)) :-
+	make_address(Address0, 80, Address, Options0, Options).
+make_server(https(Address0), Options0, server(https, Address, SSLOptions)) :-
+	make_address(Address0, 443, Address, Options0, Options),
+	merge_https_options(Options, SSLOptions).
+
+make_address(true, DefPort, Address, Options0, Options) :- !,
+	option(port(Port), Options0, DefPort),
+	(   option(ip(Bind), Options0)
+	->  Address = (Bind:Port)
+	;   Address = Port,
+	    Options = [port(Port)|Options0]
+	).
+make_address(Bind:Port, _, Bind:Port, Options0, Options) :- !,
+	must_be(atom, Bind),
+	must_be(integer, Port),
+	merge_options([port(Port), ip(Bind)], Options0, Options).
+make_address(Port, _, Address, Options0, Options) :- !,
+	integer(Port), !,
+	(   option(ip(Bind), Options0)
+	->  Address = (Bind:Port)
+	;   Address = Port,
+	    merge_options([port(Port)], Options0, Options)
+	).
+make_address(Spec, _, Address, Options0, Options) :-
+	atomic(Spec),
+	split_string(Spec, ":", "", [BindString, PortString]),
+	number_string(Port, PortString), !,
+	atom_string(Bind, BindString),
+	Address = (Bind:Port),
+	merge_options([port(Port), ip(Bind)], Options0, Options).
+make_address(Spec, _, _, _, _) :-
+	domain_error(address, Spec).
 
 merge_https_options(Options, [SSL|Options]) :-
-	option(https(true), Options), !,
 	option(certfile(CertFile), Options, 'https/server.crt'),
 	option(keyfile(KeyFile), Options, 'https/server.key'),
 	option(cipherlist(CipherList), Options, 'DEFAULT'),
@@ -296,7 +436,7 @@ merge_https_options(Options, [SSL|Options]) :-
 		    key_file(KeyFile),
 		    pem_password_hook(http_unix_daemon:ssl_passwd)
 		  ]).
-merge_https_options(Options, Options).
+
 
 %%	http_certificate_hook(+CertFile, +KeyFile, -Password) is semidet.
 %
@@ -314,33 +454,43 @@ prepare_https_certificate(CertFile, KeyFile) :-
 	).
 prepare_https_certificate(_, _).
 
-%%	store_password(+Options) is det.
+%%	store_password(+Server) is det.
 %%	ssl_passwd(+SSL, -Passwd) is det.
 %
 %	Store the password provided by the options to a global variable.
 %	When the password is fetched,  it   is  deleted  from the global
 %	variables to minimise the risc for exposing the predicate.
 
-store_password(Options) :-
+store_password(server(https, _, Options)) :-
 	option(password(Passwd), Options), !,
-	nb_setval(ssl_passwd, Passwd).
-store_password(Options) :-
+	add_passwd(Passwd).
+store_password(server(https, _, Options)) :-
 	option(pwfile(File), Options), !,
 	setup_call_cleanup(
 		open(File, read, In),
 		read_string(In, _, String),
 		close(In)),
 	    split_string(String, "", "\r\n\t ", [Passwd]),
-	nb_setval(ssl_passwd, Passwd).
+	add_passwd(Passwd).
 store_password(_).
+
+add_passwd(Passwd) :-
+	nb_current(ssl_passwd, PWD0), !,
+	append(PWD0, [Passwd], PWD1),
+	nb_setval(ssl_passwd, PWD1).
+add_passwd(Passwd) :-
+	nb_setval(ssl_passwd, [Passwd]).
 
 :- public ssl_passwd/2.
 
 ssl_passwd(_SSL, Passwd) :-
-	nb_getval(ssl_passwd, Passwd),
-	nb_delete(ssl_passwd).
+	nb_getval(ssl_passwd, [Passwd|Rest]),
+	(   Rest == []
+	->  nb_delete(ssl_passwd)
+	;   nb_setval(ssl_passwd, Rest)
+	).
 
-%%	start_server(+Options) is det.
+%%	start_server(+Server) is det.
 %
 %	Start the HTTP server.  It performs the following steps:
 %
@@ -356,23 +506,23 @@ ssl_passwd(_SSL, Passwd) :-
 %	  - Dropping root privileges (--user)
 %	  - Setting up signal handling
 
-start_server(Options) :-
-	http_server_hook(Options), !.
-start_server(Options) :-
+start_servers(Servers) :-
 	broadcast(http(pre_server_start)),
-	http_server(http_dispatch, Options),
-	option(port(Port), Options),
-	debug(daemon, 'Started server at port ~w', [Port]),
+	maplist(start_server, Servers),
 	broadcast(http(post_server_start)).
 
-make_socket(Options, Socket) :-
-	option(port(Port), Options),
-	(   option(ip(IP), Options)
-	->  Address = IP:Port
-	;   Address = Port
-	),
+start_server(server(_Scheme, Socket, Options)) :-
+	http_server_hook([tcp_socket(Socket)|Options]), !.
+start_server(server(_Scheme, Socket, Options)) :-
+	http_server(http_dispatch, [tcp_socket(Socket)|Options]),
+	broadcast(http(post_server_start)).
+
+make_socket(server(Scheme, Address, Options),
+	    server(Scheme, Socket, Options)) :-
 	tcp_socket(Socket),
-	bind_socket(Socket, Address).
+	bind_socket(Socket, Address),
+	debug(daemon(socket),
+	      'Created socket ~p, listening on ~p', [Socket, Address]).
 
 bind_socket(Socket, Address) :-
 	tcp_setopt(Socket, reuseaddr),
@@ -509,6 +659,10 @@ setup_signals(Options) :-
 	must_be(oneof([reload,quit]), Action),
 	on_signal(hup,  _, Action).
 
+:- public
+	quit/1,
+	reload/1.
+
 quit(Signal) :-
 	debug(daemon, 'Dying on signal ~w', [Signal]),
 	thread_send_message(main, quit).
@@ -566,7 +720,8 @@ prolog:message(http_daemon(help)) -->
 	  '  --pidfile=path     Write PID to path'-[], nl,
 	  '  --output=file      Send output to file (instead of syslog)'-[], nl,
 	  '  --fork=bool        Do/do not fork'-[], nl,
-	  '  --https=bool       Use HTTPS (requires SSL)'-[], nl,
+	  '  --http[=Address]   Create HTTP server'-[], nl,
+	  '  --https[=Address]  Create HTTPS server'-[], nl,
 	  '  --certfile=file    The server certificate'-[], nl,
 	  '  --keyfile=file     The server private key'-[], nl,
 	  '  --pwfile=file      File holding password for the private key'-[], nl,
@@ -576,5 +731,8 @@ prolog:message(http_daemon(help)) -->
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
 	  '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
-	  'Boolean options may be written without value (true) or as --no-name (false)'-[]
+	  'Boolean options may be written without value (true) or as --no-name (false)'-[], nl,
+	  'Address is a port number or host:port, e.g., 8080 or localhost:8080'-[], nl,
+	  'Multiple servers can be started by repeating --http and --https'-[], nl,
+	  'Each server merges the options before the first --http(s) and up the next'-[]
 	].
