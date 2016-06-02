@@ -49,6 +49,7 @@
 :- use_module(library(syslog)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_host)).
 
 :- if(exists_source(library(http/http_ssl_plugin))).
 :- use_module(library(http/http_ssl_plugin)).
@@ -391,6 +392,7 @@ server_option(pwfile(_)).
 server_option(password(_)).
 server_option(cipherlist(_)).
 server_option(workers(_)).
+server_option(redirect(_)).
 
 make_server(http(Address0), Options0, server(http, Address, Options)) :-
 	make_address(Address0, 80, Address, Options0, Options).
@@ -512,10 +514,12 @@ start_servers(Servers) :-
 	broadcast(http(post_server_start)).
 
 start_server(server(_Scheme, Socket, Options)) :-
+	option(redirect(To), Options), !,
+	http_server(server_redirect(To), [tcp_socket(Socket)|Options]).
+start_server(server(_Scheme, Socket, Options)) :-
 	http_server_hook([tcp_socket(Socket)|Options]), !.
 start_server(server(_Scheme, Socket, Options)) :-
-	http_server(http_dispatch, [tcp_socket(Socket)|Options]),
-	broadcast(http(post_server_start)).
+	http_server(http_dispatch, [tcp_socket(Socket)|Options]).
 
 make_socket(server(Scheme, Address, Options),
 	    server(Scheme, Socket, Options)) :-
@@ -614,6 +618,48 @@ switch_user(_).
 :- if(\+current_predicate(prctl/1)).
 prctl(_).
 :- endif.
+
+%%	server_redirect(+To, +Request)
+%
+%	Redirect al requests for this server to the specified server. To
+%	is one of:
+%
+%	  $ A port (integer) :
+%	  Redirect to the server running on that port in the same
+%	  Prolog process.
+%	  $ =true= :
+%	  Results from just passing =|--redirect|=.  Redirects to
+%	  an HTTPS server in the same Prolog process.
+%	  $ A URL :
+%	  Redirect to the the given URL + the request uri.  This can
+%	  be used if the server cannot find its public address.  For
+%	  example:
+%
+%	    ```
+%	    --http --redirect=https://myhost.org --https
+%	    ```
+
+server_redirect(Port, Request) :-
+	integer(Port),
+	http_server_property(Port, scheme(Scheme)),
+	http_public_host(Request, Host, _Port, []),
+	memberchk(request_uri(Location), Request),
+	(   default_port(Scheme, Port)
+	->  format(string(To), '~w://~w~w', [Scheme, Host, Location])
+	;   format(string(To), '~w://~w:~w~w', [Scheme, Host, Port, Location])
+	),
+	throw(http_reply(moved_temporary(To))).
+server_redirect(true, Request) :- !,
+	http_server_property(P, scheme(https)),
+	server_redirect(P, Request).
+server_redirect(URI, Request) :-
+	memberchk(request_uri(Location), Request),
+	atom_concat(URI, Location, To),
+	throw(http_reply(moved_temporary(To))).
+
+default_port(http, 80).
+default_port(https, 443).
+
 
 %%	setup_debug(+Options) is det.
 %
@@ -727,6 +773,7 @@ prolog:message(http_daemon(help)) -->
 	  '  --pwfile=file      File holding password for the private key'-[], nl,
 	  '  --password=pw      Password for the private key'-[], nl,
 	  '  --cipherlist=cs    Cipher strings separated by colons'-[], nl,
+	  '  --redirect=to      Redirect all requests to a URL or port'-[], nl,
 	  '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
 	  '  --gtrace=bool      Start (graphical) debugger'-[], nl,
 	  '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
