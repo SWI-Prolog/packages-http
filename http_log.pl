@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2015, University of Amsterdam
+    Copyright (c)  2008-2016, University of Amsterdam
+			      VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,13 +36,17 @@
 :- module(http_log,
 	  [ http_log_stream/1,		% -Stream
 	    http_log/2,			% +Format, +Args
-	    http_log_close/1		% +Reason
+	    http_log_close/1,		% +Reason
+	    post_data_encoded/2		% ?Bytes, ?Encoded
 	  ]).
+:- use_module(library(http/http_header)).
 :- use_module(library(settings)).
 :- use_module(library(broadcast)).
 
 :- setting(http:logfile, callable, 'httpd.log',
 	   'File in which to log HTTP requests').
+:- setting(http:log_post_data, integer, 0,
+	   'Log POST data up to N bytes long').
 
 /** <module> HTTP Logging module
 
@@ -58,7 +63,8 @@ specifications (e.g. =|/topsecret?password=secret|=).
 
 :- multifile
 	nolog/1,
-	password_field/1.
+	password_field/1,
+	nolog_post_content_type/1.
 
 % If the log settings change,  simply  close   the  log  and  it will be
 % reopened with the new settings.
@@ -177,7 +183,8 @@ http_log(Format, Args) :-
 
 log_started(Request, Id, Stream) :-
 	get_time(Now),
-	log_request(Request, LogRequest),
+	add_post_data(Request, Request1),
+	log_request(Request1, LogRequest),
 	format_time(string(HDate), '%+', Now),
 	format(Stream,
 	       '/*~s*/ request(~q, ~3f, ~q).~n',
@@ -230,6 +237,73 @@ nolog(pool(_)).
 nolog(protocol(_)).
 nolog(referer(R)) :-
 	sub_atom(R, _, _, _, password), !.
+
+%%	nolog_post_content_type(+Type) is semidet.
+%
+%	Multifile hook called with the   =|Content-type|= header. If the
+%	hook succeeds, the POST data is not logged. For example, to stop
+%	logging  anything  but  application/json   messages:
+%
+%	  ==
+%	  :- multifile http_log:nolog_post_content_type/1.
+%
+%	  http_log:nolog_post_content_type(Type) :-
+%	     Type \= (application/json).
+%	  ==
+%
+%	@arg Type is a term MainType/SubType
+
+%%	add_post_data(+Request0, -Request) is det.
+%
+%	Add   a   request   field   post_data(Data)   if   the   setting
+%	http:log_post_data is an integer > 0,  the content length < this
+%	setting and nolog_post_content_type/1 does not   succeed  on the
+%	provided content type.
+
+add_post_data(Request0, Request) :-
+	setting(http:log_post_data, MaxLen),
+	integer(MaxLen), MaxLen > 0,
+	memberchk(input(In), Request0),
+	memberchk(content_length(CLen), Request0),
+	CLen =< MaxLen,
+	memberchk(content_type(Type), Request0),
+	http_parse_header_value(content_type, Type, media(MType/MSubType)),
+	\+ nolog_post_content_type(MType/MSubType),
+	catch(peek_string(In, CLen, PostData), _, fail), !,
+	post_data_encoded(PostData, Encoded),
+	Request = [post_data(Encoded)|Request0].
+add_post_data(Request, Request).
+
+%%	post_data_encoded(?Bytes:string, ?Encoded:string) is det.
+%
+%	Encode the POST body for inclusion into   the HTTP log file. The
+%	POST data is (in/de)flated  using   zopen/3  and  base64 encoded
+%	using base64//1. The encoding makes   long text messages shorter
+%	and keeps readable logfiles if binary data is posted.
+
+post_data_encoded(Bytes, Hex) :-
+	nonvar(Bytes), !,
+	setup_call_cleanup(
+	    new_memory_file(HMem),
+	    ( setup_call_cleanup(
+		  ( open_memory_file(HMem, write, Out, [encoding(octet)]),
+		    zopen(Out, ZOut, [])
+		  ),
+		  format(ZOut, '~s', [Bytes]),
+		  close(ZOut)),
+	      memory_file_to_codes(HMem, Codes, octet)
+	    ),
+	    free_memory_file(HMem)),
+	phrase(base64(Codes), EncCodes),
+	string_codes(Hex, EncCodes).
+post_data_encoded(Bytes, Hex) :-
+	string_codes(Hex, EncCodes),
+	phrase(base64(Codes), EncCodes),
+	string_codes(ZBytes, Codes),
+	setup_call_cleanup(
+	    open_string(ZBytes, In),
+	    zopen(In, Zin, []),
+	    read_string(Zin, _, Bytes)).
 
 %%	log_completed(+Code, +Status, +Bytes, +Id, +CPU, +Stream) is det.
 %
