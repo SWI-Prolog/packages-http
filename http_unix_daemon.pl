@@ -702,11 +702,13 @@ setup_signals(Options) :-
 	on_signal(term, _, quit),
 	option(sighup(Action), Options, reload),
 	must_be(oneof([reload,quit]), Action),
+	on_signal(usr1, _, logrotate),
 	on_signal(hup,  _, Action).
 
 :- public
 	quit/1,
-	reload/1.
+	reload/1,
+	logrotate/1.
 
 quit(Signal) :-
 	debug(daemon, 'Dying on signal ~w', [Signal]),
@@ -715,6 +717,10 @@ quit(Signal) :-
 reload(Signal) :-
 	debug(daemon, 'Reload on signal ~w', [Signal]),
 	thread_send_message(main, reload).
+
+logrotate(Signal) :-
+	debug(daemon, 'Closing log files on signal ~w', [Signal]),
+	thread_send_message(main, logrotate).
 
 %%	wait(+Options)
 %
@@ -732,7 +738,10 @@ wait(_) :-
 	halt(0).
 
 handle_message(reload) :-
-	make.
+	make,
+	broadcast(logrotate).
+handle_message(logrotate) :-
+	broadcast(logrotate).
 
 
 		 /*******************************

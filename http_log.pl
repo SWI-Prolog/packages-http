@@ -73,6 +73,8 @@ specifications (e.g. =|/topsecret?password=secret|=).
 	  http_log_close(changed(New))).
 :- listen(http(Message),
 	  http_message(Message)).
+:- listen(logrotate,
+	  http_log_close(logrotate)).
 
 
 http_message(request_start(Id, Request)) :- !,
