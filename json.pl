@@ -226,13 +226,13 @@ type_term(codes,  Result, codes(Result)).
 %
 %	The following options are processed:
 %
-%		* null(NullTerm)
+%		* null(+NullTerm)
 %		Term used to represent JSON =null=.  Default @(null)
-%		* true(TrueTerm)
+%		* true(+TrueTerm)
 %		Term used to represent JSON =true=.  Default @(true)
-%		* false(FalsTerm)
+%		* false(+FalseTerm)
 %		Term used to represent JSON =false=.  Default @(false)
-%		* value_string_as(Type)
+%		* value_string_as(+Type)
 %		Prolog type used for strings used as value.  Default
 %		is =atom=.  The alternative is =string=, producing a
 %		packed string object.  Please note that =codes= or
@@ -860,14 +860,24 @@ is_json_pair(Options, Name=Value) :-
 %	  * By default, a =type= field in an object assigns a tag for
 %	    the dict.
 %
-%	On  addition  to  the   options    processed   by   json_read/3,
-%	json_read_dict/3 processes this additional option:
+%	The predicate json_read_dict/3 processes  the   same  options as
+%	json_read/3,  but  with  different  defaults.  In  addition,  it
+%	processes the `tag` option. See   json_read/3  for details about
+%	the shared options.
 %
 %	  * tag(+Name)
 %	    When converting to/from a dict, map the indicated JSON
 %	    attribute to the dict _tag_. No mapping is performed if Name
 %	    is the empty atom ('', default). See json_read_dict/2 and
 %	    json_write_dict/2.
+%	  * null(+NullTerm)
+%	  Default the atom `null`.
+%	  * true(+TrueTerm)
+%	  Default the atom `true`.
+%	  * false(+FalseTerm)
+%	  Default the atom `false`
+%	  * value_string_as(+Type)
+%	  Type defaults to `string`, producing a packed string object.
 
 json_read_dict(Stream, Dict) :-
 	json_read_dict(Stream, Dict, []).
