@@ -408,9 +408,10 @@ http_stop_server(Port, _Options) :-
 	message_queue_destroy(Queue).
 
 connect(Address) :-
-        tcp_socket(Socket),
-        tcp_connect(Socket, Address),
-	tcp_close_socket(Socket).
+        setup_call_cleanup(
+	    tcp_socket(Socket),
+	    tcp_connect(Socket, Address),
+	    tcp_close_socket(Socket)).
 
 %%	http_enough_workers(+Queue, +Why, +Peer) is det.
 %
