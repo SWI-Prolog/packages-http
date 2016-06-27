@@ -232,10 +232,11 @@ address_parts(ip(A,B,C,D)) --> !,
 %	Create the main server thread that runs accept_server/2 to
 %	listen to new requests.
 
-create_server(Goal, Port, Options) :-
+create_server(Goal, Address, Options) :-
 	get_time(StartTime),
 	memberchk(queue(Queue), Options),
 	scheme(Scheme, Options),
+	address_port(Address, Port),
 	make_addr_atom(Scheme, Port, Alias),
 	thread_create(accept_server(Goal, Options), _,
 		      [ alias(Alias)
@@ -248,6 +249,10 @@ scheme(Scheme, Options) :-
 	option(ssl(_), Options), !,
 	Scheme = https.
 scheme(http, _).
+
+address_port(_Host:Port, Port) :- !.
+address_port(Port, Port).
+
 
 %%	http_current_server(:Goal, ?Port) is nondet.
 %
