@@ -146,9 +146,9 @@ events:
 %%	http_daemon
 %
 %	Start the HTTP server  as  a   daemon  process.  This  predicate
-%	processes the following commandline arguments below. Commandline
-%	arguments that specify servers are processed  in order using the
-%	following schema:
+%	processes the commandline arguments below. Commandline arguments
+%	that specify servers are processed  in   the  order  they appear
+%	using the following schema:
 %
 %	  1. Arguments that act as default for all servers.
 %	  2. =|--http=Spec|= or =|--https=Spec|= is followed by
@@ -184,9 +184,14 @@ events:
 %
 %	  $ --user=User :
 %	  When started as root to open a port below 1000, this option
-%	  must be provided to switch to the target user. Three actions
-%	  are performed as user: open the socket, write the pidfile and
-%	  setup syslog interaction.
+%	  must be provided to switch to the target user for operating
+%	  the server. The following actions are performed as root, i.e.,
+%	  _before_ switching to User:
+%
+%	    - open the socket(s)
+%	    - write the pidfile
+%	    - setup syslog interaction
+%	    - Read the password file (=|--pwfile=File|=)
 %
 %	  $ --group=Group :
 %	  May be used in addition to =|--user|=.  If omitted, the login
@@ -203,12 +208,15 @@ events:
 %	  If given as =|--no-fork|= or =|--fork=false|=, the process
 %	  runs in the foreground.
 %
-%         $ --http[=Bool|=Port|=BindTo:Port] :
+%         $ --http[=(Bool|Port|BindTo:Port)] :
 %         Create a plain HTTP server.  If the argument is missing or
 %         =true=, create at the specified or default address.  Else
-%         use the given port and interface.
+%         use the given port and interface.  Thus, =|--http|= creates
+%         a server at port 80, =|--http=8080|= creates one at port
+%         8080 and =|--http=localhost:8080|= creates one at port
+%         8080 that is only accessible from `localhost`.
 %
-%         $ --https[=Bool|=Port|=BindTo:Port] :
+%         $ --https[=(Bool|Port|BindTo:Port)] :
 %         As =|--http|=, but creates an HTTPS server.
 %	  Use =|--certfile|=, =|--keyfile|=, =|-pwfile|=,
 %	  =|--password|= and =|--cipherlist|= to configure SSL for
