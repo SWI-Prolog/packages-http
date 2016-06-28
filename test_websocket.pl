@@ -66,7 +66,7 @@ test(echo, Reply == [ websocket{opcode:text,  format:string, data:"Hello world"}
 		     close(1005, "Ciao")
 		   ],
 		   Reply),
-	    http_stop_server(Address, [])).
+	    http_stop_server(Port, [])).
 
 :- end_tests(http).
 

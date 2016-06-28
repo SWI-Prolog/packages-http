@@ -83,7 +83,7 @@ test(connection, Close == close) :-
 		      close(Stream)),
 		  close(Out))
 	    ),
-	    http_stop_server(localhost:Port, [])).
+	    http_stop_server(Port, [])).
 
 :- http_handler('/reply-source', reply_source, []).
 

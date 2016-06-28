@@ -398,8 +398,11 @@ close_server_socket(Options) :-
 %
 %	@tbd	Realise non-graceful stop
 
+http_stop_server(Host:Port, Options) :-		% e.g., localhost:4000
+	ground(Host), !,
+	http_stop_server(Port, Options).
 http_stop_server(Port, _Options) :-
-	http_workers(Port, 0),
+	http_workers(Port, 0),			% checks Port is ground
 	current_server(Port, _, Thread, Queue, _Scheme, _Start),
 	retractall(queue_options(Queue, _)),
 	thread_signal(Thread, throw(http_stop)),
