@@ -241,7 +241,7 @@ events:
 %	  $ --gtrace=[Bool] :
 %	  Use the debugger to trace http_daemon/1.
 %
-%	  $ --sighup=Action
+%	  $ --sighup=Action :
 %	  Action to perform on =|kill -HUP <pid>|=.  Default is `reload`
 %	  (running make/0).  Alternative is `quit`, stopping the server.
 %
