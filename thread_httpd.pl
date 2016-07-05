@@ -277,6 +277,9 @@ http_current_server(Goal, Port) :-
 %	    * start_time(?Time)
 %	    Time-stamp when the server was created.
 
+http_server_property(_:Port, Property) :-
+	integer(Port), !,
+	server_property(Property, Port).
 http_server_property(Port, Property) :-
 	server_property(Property, Port).
 
