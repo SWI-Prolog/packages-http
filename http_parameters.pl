@@ -282,13 +282,10 @@ check_type3(string, Atom, String) :- !,
 	to_string(Atom, String).
 check_type3(number, Atom, Number) :- !,
 	to_number(Atom, Number).
-check_type3(integer, Atom, Integer) :- !,
+check_type3(Type, Atom, Integer) :-
+	integer_type(Type), !,
 	to_number(Atom, Integer),
-	integer(Integer).
-check_type3(nonneg, Atom, Integer) :- !,
-	to_number(Atom, Integer),
-	integer(Integer),
-	Integer >= 0.
+	has_type(Type, Integer).
 check_type3(float, Atom, Float) :- !,
 	to_number(Atom, Number),
 	Float is float(Number).
@@ -303,6 +300,12 @@ check_type3(boolean, Atom, Bool) :- !,
 	truth(Atom, Bool).
 check_type3(Type, Atom, Atom) :-
 	check_type2(Type, Atom).
+
+integer_type(integer).
+integer_type(negative_integer).
+integer_type(nonneg).
+integer_type(nonpos).
+integer_type(positive_integer).
 
 to_number(In, Number) :-
 	number(In), !, Number = In.
