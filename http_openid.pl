@@ -401,7 +401,7 @@ prelogin_buttons([H|T]) --> prelogin_button(H), prelogin_buttons(T).
 %	a =href= attribute that is absolute, it   is  taken as an OpenID
 %	2.0 endpoint. Otherwise it is taken  as   a  link on the current
 %	server. This allows us to present  non-OpenId logons in the same
-%	screen. The dedicated  handler  is   passed  the  HTTP paramters
+%	screen. The dedicated  handler  is  passed  the  HTTP parameters
 %	=openid.return_to= and =stay=.
 
 prelogin_button(img(Attrs)) -->
