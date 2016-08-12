@@ -318,7 +318,8 @@ http_convert_data(In, Fields, Data, Options) :-
 	(   memberchk(content_length(Bytes), Fields)
 	->  setup_call_cleanup(
 		( stream_range_open(In, Range, [size(Bytes)]),
-		  set_stream(Range, encoding(utf8))
+		  set_stream(Range, encoding(utf8)),
+		  set_stream(Range, file_name('HTTP:DATA'))
 		),
 		read_term(Range, Data, Options),
 		close(Range))
