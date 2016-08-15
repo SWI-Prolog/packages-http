@@ -269,7 +269,7 @@ add_post_data(Request0, Request) :-
 	memberchk(content_length(CLen), Request0),
 	CLen =< MaxLen,
 	memberchk(content_type(Type), Request0),
-	http_parse_header_value(content_type, Type, media(MType/MSubType)),
+	http_parse_header_value(content_type, Type, media(MType/MSubType, _)),
 	\+ nolog_post_content_type(MType/MSubType),
 	catch(peek_string(In, CLen, PostData), _, fail), !,
 	post_data_encoded(PostData, Encoded),
