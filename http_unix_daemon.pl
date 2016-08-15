@@ -330,7 +330,8 @@ http_daemon(Options) :-
 	maplist(make_socket, Servers0, Servers),
 	maplist(store_password, Servers),
 	(   option(fork(true), Options, true),
-	    option(interactive(false), Options, false)
+	    option(interactive(false), Options, false),
+	    can_switch_user(Options)
 	->  fork(Who),
 	    (   Who \== child
 	    ->  halt
@@ -537,7 +538,8 @@ start_server(server(_Scheme, Socket, Options)) :-
 make_socket(server(Scheme, Address, Options),
 	    server(Scheme, Socket, Options)) :-
 	tcp_socket(Socket),
-	bind_socket(Socket, Address),
+	catch(bind_socket(Socket, Address), Error,
+	      make_socket_error(Error, Address)),
 	debug(daemon(socket),
 	      'Created socket ~p, listening on ~p', [Socket, Address]).
 
@@ -545,6 +547,17 @@ bind_socket(Socket, Address) :-
 	tcp_setopt(Socket, reuseaddr),
 	tcp_bind(Socket, Address),
 	tcp_listen(Socket, 5).
+
+make_socket_error(error(socket_error(_), _), Address) :-
+	address_port(Address, Port),
+	integer(Port),
+	Port =< 1000, !,
+	verify_root(open_port(Port)).
+make_socket_error(Error, _) :-
+	throw(Error).
+
+address_port(_:Port, Port) :- !.
+address_port(Port, Port).
 
 %%	disable_development_system
 %
@@ -617,16 +630,37 @@ write_pid(_).
 
 switch_user(Options) :-
 	option(user(User), Options), !,
+	verify_root(switch_user(User)),
 	(   option(group(Group), Options)
 	->  set_user_and_group(User, Group)
 	;   set_user_and_group(User)
 	),
 	prctl(set_dumpable(true)).	% re-enable core dumps on Linux
 switch_user(_Options) :-
+	verify_no_root.
+
+%%	can_switch_user(Options) is det.
+%
+%	Verify the user options before  forking,   so  we  can print the
+%	message in time.
+
+can_switch_user(Options) :-
+	option(user(User), Options), !,
+	verify_root(switch_user(User)).
+can_switch_user(_Options) :-
+	verify_no_root.
+
+verify_root(_Task) :-
+	geteuid(0), !.
+verify_root(Task) :-
+	print_message(error, http_daemon(no_root(Task))),
+	halt(1).
+
+verify_no_root :-
 	geteuid(0), !,
 	throw(error(permission_error(open, server, http),
 		    context('Refusing to run HTTP server as root', _))).
-switch_user(_).
+verify_no_root.
 
 :- if(\+current_predicate(prctl/1)).
 prctl(_).
@@ -805,3 +839,7 @@ prolog:message(http_daemon(help)) -->
 	  'Multiple servers can be started by repeating --http and --https'-[], nl,
 	  'Each server merges the options before the first --http(s) and up the next'-[]
 	].
+prolog:message(http_daemon(no_root(switch_user(User)))) -->
+	[ 'Program must be started as root to use --user=~w.'-[User] ].
+prolog:message(http_daemon(no_root(open_port(Port)))) -->
+	[ 'Cannot open port ~w.  Only root can open ports below 1000.'-[Port] ].
