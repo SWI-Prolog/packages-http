@@ -142,6 +142,7 @@ events:
 
 :- set_prolog_flag(xpce_threaded, false).
 :- set_prolog_flag(message_ide,   false). % cause xpce to trap messages
+:- dynamic interactive/0.
 
 %%	http_daemon
 %
@@ -260,10 +261,14 @@ events:
 %	  Set the number of workers for the multi-threaded server.
 
 http_daemon :-
-	catch(http_daemon_2, E,
-	      (	  print_message(error, E),
-		  halt(1)
-	      )).
+	catch(http_daemon_2, Error, start_failed(Error)).
+
+start_failed(Error) :-
+	interactive, !,
+	print_message(warning, Error).
+start_failed(Error) :-
+	print_message(error, Error),
+	halt(1).
 
 http_daemon_2 :-
 	current_prolog_flag(argv, Argv),
@@ -554,6 +559,7 @@ disable_development_system :-
 %	was loaded, but not initialised.
 
 enable_development_system :-
+	assertz(interactive),
 	set_prolog_flag(xpce_threaded, true),
 	set_prolog_flag(message_ide, true),
 	(   current_prolog_flag(xpce_version, _)
