@@ -346,6 +346,7 @@ http_daemon(Options) :-
 	    )
 	;   write_pid(Options),
 	    switch_user(Options),
+	    setup_signals(Options),
 	    start_servers(Servers),
 	    wait(Options)
 	).
@@ -745,6 +746,8 @@ kill_x11(_).
 %	SIGTERM terminate the server. SIGHUP causes   the  server to run
 %	make/0.
 
+setup_signals(Options) :-
+	option(interactive(true), Options, false), !.
 setup_signals(Options) :-
 	on_signal(int,  _, quit),
 	on_signal(term, _, quit),
