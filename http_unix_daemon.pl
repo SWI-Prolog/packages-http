@@ -775,24 +775,40 @@ logrotate(Signal) :-
 
 %%	wait(+Options)
 %
-%	This predicate runs in the main   thread,  waiting for a message
-%	from quit/0.
+%	This predicate runs in the  main   thread,  waiting for messages
+%	send by signal handlers to control   the server. In addition, it
+%	broadcasts  maintenance(Interval,  Deadline)    messages   every
+%	Interval seconds. These messages may   be trapped using listen/2
+%	for performing scheduled maintenance such as rotating log files,
+%	cleaning stale data, etc.
 
 wait(Options) :-
 	option(interactive(true), Options, false), !,
 	enable_development_system.
 wait(_) :-
+	thread_self(Me),
+	Interval = 300,
 	repeat,
-	thread_get_message(Msg),
-	ignore(handle_message(Msg)),
-	Msg == quit,
-	halt(0).
+	next_deadline(Interval, Deadline),
+	(   thread_get_message(Me, Msg, [deadline(Deadline)])
+	->  catch(ignore(handle_message(Msg)), E,
+		  print_message(error, E)),
+	    Msg == quit,
+	    halt(0)
+	;   catch(broadcast(maintenance(Interval, Deadline)), E,
+		  print_message(error, E)),
+	    fail
+	).
 
 handle_message(reload) :-
 	make,
 	broadcast(logrotate).
 handle_message(logrotate) :-
 	broadcast(logrotate).
+
+next_deadline(Interval, Deadline) :-
+	get_time(Now),
+	Deadline is ((integer(Now) + Interval - 1)//Interval)*Interval.
 
 
 		 /*******************************
