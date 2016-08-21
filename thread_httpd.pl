@@ -536,6 +536,7 @@ http_worker(Options) :-
 	option(max_idle_time(MaxIdle), Options, infinite),
 	repeat,
 	  garbage_collect,
+	  trim_stacks,
 	  debug(http(worker), 'Waiting for a job ...', []),
 	  (   MaxIdle == infinite
 	  ->  thread_get_message(Queue, Message)
