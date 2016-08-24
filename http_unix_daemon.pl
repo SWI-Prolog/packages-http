@@ -419,9 +419,9 @@ make_address(true, DefPort, Address, Options0, Options) :- !,
 	option(port(Port), Options0, DefPort),
 	(   option(ip(Bind), Options0)
 	->  Address = (Bind:Port)
-	;   Address = Port,
-	    Options = [port(Port)|Options0]
-	).
+	;   Address = Port
+	),
+	merge_options([port(Port)], Options0, Options).
 make_address(Bind:Port, _, Bind:Port, Options0, Options) :- !,
 	must_be(atom, Bind),
 	must_be(integer, Port),
