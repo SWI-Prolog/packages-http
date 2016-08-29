@@ -295,7 +295,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 %
 %	Discard content produced sofar. It sets   the  state property to
 %	=discarded=, causing close to omit the   writing  the data. This
-%	must be to use an alternate output   (e.g. an error page) if the
+%	must be used for an alternate output (e.g. an error page) if the
 %	page generator fails.
 
 %%	is_cgi_stream(+Stream) is semidet.
