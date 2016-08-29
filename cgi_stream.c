@@ -186,12 +186,16 @@ alloc_cgi_context(IOSTREAM *s)
 }
 
 
-static void
+static int
 free_cgi_context(cgi_context *ctx)
-{ if ( ctx->stream->upstream )
-    Sset_filter(ctx->stream, NULL);
-  else
-    PL_release_stream(ctx->stream);
+{ int rc = 0;
+
+  if ( ctx->stream->upstream )
+  { Sset_filter(ctx->stream, NULL);
+  } else
+  { if ( !PL_release_stream(ctx->stream) )
+      rc = -1;
+  }
 
   if ( ctx->data )       free(ctx->data);
   if ( ctx->hook )       PL_erase(ctx->hook);
@@ -201,6 +205,7 @@ free_cgi_context(cgi_context *ctx)
 
   ctx->magic = 0;
   PL_free(ctx);
+  return rc;
 }
 
 
@@ -233,6 +238,13 @@ grow_data_buffer(cgi_context *ctx, size_t size)
 }
 
 
+static void
+silent_release_stream(IOSTREAM *s)
+{ if ( !PL_release_stream(s) )
+    PL_clear_exception();
+}
+
+
 		 /*******************************
 		 *	     PROPERTIES		*
 		 *******************************/
@@ -246,7 +258,7 @@ get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
   if ( !PL_get_stream_handle(t, &s) )
     return FALSE;
   if ( s->functions != &cgi_functions )
-  { PL_release_stream(s);
+  { silent_release_stream(s);
     return type_error(t, "cgi_stream");
   }
 
@@ -276,7 +288,7 @@ is_cgi_stream(term_t cgi)
   if ( !PL_get_stream_handle(cgi, &s) )
     return FALSE;
   rc = (s->functions == &cgi_functions);
-  PL_release_stream(s);
+  silent_release_stream(s);
 
   return rc;
 }
@@ -346,10 +358,7 @@ cgi_property(term_t cgi, term_t prop)
   }
 
 out:
-  if ( !PL_release_stream(s) )
-  { if ( PL_exception(0) )
-      PL_clear_exception();
-  }
+  silent_release_stream(s);
 
   return rc;
 }
@@ -426,7 +435,7 @@ cgi_set(term_t cgi, term_t prop)
   }
 
 out:
-  PL_release_stream(s);
+  silent_release_stream(s);
   return rc;
 }
 
@@ -442,7 +451,7 @@ cgi_discard(term_t cgi)
   ctx->state = CGI_DISCARDED;
 					/* empty buffer to avoid write */
   ctx->cgi_stream->bufp = ctx->cgi_stream->buffer;
-  PL_release_stream(s);
+  silent_release_stream(s);
 
   return TRUE;
 }
@@ -689,7 +698,8 @@ cgi_close(void *handle)
 out:
   update_sent(ctx);
   ctx->stream->encoding = ctx->parent_encoding;
-  free_cgi_context(ctx);
+  if ( free_cgi_context(ctx) < 0 )
+    rc = -1;
 
   return rc;
 }
@@ -768,7 +778,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
   if ( !(s->flags&SIO_OUTPUT) )		/* only allow output stream */
-  { PL_release_stream(s);
+  { silent_release_stream(s);
     return permission_error("stream", "write", org);
   }
 
@@ -792,7 +802,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   ctx->cgi_stream = s2;
   if ( PL_unify_stream(new, s2) )
   { Sset_filter(s, s2);
-    PL_release_stream(s);
+    silent_release_stream(s);
     LOCK();
     ctx->id = ++current_id;
     UNLOCK();
