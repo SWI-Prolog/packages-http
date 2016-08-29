@@ -566,7 +566,7 @@ compile_schedule(monthly(Day, Time0), monthly(Day, Time)) :-
 compile_time(HH:MM0, HH:MM) :-
 	must_be(between(0, 23), HH),
 	must_be(between(0, 59), MM0),
-	MM is ((MM0+4)/5)*5.
+	MM is ((MM0+4)//5)*5.
 
 compile_weekday(N, _) :-
 	var(N), !,
@@ -588,7 +588,8 @@ compile_weekday(Name, N) :-
 
 http_consider_logrotate :-
 	scheduled_logrotate(Schedule, Options),
-	get_time(Now),
+	get_time(NowF),
+	Now is round(NowF/60.0)*60,
 	scheduled(Schedule, Now), !,
 	http_logrotate([background(true)|Options]).
 
