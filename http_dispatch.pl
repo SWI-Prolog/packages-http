@@ -586,9 +586,8 @@ html_write:expand_attribute_value(location_by_id(ID)) -->
 %
 %	Verify  authentication  information.   If    authentication   is
 %	requested through Options, demand it. The actual verification is
-%	done by the multifile   predicate  http_dispatch:authenticate/3.
-%	The  library  http_authenticate.pl  provides  an  implementation
-%	thereof.
+%	done by the multifile predicate http:authenticate/3. The library
+%	http_authenticate.pl provides an implementation thereof.
 %
 %	@error	permission_error(access, http_location, Location)
 
@@ -601,7 +600,7 @@ authentication([authentication(Type)|Options], Request, Fields) :- !,
 	->  append(XFields, More, Fields),
 	    authentication(Options, Request, More)
 	;   memberchk(path(Path), Request),
-	    throw(error(permission_error(access, http_location, Path), _))
+	    permission_error(access, http_location, Path)
 	).
 authentication([_|Options], Request, Fields) :-
 	authentication(Options, Request, Fields).
