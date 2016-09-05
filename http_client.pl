@@ -192,9 +192,9 @@ http_patch(URL, In, Out, Options) :-
 
 %%	http_read_data(+Request, -Data, +Options) is det.
 %
-%	Read data from an HTTP connection.   Options must contain a term
-%	input(In) that provides the input stream   from the HTTP server.
-%	Fields is the parsed http reply-header. Options is one of:
+%	Read data from an HTTP connection   and  convert it according to
+%	the supplied to(Format) option or  based on the =|Content-type|=
+%	in the Request. The following options are supported:
 %
 %	  * to(Format)
 %	    Convert data into Format.  Values are:
@@ -223,9 +223,10 @@ http_patch(URL, In, Out, Options) :-
 %	  * 'application/x-prolog'
 %	  Converts data into a Prolog term.
 %
-%	@param Request is a parsed HTTP request as returned by
-%	http_read_request/2 or available from the HTTP server's
-%	request dispatcher.
+%	@param  Request  is  a  parsed  HTTP   request  as  returned  by
+%	http_read_request/2 or available from the  HTTP server's request
+%	dispatcher. Request must contain a  term input(In) that provides
+%	the input stream from the HTTP server.
 
 http_read_data(Fields, Data, QOptions) :-
 	meta_options(is_meta, QOptions, Options),
