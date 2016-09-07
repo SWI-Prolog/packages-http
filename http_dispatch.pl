@@ -920,7 +920,7 @@ http_404(_Options, Request) :-
 
 %%	http_switch_protocol(:Goal, +Options)
 %
-%	Send an =|HTTP 101 Switching   Protocols"|= reply. After sending
+%	Send an =|"HTTP 101 Switching   Protocols"|= reply. After sending
 %	the  reply,  the  HTTP  library    calls   call(Goal,  InStream,
 %	OutStream), where InStream and OutStream are  the raw streams to
 %	the HTTP client. This allows the communication to continue using
@@ -941,8 +941,10 @@ http_404(_Options, Request) :-
 %	This predicate interacts with the server  library by throwing an
 %	exception.
 %
-%	@param	Options is reserved for future extensions.  It must be
-%		initialised to the empty list ([]).
+%	@param	Options is reserved for future extensions.  Currently, it
+%		must be the empty list ([]), or a list with a single element
+%		`headers(Hs)` where `Hs` is a list of =|Name(Value)|= terms
+%		that specify header fields of the reply.
 %	@throws	http_reply(switch_protocol(Goal, Options))
 
 http_switch_protocol(Goal, Options) :-
