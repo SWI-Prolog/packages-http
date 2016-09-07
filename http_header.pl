@@ -365,7 +365,7 @@ status_reply(no_content, Out, HdrExtra, _Context, _Method, Code) :- !,
 	format(Out, '~s', [Header]).
 status_reply(switching_protocols(_Goal,Options), Out,
 	     HdrExtra0, _Context, _Method, Code) :- !,
-	option(header(Extra1), Options, []),
+	option(headers(Extra1), Options, []),
 	http_join_headers(HdrExtra0, Extra1, HdrExtra),
 	phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
 	format(Out, '~s', [Header]).
