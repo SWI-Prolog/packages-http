@@ -533,9 +533,16 @@ handle_stay_signed_in(_).
 assert_openid(OpenIDLogin, OpenID, Server, Target) :-
 	openid_identifier_select_url(OpenIDLogin),
 	openid_identifier_select_url(OpenID), !,
-	http_session_assert(openid_login(Identity, Identity, Server, Target)).
+	assert_openid_in_session(openid_login(Identity, Identity, Server, Target)).
 assert_openid(OpenIDLogin, OpenID, Server, Target) :-
-	http_session_assert(openid_login(OpenIDLogin, OpenID, Server, Target)).
+	assert_openid_in_session(openid_login(OpenIDLogin, OpenID, Server, Target)).
+
+assert_openid_in_session(Term) :-
+	(   http_in_session(Session)
+	->  debug(openid(verify), 'Assert ~p in ~p', [Term, Session])
+	;   debug(openid(verify), 'No session!', [])
+	),
+	http_session_assert(Term).
 
 %%	openid_server(?OpenIDLogin, ?OpenID, ?Server) is nondet.
 %
@@ -550,8 +557,18 @@ openid_server(OpenIDLogin, OpenID, Server) :-
 	openid_server(OpenIDLogin, OpenID, Server, _Target).
 
 openid_server(OpenIDLogin, OpenID, Server, Target) :-
-	http_in_session(_),
-	http_session_data(openid_login(OpenIDLogin, OpenID, Server, Target)), !.
+	http_in_session(Session),
+	(   http_session_data(openid_login(OpenIDLogin, OpenID, Server, Target))
+	->  true
+	;   http_session_data(openid_login(OpenIDLogin1, OpenID1, Server1, Target1)),
+	    debug(openid(verify), '~p \\== ~p',
+		  [ openid_login(OpenIDLogin, OpenID, Server, Target),
+		    openid_login(OpenIDLogin1, OpenID1, Server1, Target1)
+		  ]),
+	    fail
+	;   debug(openid(verify), 'No openid_login/4 term in session ~p', [Session]),
+	    fail
+	).
 
 
 %%	public_url(+Request, +Path, -URL) is det.
@@ -999,10 +1016,12 @@ new_assoc_handle(Length, Handle) :-
 %	First thing to check is the immediate acknowledgement.
 
 checkid_setup_server(_Request, Form, _Options) :-
-	memberchk('openid.identity'	= Identity,  Form),
-	memberchk('openid.assoc_handle'	= Handle,    Form),
-	memberchk('openid.return_to'	= ReturnTo,  Form),
-	memberchk('openid.trust_root'	= TrustRoot, Form),
+	memberchk('openid.identity'	  = Identity,  Form),
+	memberchk('openid.assoc_handle'	  = Handle,    Form),
+	memberchk('openid.return_to'	  = ReturnTo,  Form),
+	(   memberchk('openid.realm'	  = Realm,     Form) -> true
+	;   memberchk('openid.trust_root' = Realm, Form)
+	),
 
 	server_association(_, Handle, _Association),		% check
 
@@ -1021,7 +1040,8 @@ checkid_setup_server(_Request, Form, _Options) :-
 				   \hidden('openid.identity', Identity),
 				   \hidden('openid.assoc_handle', Handle),
 				   \hidden('openid.return_to', ReturnTo),
-				   \hidden('openid.trust_root', TrustRoot),
+				   \hidden('openid.realm', Realm),
+				   \hidden('openid.trust_root', Realm),
 				   div(['Password: ',
 					input([ type(password),
 						name('openid.password')
@@ -1090,7 +1110,8 @@ openid_grant(Request) :-
 			  ],
 	    signed_fields(SignedPairs, Signed),
 	    signature(SignedPairs, Association, Signature),
-	    phrase(base64(Signature), Bas64Sig),
+	    phrase(base64(Signature), Bas64SigCodes),
+	    string_codes(Bas64Sig, Bas64SigCodes),
 	    redirect_browser(ReturnTo,
 			     [ 'openid.mode' = id_res,
 			       'openid.identity' = Identity,
