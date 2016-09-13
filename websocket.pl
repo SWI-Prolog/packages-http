@@ -158,7 +158,7 @@ ws_client_options(null,        [mode(client)]) :- !.
 ws_client_options(Subprotocol, [mode(client), subprotocol(Subprotocol)]).
 
 add_subprotocols(OptionsIn, OptionsOut) :-
-	select_option(subprotocols(Subprotocols), OptionsIn, Options1),
+	select_option(subprotocols(Subprotocols), OptionsIn, Options1), !,
 	must_be(list(atom), Subprotocols),
 	atomic_list_concat(Subprotocols, ', ', Value),
 	OptionsOut = [ request_header('Sec-WebSocket-Protocol' = Value)
