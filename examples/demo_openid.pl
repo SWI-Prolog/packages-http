@@ -63,8 +63,7 @@ server :-
 	Port = 8000,
 	http_server(http_dispatch,
 		    [ port(Port)
-		    ]),
-	debug(openid(test), 'Server started at http://localhost:~w/', [Port]).
+		    ]).
 
 
 assoc :-
