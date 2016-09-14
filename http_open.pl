@@ -891,7 +891,7 @@ content_type(Lines, Type) :-
 %
 %	Do not use  the   =|Content-encoding|=  as =|Transfer-encoding|=
 %	encoding for specific values of   ContentType. This predicate is
-%	multifile and can this be extended by the user.
+%	multifile and can thus be extended by the user.
 
 http:disable_encoding_filter('application/x-gzip').
 http:disable_encoding_filter('application/x-tar').
