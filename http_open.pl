@@ -479,15 +479,18 @@ host_and_port(Host, _,       Port,    Host:Port).
 
 %%	autoload_https(+Parts) is det.
 %
-%	If the requested scheme is https, load the HTTPS plugin.
+%	If the requested scheme is https or wss, load the HTTPS plugin.
 
 autoload_https(Parts) :-
-	memberchk(scheme(https), Parts),
+	memberchk(scheme(S), Parts),
+	secure_scheme(S),
 	\+ clause(http:http_protocol_hook(https, _, StreamPair, StreamPair, _),_),
 	exists_source(library(http/http_ssl_plugin)), !,
 	use_module(library(http/http_ssl_plugin)).
 autoload_https(_).
 
+secure_scheme(https).
+secure_scheme(wss).
 
 %%	send_rec_header(+StreamPair, -Stream,
 %%			+Host, +RequestURI, +Parts, +Options) is det.
