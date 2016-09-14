@@ -447,7 +447,9 @@ http:http_connection_over_proxy(direct, _, Host:Port,
         open_socket(Host:Port, StreamPair, Options).
 http:http_connection_over_proxy(proxy(ProxyHost, ProxyPort), Parts, _,
 				StreamPair, Options, Options) :-
-        \+ memberchk(scheme(https), Parts), !,
+        \+ ( memberchk(scheme(Scheme), Parts),
+	     secure_scheme(Scheme)
+	   ), !,
         % We do not want any /more/ proxy after this
         open_socket(ProxyHost:ProxyPort, StreamPair,
 		    [bypass_proxy(true)|Options]).
@@ -479,15 +481,18 @@ host_and_port(Host, _,       Port,    Host:Port).
 
 %%	autoload_https(+Parts) is det.
 %
-%	If the requested scheme is https, load the HTTPS plugin.
+%	If the requested scheme is https or wss, load the HTTPS plugin.
 
 autoload_https(Parts) :-
-	memberchk(scheme(https), Parts),
-	\+ clause(http:http_protocol_hook(https, _, StreamPair, StreamPair, _),_),
+	memberchk(scheme(S), Parts),
+	secure_scheme(S),
+	\+ clause(http:http_protocol_hook(S, _, StreamPair, StreamPair, _),_),
 	exists_source(library(http/http_ssl_plugin)), !,
 	use_module(library(http/http_ssl_plugin)).
 autoload_https(_).
 
+secure_scheme(https).
+secure_scheme(wss).
 
 %%	send_rec_header(+StreamPair, -Stream,
 %%			+Host, +RequestURI, +Parts, +Options) is det.
