@@ -177,7 +177,7 @@ close_log(_).
 
 http_log(Format, Args) :-
 	(   http_log_stream(Stream)
-	->  format(Stream, Format, Args)
+	->  system:format(Stream, Format, Args)	% use operators from `system`
 	;   true
 	).
 
