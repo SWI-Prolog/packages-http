@@ -115,13 +115,14 @@ root(_Request) :-
 
 
 allow(Request) :-
-	openid_authenticate(Request, Server, Identity, _ReturnTo),
+	openid_user(Request, OpenID, []),
+	openid_server(_OpenIDLogin, OpenID, Server),
 	reply_html_page(title('Success'),
 			[ h1('OpenID login succeeded'),
 			  p([ 'The OpenID server ',
 			      a(href(Server),Server),
 			      ' verified you as ',
-			      a(href(Identity), Identity)
+			      a(href(OpenID), OpenID)
 			    ])
 			]).
 
