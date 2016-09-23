@@ -785,20 +785,34 @@ logrotate(Signal) :-
 wait(Options) :-
 	option(interactive(true), Options, false), !,
 	enable_development_system.
+wait(Options) :-
+	thread_self(Me),
+	option(maintenance_interval(Interval), Options, 300),
+	Interval > 0, !,
+	first_deadline(Interval, FirstDeadline),
+	State = deadline(0),
+	repeat,
+	    State = deadline(Count),
+	    Deadline is FirstDeadline+Count*Interval,
+	    (   thread_get_message(Me, Msg, [deadline(Deadline)])
+	    ->  catch(ignore(handle_message(Msg)), E,
+		      print_message(error, E)),
+		Msg == quit,
+		halt(0)
+	    ;   Count1 is Count + 1,
+		nb_setarg(1, State, Count1),
+	        catch(broadcast(maintenance(Interval, Deadline)), E,
+		      print_message(error, E)),
+		fail
+	    ).
 wait(_) :-
 	thread_self(Me),
-	Interval = 300,
 	repeat,
-	next_deadline(Interval, Deadline),
-	(   thread_get_message(Me, Msg, [deadline(Deadline)])
-	->  catch(ignore(handle_message(Msg)), E,
+	    thread_get_message(Me, Msg),
+	    catch(ignore(handle_message(Msg)), E,
 		  print_message(error, E)),
-	    Msg == quit,
-	    halt(0)
-	;   catch(broadcast(maintenance(Interval, Deadline)), E,
-		  print_message(error, E)),
-	    fail
-	).
+	    Msg == quit, !,
+	    halt(0).
 
 handle_message(reload) :-
 	make,
@@ -806,7 +820,7 @@ handle_message(reload) :-
 handle_message(logrotate) :-
 	broadcast(logrotate).
 
-next_deadline(Interval, Deadline) :-
+first_deadline(Interval, Deadline) :-
 	get_time(Now),
 	Deadline is ((integer(Now) + Interval - 1)//Interval)*Interval.
 
