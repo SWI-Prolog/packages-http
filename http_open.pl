@@ -431,11 +431,14 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
 	->  true
 	;   http:http_connection_over_proxy(Method, Parts, Host:Port,
 					    SocketStreamPair, Options, Options1),
-	    (   http:http_protocol_hook(Scheme, Parts,
-					SocketStreamPair,
-					StreamPair, Options)
-	    ->  true
-	    ;   StreamPair = SocketStreamPair
+	    (	catch(http:http_protocol_hook(Scheme, Parts,
+					      SocketStreamPair,
+					      StreamPair, Options),
+		      Error,
+		      (	close(SocketStreamPair, [force(true)]),
+			throw(Error)))
+	    ->	true
+	    ;	StreamPair = SocketStreamPair
 	    ),
 	    send_rec_header(StreamPair, Stream, HostPort,
 			    RequestURI, Parts, Options1)
