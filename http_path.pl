@@ -69,14 +69,14 @@ additional argument with options. Currently only one option is defined:
     decide to provide a fall-back using a negative priority.  We suggest
     -100 for such cases.
 
-This library predefines three locations at   priority  -100: The =icons=
-and =css= aliases are intended for images   and css files and are backed
-up by file a file-search-path that  allows   finding  the  icons and css
-files that belong to the server infrastructure (e.g., http_dirindex/2).
+This library predefines a single location at priority -100:
 
     * root
     The root of the server.  Default is /, but this may be overruled
     using the setting (see setting/2) =|http:prefix|=
+
+To serve additional resource files such as CSS, JavaScript and icons,
+see `library(http/http_server_files)`.
 
 Here is an example that binds =|/login|=  to login/1. The user can reuse
 this application while moving all locations  using   a  new rule for the
