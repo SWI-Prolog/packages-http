@@ -700,7 +700,7 @@ also tcp_bind/2.
 
     \termitem{workers}{+N}
 Defines the number of worker threads in the pool. Default is to use
-\arg{two} workers. Choosing the optimal value for best performance is a
+\arg{five} workers. Choosing the optimal value for best performance is a
 difficult task depending on the number of CPUs in your system and how
 much resources are required for processing a request. Too high numbers
 makes your system switch too often between threads or even swap if there
