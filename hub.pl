@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2015, VU University Amsterdam
+    Copyright (c)  2014-2016, VU University Amsterdam
+			      CWI Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,16 +38,19 @@
 	    hub_add/3,			% +HubName, +Websocket, ?Id
 	    hub_send/2,			% +ClientId, +Message
 	    hub_broadcast/2,		% +HubName, +Message
+	    hub_broadcast/3,		% +HubName, +Message, +Condition
 	    current_hub/2		% ?HubName, ?Hub
 	  ]).
 :- use_module(library(debug)).
 :- use_module(library(error)).
 :- use_module(library(apply)).
 :- use_module(library(gensym)).
-:- use_module(library(aggregate)).
 :- use_module(library(uuid)).
 :- use_module(library(ordsets)).
 :- use_module(library(http/websocket)).
+
+:- meta_predicate
+	hub_broadcast(+,+,1).
 
 /** <module> Manage a hub for websockets
 
@@ -389,26 +393,42 @@ create_output_thread(Hub, Queue) :-
 			Hub, hub_out_q_).
 
 %%	hub_broadcast(+Hub, +Message) is det.
+%%	hub_broadcast(+Hub, +Message, :Condition) is det.
 %
-%	Send Message to all websockets associated   with  Hub. Note that
-%	this  process  is   _asynchronous_:    this   predicate  returns
-%	immediately after putting all requests in  a broadcast queue. If
-%	a message cannot be delivered due to a network error, the hub is
-%	informed through io_error/3.
+%	Send Message to all websockets  associated   with  Hub for which
+%	call(Condition,  Id)  succeeds.  Note  that    this  process  is
+%	_asynchronous_: this predicate returns immediately after putting
+%	all requests in a  broadcast  queue.   If  a  message  cannot be
+%	delivered due to a network error,   the  hub is informed through
+%	io_error/3.
 
 hub_broadcast(HubName, Message) :-
+	hub_broadcast(HubName, Message, all).
+
+all(_).
+
+hub_broadcast(HubName, Message, Condition) :-
 	must_be(atom, HubName),
 	hub(HubName, Hub),
-	forall(websocket(HubName, _WS, ClientQueue, _Lock, _Id),
-	       queue_output(ClientQueue, Message)),
-	create_broadcast_threads(Hub).
+	State = count(0),
+	forall(( websocket(HubName, _WS, ClientQueue, _Lock, Id),
+		 call(Condition, Id)
+	       ),
+	       ( queue_output(ClientQueue, Message),
+	         inc_count(State)
+	       )),
+	State = count(Count),
+	create_broadcast_threads(Hub, Count).
 
 queue_output(Queue, Message) :-
 	thread_send_message(Queue, Message).
 
+inc_count(State) :-
+	arg(1, State, C0),
+	C1 is C0+1,
+	nb_setarg(1, State, C1).
 
-create_broadcast_threads(Hub) :-
-	aggregate_all(count, websocket(Hub.name, _, _, _, _), Count),
+create_broadcast_threads(Hub, Count) :-
 	Threads is ceiling(sqrt(Count)),
 	forall(between(1, Threads, _),
 	       create_broadcast_thread(Hub)).
