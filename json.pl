@@ -956,7 +956,7 @@ make_json_dict_options(Options, Record, RestOptions) :-
 atom_json_dict(Atom, Term, Options) :-
 	ground(Atom), !,
 	setup_call_cleanup(
-	    ( atom_to_memory_file(Atom, MF),
+	    ( text_memfile(Atom, MF),
 	      open_memory_file(MF, read, In, [free_on_close(true)])
 	    ),
 	    json_read_dict(In, Term, Options),
@@ -969,6 +969,14 @@ atom_json_dict(Result, Term, Options) :-
 	),
 	with_output_to(Out,
 		       json_write_dict(current_output, Term, Options1)).
+
+text_memfile(Atom, MF) :-
+	atom(Atom), !,
+	atom_to_memory_file(Atom, MF).
+text_memfile(String, MF) :-
+	string(String), !,
+	new_memory_file(MF),
+	insert_memory_file(MF, 0, String).
 
 :- endif.
 
