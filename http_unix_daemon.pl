@@ -192,7 +192,7 @@ events:
 %	    - open the socket(s)
 %	    - write the pidfile
 %	    - setup syslog interaction
-%	    - Read the password file (=|--pwfile=File|=)
+%	    - Read the certificate, key and password file (=|--pwfile=File|=)
 %
 %	  $ --group=Group :
 %	  May be used in addition to =|--user|=.  If omitted, the login
