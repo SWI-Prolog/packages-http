@@ -233,7 +233,7 @@ events:
 %	  File holding the password for accessing  the private key. This
 %	  is preferred over using =|--password=PW|=   as it allows using
 %	  file protection to avoid leaking the password.  The file is
-%	  read _before_ the server drops privilages when started with
+%	  read _before_ the server drops privileges when started with
 %	  the =|--user|= option.
 %
 %	  $ --password=PW :
@@ -328,7 +328,6 @@ http_daemon(Options) :-
 	kill_x11(Options),
 	option_servers(Options, Servers0),
 	maplist(make_socket, Servers0, Servers),
-	maplist(store_password, Servers),
 	(   option(fork(true), Options, true),
 	    option(interactive(false), Options, false),
 	    can_switch_user(Options)
@@ -447,12 +446,27 @@ merge_https_options(Options, [SSL|Options]) :-
 	option(certfile(CertFile), Options, 'https/server.crt'),
 	option(keyfile(KeyFile), Options, 'https/server.key'),
 	option(cipherlist(CipherList), Options, 'DEFAULT'),
-	prepare_https_certificate(CertFile, KeyFile),
-	SSL = ssl([ certificate_file(CertFile),
+	prepare_https_certificate(CertFile, KeyFile, Passwd0),
+	(   string(Passwd0)
+	->  Passwd = Passwd0
+	;   options_password(Options, Passwd)
+	),
+	file_to_string(CertFile, Certificate),
+	private_key(KeyFile, Passwd, Key),
+	SSL = ssl([ certificate(Certificate),
 		    cipher_list(CipherList),
-		    key_file(KeyFile),
-		    pem_password_hook(http_unix_daemon:ssl_passwd)
+		    key(Key)
 		  ]).
+
+file_to_string(File, String) :-
+	setup_call_cleanup(open(File, read, In),
+			   read_string(In, _, String),
+			   close(In)).
+
+private_key(KeyFile, Passwd, Key) :-
+	setup_call_cleanup(open(KeyFile, read, In),
+			   load_private_key(In, Passwd, Key),
+			   close(In)).
 
 
 %%	http_certificate_hook(+CertFile, +KeyFile, -Password) is semidet.
@@ -463,49 +477,18 @@ merge_https_options(Options, [SSL|Options]) :-
 %	will be used to  decrypt  the  server   private  key  as  if the
 %	--password=Password option was given.
 
-prepare_https_certificate(CertFile, KeyFile) :-
-	http_certificate_hook(CertFile, KeyFile, Password), !,
-	(   string(Password)
-	->  store_password([password(Password)])
-	;   true
-	).
-prepare_https_certificate(_, _).
+prepare_https_certificate(CertFile, KeyFile, Password) :-
+	http_certificate_hook(CertFile, KeyFile, Password), !.
+prepare_https_certificate(_, _, _).
 
-%%	store_password(+Server) is det.
-%%	ssl_passwd(+SSL, -Passwd) is det.
-%
-%	Store the password provided by the options to a global variable.
-%	When the password is fetched,  it   is  deleted  from the global
-%	variables to minimise the risc for exposing the predicate.
 
-store_password(server(https, _, Options)) :-
-	option(password(Passwd), Options), !,
-	add_passwd(Passwd).
-store_password(server(https, _, Options)) :-
+options_password(Options, Passwd) :-
+	option(password(Passwd), Options), !.
+options_password(Options, Passwd) :-
 	option(pwfile(File), Options), !,
-	setup_call_cleanup(
-		open(File, read, In),
-		read_string(In, _, String),
-		close(In)),
-	    split_string(String, "", "\r\n\t ", [Passwd]),
-	add_passwd(Passwd).
-store_password(_).
-
-add_passwd(Passwd) :-
-	nb_current(ssl_passwd, PWD0), !,
-	append(PWD0, [Passwd], PWD1),
-	nb_setval(ssl_passwd, PWD1).
-add_passwd(Passwd) :-
-	nb_setval(ssl_passwd, [Passwd]).
-
-:- public ssl_passwd/2.
-
-ssl_passwd(_SSL, Passwd) :-
-	nb_getval(ssl_passwd, [Passwd|Rest]),
-	(   Rest == []
-	->  nb_delete(ssl_passwd)
-	;   nb_setval(ssl_passwd, Rest)
-	).
+	file_to_string(File, String),
+	split_string(String, "", "\r\n\t ", [Passwd]).
+options_password(_, '').
 
 %%	start_server(+Server) is det.
 %
