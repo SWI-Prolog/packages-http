@@ -125,6 +125,7 @@ session_option(proxy_enabled, boolean).
 %
 %		* timeout(+Seconds)
 %		Session timeout in seconds.  Default is 600 (10 min).
+%		A timeout of `0` (zero) disables timeout.
 %
 %		* cookie(+Cookiekname)
 %		Name to use for the cookie to identify the session.
