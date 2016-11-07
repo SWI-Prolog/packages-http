@@ -451,17 +451,12 @@ merge_https_options(Options, [SSL|Options]) :-
 	->  Passwd = Passwd0
 	;   options_password(Options, Passwd)
 	),
-	file_to_string(CertFile, Certificate),
+	read_file_to_string(CertFile, Certificate, []),
 	private_key(KeyFile, Passwd, Key),
 	SSL = ssl([ certificate(Certificate),
 		    cipher_list(CipherList),
 		    key(Key)
 		  ]).
-
-file_to_string(File, String) :-
-	setup_call_cleanup(open(File, read, In),
-			   read_string(In, _, String),
-			   close(In)).
 
 private_key(KeyFile, Passwd, Key) :-
 	setup_call_cleanup(open(KeyFile, read, In),
@@ -486,7 +481,7 @@ options_password(Options, Passwd) :-
 	option(password(Passwd), Options), !.
 options_password(Options, Passwd) :-
 	option(pwfile(File), Options), !,
-	file_to_string(File, String),
+	read_file_to_string(File, String, []),
 	split_string(String, "", "\r\n\t ", [Passwd]).
 options_password(_, '').
 
