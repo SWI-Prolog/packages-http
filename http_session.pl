@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker, Matt Lilley
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2006-2015, University of Amsterdam
+    Copyright (c)  2006-2016, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -36,6 +36,7 @@
 :- module(http_session,
 	  [ http_set_session_options/1,	% +Options
 	    http_set_session/1,		% +Option
+	    http_set_session/2,		% +SessionId, +Option
 	    http_session_option/1,	% ?Option
 
 	    http_session_id/1,		% -SessionId
@@ -196,15 +197,19 @@ session_setting(_, Setting) :-
 	session_setting(Setting).
 
 %%	http_set_session(Setting) is det.
+%%	http_set_session(SessionId, Setting) is det.
 %
-%	Overrule a setting for the current  session. Currently, the only
-%	setting that can be overruled is =timeout=.
+%	Overrule  a  setting  for  the  current  or  specified  session.
+%	Currently, the only setting that can be overruled is =timeout=.
 %
 %	@error	permission_error(set, http_session, Setting) if setting
 %		a setting that is not supported on per-session basis.
 
 http_set_session(Setting) :-
 	http_session_id(SessionId),
+	http_set_session(SessionId, Setting).
+
+http_set_session(SessionId, Setting) :-
 	functor(Setting, Name, Arity),
 	(   local_option(Name, _, _)
 	->  true
