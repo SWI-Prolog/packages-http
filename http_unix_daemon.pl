@@ -454,12 +454,30 @@ merge_https_options(Options, [SSL|Options]) :-
 	),
 	read_file_to_string(CertFile, Certificate, []),
 	private_key(KeyFile, Passwd, Key),
-	findall(HostName-HostOptions, http:sni(HostName, HostOptions), SNIs),
+	findall(HostName-HostOptions, http:sni(HostName, HostOptions), SNIs0),
+	maplist(sni_preprocess, SNIs0, SNIs),
 	SSL = ssl([ certificate(Certificate),
 		    cipher_list(CipherList),
 		    key(Key),
 		    sni(SNIs)
 		  ]).
+
+% Load certificate and, if possible, private key before dropping privileges.
+
+sni_preprocess(Host-Options0, Host-Options) :-
+	(   select_option(certificate_file(CertFile), Options0, Options1)
+	->  read_file_to_string(CertFile, Certificate, []),
+	    Options2 = [certificate(Certificate)|Options1]
+	;   Options2 = Options0
+	),
+	(   select_option(key_file(KeyFile), Options2, Options3),
+	    options_password(Options3, Passwd),
+	    \+ option(pem_password_hook(_), Options3)
+	->  private_key(KeyFile, Passwd, Key),
+	    Options = [key(Key)|Options3]
+	;   Options = Options2
+	).
+
 
 private_key(KeyFile, Passwd, Key) :-
 	setup_call_cleanup(open(KeyFile, read, In),
