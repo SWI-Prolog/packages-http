@@ -57,7 +57,8 @@
 
 :- multifile
 	http_server_hook/1,			% +Options
-	http_certificate_hook/3.		% +CertFile, +KeyFile, -Password
+	http_certificate_hook/3,		% +CertFile, +KeyFile, -Password
+	http:sni_options/2.			% +HostName, +SSLOptions
 
 /** <module> Run SWI-Prolog HTTP server as a Unix system daemon
 
@@ -442,6 +443,8 @@ make_address(Spec, _, Address, Options0, Options) :-
 make_address(Spec, _, _, _, _) :-
 	domain_error(address, Spec).
 
+:- dynamic sni/3.
+
 merge_https_options(Options, [SSL|Options]) :-
 	option(certfile(CertFile), Options, 'https/server.crt'),
 	option(keyfile(KeyFile), Options, 'https/server.key'),
@@ -453,10 +456,18 @@ merge_https_options(Options, [SSL|Options]) :-
 	),
 	read_file_to_string(CertFile, Certificate, []),
 	private_key(KeyFile, Passwd, Key),
+	findall(HostName-HostOptions, http:sni_options(HostName, HostOptions), SNIs),
+	maplist(sni_contexts, SNIs),
 	SSL = ssl([ certificate(Certificate),
 		    cipher_list(CipherList),
-		    key(Key)
+		    key(Key),
+		    sni_hook(http_unix_daemon:sni)
 		  ]).
+
+sni_contexts(Host-Options) :-
+        ssl_context(server, SSL, Options),
+        assertz(sni(_, Host, SSL)).
+
 
 private_key(KeyFile, Passwd, Key) :-
 	setup_call_cleanup(open(KeyFile, read, In),
@@ -812,6 +823,16 @@ first_deadline(Interval, Deadline) :-
 %	Hook that is called to start the  HTTP server. This hook must be
 %	compatible to http_server(Handler,  Options).   The  default  is
 %	provided by start_server/1.
+
+
+%%	http:sni_options(-HostName, -SSLOptions) is multi.
+%
+%	Hook  to   provide  Server  Name  Indication   (SNI)  for  TLS
+%	servers. When starting an HTTPS  server, all solutions of this
+%	predicate are  collected and a suitable  sni_hook/1 is defined
+%	for ssl_context/3  to use different contexts  depending on the
+%	host  name  of the  client  request.   This hook  is  executed
+%	_before_ privileges are dropped.
 
 
 		 /*******************************
