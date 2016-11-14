@@ -31,8 +31,8 @@ capabilities from SWI-Prolog. Both server and client are modular
 libraries.  Further reading material is available from the locations
 below.
 \begin{shortlist}
-    \item \url[HOWTO collection]{http://www.swi-prolog.org/howto/http/}
-    \item \url[Tutorial by Anne Ogborn]{http://www.pathwayslms.com/swipltuts/html}
+    \item \href{http://www.swi-prolog.org/howto/http/}{HOWTO collection}
+    \item \href{http://www.pathwayslms.com/swipltuts/html}{Tutorial by Anne Ogborn}
 \end{shortlist}
 \end{abstract}
 
