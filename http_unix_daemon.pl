@@ -455,25 +455,19 @@ merge_https_options(Options, [SSL|Options]) :-
 	;   options_password(Options, Passwd)
 	),
 	read_file_to_string(CertFile, Certificate, []),
-	private_key(KeyFile, Passwd, Key),
+	read_file_to_string(KeyFile, Key, []),
 	findall(HostName-HostOptions, http:sni_options(HostName, HostOptions), SNIs),
 	maplist(sni_contexts, SNIs),
 	SSL = ssl([ certificate(Certificate),
 		    cipher_list(CipherList),
 		    key(Key),
+		    password(Passwd),
 		    sni_hook(http_unix_daemon:sni)
 		  ]).
 
 sni_contexts(Host-Options) :-
         ssl_context(server, SSL, Options),
         assertz(sni(_, Host, SSL)).
-
-
-private_key(KeyFile, Passwd, Key) :-
-	setup_call_cleanup(open(KeyFile, read, In),
-			   load_private_key(In, Passwd, Key),
-			   close(In)).
-
 
 %%	http_certificate_hook(+CertFile, +KeyFile, -Password) is semidet.
 %
