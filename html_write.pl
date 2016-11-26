@@ -52,6 +52,7 @@
 	    html_receive//1,		% +Id
 	    html_receive//2,		% +Id, :Handler
 	    xhtml_ns//2,		% +Id, +Value
+	    html_root_attribute//2,	% +Name, +Value
 
 	    html/4,			% <![html[quasi quotations]]>
 
@@ -552,7 +553,7 @@ xhtml_empty(Env, Attributes) -->
 	attributes(Attributes),
 	['/>'].
 
-%%	xhtml_ns(Id, Value)//
+%%	xhtml_ns(+Id, +Value)//
 %
 %	Demand an xmlns:id=Value in the outer   html  tag. This uses the
 %	html_post/2 mechanism to  post  to   the  =xmlns=  channel. Rdfa
@@ -581,6 +582,19 @@ xhtml_ns(Id, Value) -->
 xhtml_ns(_, _) -->
 	[].
 
+%%	html_root_attribute(+Name, +Value)//
+%
+%	Add an attribute to the  HTML  root   element  of  the page. For
+%	example:
+%
+%	  ==
+%	      html(div(...)),
+%	      html_root_attribute(lang, en),
+%	      ...
+%	  ==
+
+html_root_attribute(Name, Value) -->
+	html_post(html_begin, \attribute(Name=Value)).
 
 %%	attributes(+Env, +Attributes)// is det.
 %
@@ -597,7 +611,8 @@ attributes(html, L) --> !,
 	    html_receive(xmlns)
 	;   attributes(L),
 	    html_noreceive(xmlns)
-	).
+	),
+	html_receive(html_begin).
 attributes(_, L) -->
 	attributes(L).
 
