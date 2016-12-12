@@ -350,7 +350,7 @@ http_status_reply(Status, Out, HdrExtra, Context, Code) :-
 	http_status_reply(Status, Out, HdrExtra, Context, [method(get)], Code).
 
 http_status_reply(Status, Out, HdrExtra, Context, Request, Code) :-
-	memberchk(method(Method), Request),
+	option(method(Method), Request, get),
 	setup_call_cleanup(
 	    set_stream(Out, encoding(utf8)),
 	    status_reply_flush(Status, Out, HdrExtra, Context, Method, Code),
