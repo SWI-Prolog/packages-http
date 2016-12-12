@@ -114,7 +114,7 @@ self-signed SSL certificate.
 	make_socket_hook/3,
 	accept_hook/2,
 	close_hook/1,
-	open_client_hook/5,
+	open_client_hook/6,
 	http:create_pool/1,
 	http:schedule_workers/1.
 
@@ -587,7 +587,7 @@ open_client(Message, Queue, Goal, In, Out, Opts,
 	      timeout(Timeout)
 	    | Options
 	    ]) :-
-	catch(open_client(Message, Goal, In, Out, Options),
+	catch(open_client(Message, Goal, In, Out, Options, Opts),
 	      E, report_error(E)),
 	option(timeout(Timeout), Opts, 60),
 	(   debugging(http(connection))
@@ -597,12 +597,15 @@ open_client(Message, Queue, Goal, In, Out, Opts,
 	).
 
 
-open_client(Message, Goal, In, Out, Options) :-
-	open_client_hook(Message, Goal, In, Out, Options), !.
+%%	open_client(+Message, +Goal, -In, -Out,
+%%		    -ClientOptions, +Options) is det.
+
+open_client(Message, Goal, In, Out, ClientOptions, Options) :-
+	open_client_hook(Message, Goal, In, Out, ClientOptions, Options), !.
 open_client(tcp_client(Socket, Goal, Peer), Goal, In, Out,
 	    [ peer(Peer),
 	      protocol(http)
-	    ]) :-
+	    ], _) :-
 	tcp_open_socket(Socket, In, Out).
 
 report_error(E) :-
