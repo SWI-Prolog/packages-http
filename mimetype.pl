@@ -131,7 +131,7 @@ ext_mimetype(md,   text/'x-markdown').
 ext_mimetype(rdf,  application/'rdf+xml').
 ext_mimetype(rdfs, application/'rdf+xml').
 ext_mimetype(owl,  application/'rdf+xml').
-ext_mimetype(ttl,  application/'x-turtle').
+ext_mimetype(ttl,  application/turtle).
 ext_mimetype(nt,   application/'n-triples').
 ext_mimetype(nq,   application/'n-quads').
 					% Prolog source
