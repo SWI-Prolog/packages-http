@@ -50,6 +50,7 @@
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_host)).
+:- use_module(library(main)).
 
 :- if(exists_source(library(http/http_ssl_plugin))).
 :- use_module(library(http/http_ssl_plugin)).
@@ -279,41 +280,6 @@ http_daemon_2 :-
 	;   true
 	),
 	http_daemon(Options).
-
-%%	argv_options(+Argv, -RestArgv, -Options) is det.
-%
-%	Generic transformation of long commandline arguments to options.
-%	Each --Name=Value is mapped to Name(Value).   Each plain name is
-%	mapped to Name(true), unless Name starts  with =|no-|=, in which
-%	case the option is mapped to   Name(false).  Numeric options are
-%	mapped to Prolog numbers.
-
-argv_options([], [], []).
-argv_options([H0|T0], R, [H|T]) :-
-	sub_atom(H0, 0, _, _, --), !,
-	(   sub_atom(H0, B, _, A, =)
-	->  B2 is B-2,
-	    sub_atom(H0, 2, B2, _, Name),
-	    sub_string(H0, _, A,  0, Value0),
-	    convert_option(Name, Value0, Value)
-	;   sub_atom(H0, 2, _, 0, Name0),
-	    (	sub_atom(Name0, 0, _, _, 'no-')
-	    ->	sub_atom(Name0, 3, _, 0, Name),
-		Value = false
-	    ;	Name = Name0,
-		Value = true
-	    )
-	),
-	H =.. [Name,Value],
-	argv_options(T0, R, T).
-argv_options([H|T0], [H|R], T) :-
-	argv_options(T0, R, T).
-
-convert_option(password, String, String) :- !.
-convert_option(_, String, Number) :-
-	number_string(Number, String), !.
-convert_option(_, String, Atom) :-
-	atom_string(Atom, String).
 
 %%	http_daemon(+Options)
 %
