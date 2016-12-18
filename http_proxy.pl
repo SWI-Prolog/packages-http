@@ -44,36 +44,37 @@ connections through an HTTP proxy that   supports the HTTP 1.1 =CONNECT=
 method.
 */
 
-		 /*******************************
-		 *	      PROXY		*
-		 *******************************/
+                 /*******************************
+                 *            PROXY             *
+                 *******************************/
 
-%%	socket:try_proxy(+Proxy, +Address, -Socket, -StreamPair)
+%!  socket:try_proxy(+Proxy, +Address, -Socket, -StreamPair)
 %
-%	Connection is via an HTTP proxy   for  socket: Use HTTP CONNECT.
-%	Note that most proxies will only  support this for connecting on
-%	port 443
+%   Connection is via an HTTP proxy   for  socket: Use HTTP CONNECT.
+%   Note that most proxies will only  support this for connecting on
+%   port 443
 %
-%	@arg Proxy is of the form proxy(Host, Port)
-%	@error proxy_error(Message) if the proxy connection is
-%	not successful.
+%   @arg Proxy is of the form proxy(Host, Port)
+%   @error proxy_error(Message) if the proxy connection is
+%   not successful.
 
-socket:try_proxy(proxy(Host, Port), Address, Socket, StreamPair) :- !,
-        tcp_socket(Socket),
-        tcp_connect(Socket, Host:Port, StreamPair),
-        catch(negotiate_http_connect(StreamPair, Address),
-              Error,
-              ( close(StreamPair, [force(true)]),
-                throw(Error)
-              )).
+socket:try_proxy(proxy(Host, Port), Address, Socket, StreamPair) :-
+    !,
+    tcp_socket(Socket),
+    tcp_connect(Socket, Host:Port, StreamPair),
+    catch(negotiate_http_connect(StreamPair, Address),
+          Error,
+          ( close(StreamPair, [force(true)]),
+            throw(Error)
+          )).
 
 negotiate_http_connect(StreamPair, Address) :-
-        format(StreamPair, 'CONNECT ~w HTTP/1.1\r\n\r\n', [Address]),
-        flush_output(StreamPair),
-        http_read_reply_header(StreamPair, Header),
-        memberchk(status(_, Status, Message), Header),
-        (   Status == ok
-	->  true
-        ;   throw(error(proxy_error(Message), _))
-        ).
+    format(StreamPair, 'CONNECT ~w HTTP/1.1\r\n\r\n', [Address]),
+    flush_output(StreamPair),
+    http_read_reply_header(StreamPair, Header),
+    memberchk(status(_, Status, Message), Header),
+    (   Status == ok
+    ->  true
+    ;   throw(error(proxy_error(Message), _))
+    ).
 

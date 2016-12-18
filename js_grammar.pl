@@ -33,10 +33,10 @@
 */
 
 :- module(javascript_grammar,
-	  [ js_token//1
-	  ]).
+          [ js_token//1
+          ]).
 :- use_module(library(dcg/basics)).
-:- use_module(library(pure_input)).	% syntax_error//1
+:- use_module(library(pure_input)).     % syntax_error//1
 :- set_prolog_flag(double_quotes, codes).
 
 /** <module> JavaScript grammar
@@ -45,119 +45,127 @@ This file provides a tokenizer for   JavaScript  (EcmaScript). This code
 supports  the  quasi  quotation   syntax    =javascript=,   defined   in
 library(http/js_write).
 
-@see	http://tomcopeland.blogs.com/EcmaScript.html is used for the
-	high-level syntax.
-@see	http://www.ecma-international.org/ecma-262/5.1/ is used for
-	implementing the tokenization code.
+@see    http://tomcopeland.blogs.com/EcmaScript.html is used for the
+        high-level syntax.
+@see    http://www.ecma-international.org/ecma-262/5.1/ is used for
+        implementing the tokenization code.
 */
 
-%%	js_token(-TokenType)//
+%!  js_token(-TokenType)//
 %
-%	Matches and classifies the next JavaScript token.
+%   Matches and classifies the next JavaScript token.
 
 js_token(Type) -->
-	token(Type).
+    token(Type).
 
-%%	token(-Type) is semidet.
+%!  token(-Type) is semidet.
 %
-%	Get the next token from the   input. Fails when encountering the
-%	end of the input.
+%   Get the next token from the   input. Fails when encountering the
+%   end of the input.
 %
-%	@error syntax_error(Culprit)
+%   @error syntax_error(Culprit)
 
-token(comment)	      --> comment, !.
-token(string)	      --> string_literal, !.
-token(number)	      --> numeric_literal, !.
+token(comment)        --> comment, !.
+token(string)         --> string_literal, !.
+token(number)         --> numeric_literal, !.
 token(identifier(Id)) --> identifier_name(Id), !.
-token(regex)	      --> regex_literal, !.
-token(ws)	      --> blank, !, blanks.
+token(regex)          --> regex_literal, !.
+token(ws)             --> blank, !, blanks.
 token(punct(Char))    --> [Code], { char_code(Char, Code) }.
 
-%%	comment// is semidet.
+%!  comment// is semidet.
 
 comment -->
-	"/*", !,
-	(   string(_), "*/"
-	->  []
-	;   syntax_error(eof_in_comment)
-	).
+    "/*",
+    !,
+    (   string(_), "*/"
+    ->  []
+    ;   syntax_error(eof_in_comment)
+    ).
 comment -->
-	"//", !,
-	(   string(_), eol
-	->  []
-	;   string(_), eof
-	->  []
-	).
+    "//",
+    !,
+    (   string(_), eol
+    ->  []
+    ;   string(_), eof
+    ->  []
+    ).
 
 
-%%	string_literal// is semidet.
+%!  string_literal// is semidet.
 %
-%	Matches a string literal
+%   Matches a string literal
 
 string_literal -->
-	"\"", !,
-	(   q_codes, "\""
-	->  []
-	;   syntax_error(eof_in_string)
-	).
+    "\"",
+    !,
+    (   q_codes, "\""
+    ->  []
+    ;   syntax_error(eof_in_string)
+    ).
 string_literal -->
-	"\'", !,
-	(   q_codes, "\'"
-	->  []
-	;   syntax_error(eof_in_string)
-	).
+    "\'",
+    !,
+    (   q_codes, "\'"
+    ->  []
+    ;   syntax_error(eof_in_string)
+    ).
 
 
-%%	numeric_literal//
+%!  numeric_literal//
 %
-%	Matches JavaScript notion of a numeric constant
+%   Matches JavaScript notion of a numeric constant
 
 numeric_literal -->
-	(   decimal_literal
-	->  []
-	;   hex_integer
-	),
-	(   (   decimal_digit
-	    ;   js_id_start(_)
-	    )
-	->  syntax_error(js(illegal_number))
-	;   []
-	).
+    (   decimal_literal
+    ->  []
+    ;   hex_integer
+    ),
+    (   (   decimal_digit
+        ;   js_id_start(_)
+        )
+    ->  syntax_error(js(illegal_number))
+    ;   []
+    ).
 
 decimal_literal -->
-	decimal_integer, ".", opt_decimal_digits, opt_exponent.
+    decimal_integer, ".", opt_decimal_digits, opt_exponent.
 decimal_literal -->
-	".", decimal_digits, opt_exponent.
+    ".", decimal_digits, opt_exponent.
 decimal_literal -->
-	decimal_integer,
-	opt_exponent.
+    decimal_integer,
+    opt_exponent.
 
 decimal_integer -->
-	"0", !.
+    "0", 
+    !.
 decimal_integer -->
-	non_zero_digit, opt_decimal_digits.
+    non_zero_digit, opt_decimal_digits.
 
 decimal_digits -->
-	decimal_digit, !,
-	opt_decimal_digits.
+    decimal_digit,
+    !,
+    opt_decimal_digits.
 
 opt_decimal_digits -->
-	decimal_digit, !,
-	opt_decimal_digits.
+    decimal_digit,
+    !,
+    opt_decimal_digits.
 opt_decimal_digits -->
-	[].
+    [].
 
 decimal_digit --> [C], { code_type(C, digit) }.
 non_zero_digit --> [C], { code_type(C, digit), C \== 0'0 }.
 
 opt_exponent -->
-	exponent, !.
+    exponent, 
+    !.
 opt_exponent -->
-	[].
+    [].
 
 exponent -->
-	exponent_indictor,
-	signed_integer.
+    exponent_indictor,
+    signed_integer.
 
 exponent_indictor --> "e", !.
 exponent_indictor --> "E".
@@ -172,64 +180,67 @@ x --> "x".
 x --> "X".
 
 
-%%	regex_literal// is semidet.
+%!  regex_literal// is semidet.
 %
-%	Matches regex expression /.../flags
+%   Matches regex expression /.../flags
 
 regex_literal -->
-	"/", regex_body, "/", !, regex_flags.
+    "/", regex_body, "/", !, regex_flags.
 
 regex_body -->
-	regex_first_char,
-	regex_chars.
+    regex_first_char,
+    regex_chars.
 
 regex_chars --> regex_char, !, regex_chars.
 regex_chars --> [].
 
 regex_first_char -->
-	regex_non_terminator(C), !,
-	{ \+ memberchk(C, "*\\/[") }.
+    regex_non_terminator(C),
+    !,
+    { \+ memberchk(C, "*\\/[") }.
 regex_first_char -->
-	regex_backslash_sequence.
+    regex_backslash_sequence.
 regex_first_char -->
-	regex_class.
+    regex_class.
 
 regex_char -->
-	regex_non_terminator(C), !,
-	{ \+ memberchk(C, "\\/[") }.
+    regex_non_terminator(C),
+    !,
+    { \+ memberchk(C, "\\/[") }.
 regex_char -->
-	regex_backslash_sequence.
+    regex_backslash_sequence.
 regex_char -->
-	regex_class.
+    regex_class.
 
 regex_backslash_sequence -->
-	"\\", !, regex_non_terminator(_).
+    "\\", !, regex_non_terminator(_).
 
 regex_class -->
-	"[", regex_class_chars, "]".
+    "[", regex_class_chars, "]".
 
 regex_class_chars --> regex_class_char, !, regex_class_chars.
 regex_class_chars --> "".
 
 regex_class_char -->
-	regex_non_terminator(C), !,
-	{ \+ memberchk(C, "]\\") }.
+    regex_non_terminator(C),
+    !,
+    { \+ memberchk(C, "]\\") }.
 
 regex_non_terminator(_) -->
-	eol, !, {fail}.
+    eol, !, {fail}.
 regex_non_terminator(C) -->
-	source_char(C).
+    source_char(C).
 
 regex_flags -->
-	js_id_conts(_).
+    js_id_conts(_).
 
 source_char(C) -->
-	[C].
+    [C].
 
 
-%%	q_codes//
+%!  q_codes//
 %
-%	Shortest list of quoted characters.
+%   Shortest list of quoted characters.
 
 q_codes --> [] ; q_code, q_codes.
 
@@ -262,21 +273,22 @@ eol --> "\n", !.
 eol --> "\r".
 
 eof -->
-	\+ [_].
+    \+ [_].
 
 
-%	js_identifier classification. Now  based  on   Prolog.  This  is
-%	pretty close, but I'm afraid there are corner cases.
+%       js_identifier classification. Now  based  on   Prolog.  This  is
+%       pretty close, but I'm afraid there are corner cases.
 
 identifier_name(Id) -->
-	js_id_start(C0), !,
-	js_id_conts(Rest),
-	{ atom_codes(Id, [C0|Rest]),
-	  (   keyword(Id)
-	  ->  fail, syntax_error(reserved(Id))
-	  ;   true
-	  )
-	}.
+    js_id_start(C0),
+    !,
+    js_id_conts(Rest),
+    { atom_codes(Id, [C0|Rest]),
+      (   keyword(Id)
+      ->  fail, syntax_error(reserved(Id))
+      ;   true
+      )
+    }.
 
 
 js_id_start(C) --> [C], {js_id_start(C)}.
@@ -294,7 +306,7 @@ js_id_cont(C) :- code_type(C, prolog_identifier_continue), !.
 js_id_cont(0'$) :- !.
 
 
-keyword(break).				% standard keywords
+keyword(break).                         % standard keywords
 keyword(do).
 keyword(instanceof).
 keyword(typeof).
@@ -321,7 +333,7 @@ keyword(delete).
 keyword(in).
 keyword(try).
 
-keyword(class).				% reserved keywords
+keyword(class).                         % reserved keywords
 keyword(enum).
 keyword(extends).
 keyword(super).
@@ -329,7 +341,7 @@ keyword(const).
 keyword(export).
 keyword(import).
 
-keyword(implements).			% future reserved keywords
+keyword(implements).                    % future reserved keywords
 keyword(let).
 keyword(private).
 keyword(public).

@@ -37,17 +37,17 @@
 
 /** <module> DCG basics
 
-@deprecated	The DCG basics library has been moved to library(dcg_bacis).
-		This stub loads and reexports the new library.  Please update
-		your code accordingly.
+@deprecated     The DCG basics library has been moved to library(dcg_bacis).
+                This stub loads and reexports the new library.  Please update
+                your code accordingly.
 */
 
 :- multifile
-	prolog:message//1.
+    prolog:message//1.
 
 prolog:message(moved_library(Old, New)) -->
-	[ 'Library was moved: ~q --> ~q'-[Old, New] ].
+    [ 'Library was moved: ~q --> ~q'-[Old, New] ].
 
 :- initialization
    print_message(informational, moved_library(library(http/dcg_basics),
-					      library(dcg/basics))).
+                                          library(dcg/basics))).

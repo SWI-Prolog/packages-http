@@ -33,7 +33,7 @@
 */
 
 :- module(http_hook,
-	  []).
+          []).
 
 /** <module> HTTP library hooks
 
@@ -43,64 +43,64 @@ Get the declarations of the HTTP package using
     :- use_module(library(http/http_hook)).
     ==
 
-@tbd	This should be using include, but then it cannot be a module
-	and this would cause more overhead in SWI-Prolog
-@tbd	Complete this and document the hooks.
+@tbd    This should be using include, but then it cannot be a module
+        and this would cause more overhead in SWI-Prolog
+@tbd    Complete this and document the hooks.
 */
 
-		 /*******************************
-		 *	     HTTP-PATH		*
-		 *******************************/
+                 /*******************************
+                 *           HTTP-PATH          *
+                 *******************************/
 
 :- multifile http:location/3.
 :- dynamic   http:location/3.
 
 
-		 /*******************************
-		 *	     HTML-WRITE		*
-		 *******************************/
+                 /*******************************
+                 *           HTML-WRITE         *
+                 *******************************/
 
 :- multifile
-	html_write:expand//1,
-	html_write:expand_attribute_value//1,
-	html_write:html_head_expansion/2,
-	html_write:layout/3.
+    html_write:expand//1,
+    html_write:expand_attribute_value//1,
+    html_write:html_head_expansion/2,
+    html_write:layout/3.
 
 
-		 /*******************************
-		 *	   HTTP-DISPATCH	*
-		 *******************************/
+                 /*******************************
+                 *         HTTP-DISPATCH        *
+                 *******************************/
 
 :- multifile
-	http:authenticate/3.
+    http:authenticate/3.
 
 
-		 /*******************************
-		 *	 HTTP-PARAMETERS	*
-		 *******************************/
+                 /*******************************
+                 *       HTTP-PARAMETERS        *
+                 *******************************/
 
-%%	http:convert_parameter(+Type, +ValueIn, -ValueOut) is semidet.
+%!  http:convert_parameter(+Type, +ValueIn, -ValueOut) is semidet.
 %
-%	Hook to execute a step in the HTTP parameter conversion process.
+%   Hook to execute a step in the HTTP parameter conversion process.
 %
-%	@see http_parameters:check_type/4.
+%   @see http_parameters:check_type/4.
 
 :- multifile
-	http:convert_parameter/3.
+    http:convert_parameter/3.
 
 
-		 /*******************************
-		 *	      PROXIES		*
-		 *******************************/
+                 /*******************************
+                 *            PROXIES           *
+                 *******************************/
 
-%%      http:http_connection_over_proxy(+Proxy, +URLParts, +Endpoint,
-%%					-StreamPair, +Options, -NewOptions).
+%!  http:http_connection_over_proxy(+Proxy, +URLParts, +Endpoint,
+%!                                  -StreamPair, +Options, -NewOptions).
 %
-%	Try to connect to the host Endpoint   via Proxy for the purposes
-%	of retrieving the resource  identified   by  URLParts. Different
-%	options can be returned in NewOptions,  which may be required if
-%	you   have   defined   a   non-standard     proxy    method   in
-%	socket:proxy_for_url/3 (such as one requiring authentication)
+%   Try to connect to the host Endpoint   via Proxy for the purposes
+%   of retrieving the resource  identified   by  URLParts. Different
+%   options can be returned in NewOptions,  which may be required if
+%   you   have   defined   a   non-standard     proxy    method   in
+%   socket:proxy_for_url/3 (such as one requiring authentication)
 
 :- multifile
-	http:http_connection_over_proxy/6.
+    http:http_connection_over_proxy/6.

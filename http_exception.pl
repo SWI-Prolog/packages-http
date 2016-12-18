@@ -34,10 +34,10 @@
 */
 
 :- module(http_exception,
-	  [ map_exception_to_http_status/4,	% +Exception, -Reply,
-						% -HdrExtra, -Context
-	    in_or_exclude_backtrace/2		% +Error, -CleanedError
-	  ]).
+          [ map_exception_to_http_status/4,     % +Exception, -Reply,
+                                                % -HdrExtra, -Context
+            in_or_exclude_backtrace/2           % +Error, -CleanedError
+          ]).
 
 /** <module> Map Prolog exceptions to HTTP errors
 
@@ -49,92 +49,98 @@ http locations are mapped to 404 while out-of-stack is mapped to 503.
 This library provides one hook: http:bad_request_error/2 can be extended
 to map exceptions into 400 bad request responses.
 
-@see	http_header.pl, http_wrapper.pl
+@see    http_header.pl, http_wrapper.pl
 */
 
 :- multifile
-	http:bad_request_error/2.	% Formal, Context
+    http:bad_request_error/2.       % Formal, Context
 
-%%	map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
+%!  map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
 %
-%	Map certain defined  exceptions  to   special  reply  codes. The
-%	http(not_modified)   provides   backward     compatibility    to
-%	http_reply(not_modified).
+%   Map certain defined  exceptions  to   special  reply  codes. The
+%   http(not_modified)   provides   backward     compatibility    to
+%   http_reply(not_modified).
 
 map_exception_to_http_status(http(not_modified),
-	      not_modified,
-	      [connection('Keep-Alive')],
+              not_modified,
+              [connection('Keep-Alive')],
               []) :- !.
 map_exception_to_http_status(http_reply(Reply),
-	      Reply,
-	      [connection(Close)],
-              []) :- !,
-	keep_alive(Reply, Close).
+              Reply,
+              [connection(Close)],
+              []) :-
+    !,
+    keep_alive(Reply, Close).
 map_exception_to_http_status(http_reply(Reply, HdrExtra0),
-	      Reply,
-	      HdrExtra,
-              Context) :- !,
-        map_exception_to_http_status(http_reply(Reply, HdrExtra0, []),
-                                     Reply,
-                                     HdrExtra,
-                                     Context).
+              Reply,
+              HdrExtra,
+              Context) :-
+    !,
+    map_exception_to_http_status(http_reply(Reply, HdrExtra0, []),
+                                 Reply,
+                                 HdrExtra,
+                                 Context).
 
 map_exception_to_http_status(http_reply(Reply, HdrExtra0, Context),
-	      Reply,
-	      HdrExtra,
-              Context):- !,
-	(   memberchk(connection(_), HdrExtra0)
-	->  HdrExtra = HdrExtra0
-	;   HdrExtra = [connection(Close)|HdrExtra0],
-	    keep_alive(Reply, Close)
-	).
+              Reply,
+              HdrExtra,
+              Context):-
+    !,
+    (   memberchk(connection(_), HdrExtra0)
+    ->  HdrExtra = HdrExtra0
+    ;   HdrExtra = [connection(Close)|HdrExtra0],
+        keep_alive(Reply, Close)
+    ).
 map_exception_to_http_status(error(existence_error(http_location, Location), _),
-	      not_found(Location),
-	      [connection(close)],
+              not_found(Location),
+              [connection(close)],
               []) :- !.
 map_exception_to_http_status(error(permission_error(http_method, Method, Location), _),
-	      method_not_allowed(Method, Location),
-	      [connection(close)],
+              method_not_allowed(Method, Location),
+              [connection(close)],
               []) :- !.
 map_exception_to_http_status(error(permission_error(_, http_location, Location), _),
-	      forbidden(Location),
-	      [connection(close)],
+              forbidden(Location),
+              [connection(close)],
               []) :- !.
 map_exception_to_http_status(error(threads_in_pool(_Pool), _),
-	      busy,
-	      [connection(close)],
+              busy,
+              [connection(close)],
               []) :- !.
 map_exception_to_http_status(E,
-	      resource_error(E),
-	      [connection(close)],
+              resource_error(E),
+              [connection(close)],
               []) :-
-	resource_error(E), !.
+    resource_error(E), 
+    !.
 map_exception_to_http_status(E,
-	      bad_request(E2),
-	      [connection(close)],
+              bad_request(E2),
+              [connection(close)],
               []) :-
-	bad_request_exception(E), !,
-	discard_stack_trace(E, E2).
+    bad_request_exception(E),
+    !,
+    discard_stack_trace(E, E2).
 map_exception_to_http_status(E,
-	      server_error(E),
-	      [connection(close)],
+              server_error(E),
+              [connection(close)],
               []).
 
 resource_error(error(resource_error(_), _)).
 
 bad_request_exception(error(Error, Context)) :-
-	nonvar(Error),
-	bad_request_error(Error, ContextGeneral),
-	(   var(ContextGeneral)
-	->  true
-	;   Context = context(_Stack, ContextInstance)
-	->  subsumes_term(ContextGeneral, ContextInstance)
-	), !.
+    nonvar(Error),
+    bad_request_error(Error, ContextGeneral),
+    (   var(ContextGeneral)
+    ->  true
+    ;   Context = context(_Stack, ContextInstance)
+    ->  subsumes_term(ContextGeneral, ContextInstance)
+    ), 
+    !.
 
 bad_request_error(Error, Context) :-
-	http:bad_request_error(Error, Context).
+    http:bad_request_error(Error, Context).
 bad_request_error(Error, Context) :-
-	default_bad_request_error(Error, Context).
+    default_bad_request_error(Error, Context).
 
 default_bad_request_error(domain_error(http_request, _), _).
 default_bad_request_error(existence_error(http_parameter, _), _).
@@ -144,48 +150,50 @@ default_bad_request_error(syntax_error(http_request(_)), _).
 default_bad_request_error(syntax_error(_), in_http_request).
 
 discard_stack_trace(error(Formal, context(_,Msg)),
-		    error(Formal, context(_,Msg))).
+                    error(Formal, context(_,Msg))).
 
-%%	in_or_exclude_backtrace(+ErrorIn, -ErrorOut)
+%!  in_or_exclude_backtrace(+ErrorIn, -ErrorOut)
 %
-%	Remove  the  stacktrace  from  the   exception,  unless  setting
-%	`http:client_backtrace` is `true`.
+%   Remove  the  stacktrace  from  the   exception,  unless  setting
+%   `http:client_backtrace` is `true`.
 
 in_or_exclude_backtrace(Error, Error) :-
-	current_setting(http:client_backtrace),
-	setting(http:client_backtrace, true), !.
+    current_setting(http:client_backtrace),
+    setting(http:client_backtrace, true), 
+    !.
 in_or_exclude_backtrace(Error0, Error) :-
-	discard_stack_trace(Error0, Error), !.
+    discard_stack_trace(Error0, Error), 
+    !.
 in_or_exclude_backtrace(Exception, Exception).
 
 
-%%	http:bad_request_error(+Formal, -ContextTemplate) is semidet.
+%!  http:bad_request_error(+Formal, -ContextTemplate) is semidet.
 %
-%	If  an  exception  of  the   term  error(Formal,  context(Stack,
-%	Context)) is caught and  subsumes_term(ContextTemplate, Context)
-%	is true, translate the exception into  an HTTP 400 exception. If
-%	the exception contains a stack-trace, this  is stripped from the
-%	response.
+%   If  an  exception  of  the   term  error(Formal,  context(Stack,
+%   Context)) is caught and  subsumes_term(ContextTemplate, Context)
+%   is true, translate the exception into  an HTTP 400 exception. If
+%   the exception contains a stack-trace, this  is stripped from the
+%   response.
 %
-%	The idea behind this hook  is   that  applications can raise 400
-%	responses by
+%   The idea behind this hook  is   that  applications can raise 400
+%   responses by
 %
-%	  - Throwing a specific (error) exception and adding a rule
-%	    to this predicate to interpret this as 400.
-%	  - Define rules for prolog:error_message//1 to formulate
-%	    an appropriate message.
+%     - Throwing a specific (error) exception and adding a rule
+%       to this predicate to interpret this as 400.
+%     - Define rules for prolog:error_message//1 to formulate
+%       an appropriate message.
 
 
-%%	keep_alive(+Reply) is semidet.
-%%	keep_alive(+Reply, -Connection) is det.
+%!  keep_alive(+Reply) is semidet.
+%!  keep_alive(+Reply, -Connection) is det.
 %
-%	If true for Reply, the default is to keep the connection open.
+%   If true for Reply, the default is to keep the connection open.
 
 keep_alive(Reply, Connection) :-
-	(   keep_alive(Reply)
-	->  Connection = 'Keep-Alive'
-	;   Connection = close
-	).
+    (   keep_alive(Reply)
+    ->  Connection = 'Keep-Alive'
+    ;   Connection = close
+    ).
 
 keep_alive(not_modified).
 keep_alive(bytes(_Type, _Bytes)).
@@ -196,14 +204,14 @@ keep_alive(cgi_stream(_In, _Len)).
 keep_alive(switching_protocols(_Goal, _)).
 
 
-		 /*******************************
-		 *	    IDE SUPPORT		*
-		 *******************************/
+                 /*******************************
+                 *          IDE SUPPORT         *
+                 *******************************/
 
 % See library('trace/exceptions')
 
 :- multifile
-	prolog:general_exception/2.
+    prolog:general_exception/2.
 
 prolog:general_exception(http_reply(_), http_reply(_)).
 prolog:general_exception(http_reply(_,_), http_reply(_,_)).

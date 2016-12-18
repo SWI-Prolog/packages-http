@@ -34,8 +34,8 @@
 */
 
 :- module(http_error,
-	  [
-	  ]).
+          [
+          ]).
 :- use_module(library(prolog_stack)).
 :- use_module(library(settings)).
 :- use_module(library(broadcast)).
@@ -59,51 +59,55 @@ can be controlled by
 */
 
 :- setting(http:client_backtrace, boolean, true,
-	   'Make backtrace visible to the client').
+           'Make backtrace visible to the client').
 
 
-		 /*******************************
-		 *     LOG ERRORS TO STDERR	*
-		 *******************************/
+                 /*******************************
+                 *     LOG ERRORS TO STDERR     *
+                 *******************************/
 
 :- debug(http(error)).
 
 :- listen(http(Message),
-	  http_listen(Message)).
+          http_listen(Message)).
 
 :- dynamic
-	saved_request/2.
+    saved_request/2.
 
 http_listen(_) :-
-	\+ debugging(http(error)), !.
-http_listen(request_start(Id, Request)) :- !,
-	asserta(saved_request(Id, Request)).
+    \+ debugging(http(error)), 
+    !.
+http_listen(request_start(Id, Request)) :-
+    !,
+    asserta(saved_request(Id, Request)).
 http_listen(request_finished(Id, Code, Status, _CPU, _Bytes)) :-
-	retract(saved_request(Id, Request)), !,
-	Code >= 400,
-	memberchk(path(Path), Request),
-	memberchk(method(Method), Request),
-	upcase_atom(Method, UMethod),
-	reply_status(Status, Reply),
-	debug(http(error),
-	      '~w ~w: [~w] ~w', [UMethod, Path, Code, Reply]).
+    retract(saved_request(Id, Request)),
+    !,
+    Code >= 400,
+    memberchk(path(Path), Request),
+    memberchk(method(Method), Request),
+    upcase_atom(Method, UMethod),
+    reply_status(Status, Reply),
+    debug(http(error),
+          '~w ~w: [~w] ~w', [UMethod, Path, Code, Reply]).
 
 reply_status(Status, Reply) :-
-	map_exception(Status, Reply), !.
+    map_exception(Status, Reply), 
+    !.
 reply_status(Status, Message) :-
-	message_to_string(Status, Message).
+    message_to_string(Status, Message).
 
 map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
-        string_length(Bytes, L).	% also does lists
+    string_length(Bytes, L).        % also does lists
 map_exception(http_reply(Reply), Reply).
 map_exception(http_reply(Reply, _), Reply).
 map_exception(error(existence_error(http_location, Location), _Stack),
-	      error(404, Location)).
+              error(404, Location)).
 
 
-		 /*******************************
-		 *     DECORATE STACK TRACES	*
-		 *******************************/
+                 /*******************************
+                 *     DECORATE STACK TRACES    *
+                 *******************************/
 
 :- dynamic prolog_stack:stack_guard/1.
 :- multifile prolog_stack:stack_guard/1.

@@ -34,13 +34,13 @@
 */
 
 :- module(http_cors,
-	  [ cors_enable/0,
-	    cors_enable/2			% +Requesy, +Options
-	  ]).
+          [ cors_enable/0,
+            cors_enable/2                       % +Requesy, +Options
+          ]).
 :- use_module(library(settings)).
 
 :- setting(http:cors, list(atom), [],
-	   'Enable CORS for the listed domains.  Use [*] for all domains').
+           'Enable CORS for the listed domains.  Use [*] for all domains').
 
 /** <module> Enable CORS: Cross-Origin Resource Sharing
 
@@ -62,9 +62,9 @@ the setting http:cors is set to the empty list ([]).
 
   ==
   my_handler(Request) :-
-	....,
-	cors_enable,
-	reply_json(Response, []).
+        ....,
+        cors_enable,
+        reply_json(Response, []).
   ==
 
 If a site uses a _Preflight_  =OPTIONS=   request  to  find the server's
@@ -73,101 +73,104 @@ an appropriate reply.  For example:
 
   ==
   my_handler(Request) :-
-	option(method(options), Request), !,
-	cors_enable(Request,
-		    [ methods([get,post,delete])
-		    ]),
-	format('~n').				% 200 with empty body
+        option(method(options), Request), !,
+        cors_enable(Request,
+                    [ methods([get,post,delete])
+                    ]),
+        format('~n').                           % 200 with empty body
   ==
 
-@see	http://en.wikipedia.org/wiki/Cross-site_scripting for understanding
-	Cross-site scripting.
-@see	http://www.w3.org/TR/cors/ for understanding CORS
+@see    http://en.wikipedia.org/wiki/Cross-site_scripting for understanding
+        Cross-site scripting.
+@see    http://www.w3.org/TR/cors/ for understanding CORS
 */
 
 
-%%	cors_enable is det.
+%!  cors_enable is det.
 %
-%	Emit  the  HTTP  header   =|Access-Control-Allow-Origin|=  using
-%	domains from the setting http:cors.  This   this  setting  is []
-%	(default), nothing is written. This  predicate is typically used
-%	for replying to API  HTTP-request  (e.g.,   replies  to  an AJAX
-%	request that typically serve JSON or XML).
+%   Emit  the  HTTP  header   =|Access-Control-Allow-Origin|=  using
+%   domains from the setting http:cors.  This   this  setting  is []
+%   (default), nothing is written. This  predicate is typically used
+%   for replying to API  HTTP-request  (e.g.,   replies  to  an AJAX
+%   request that typically serve JSON or XML).
 
 cors_enable :-
-	cors_enable_domain, !.
-cors_enable.				% CORS not enabled
+    cors_enable_domain, 
+    !.
+cors_enable.                            % CORS not enabled
 
 cors_enable_domain :-
-	setting(http:cors, List),
-	List \== [], !,
-	format('Access-Control-Allow-Origin: ', []),
-	write_domains(List),
-	nl.
+    setting(http:cors, List),
+    List \== [],
+    !,
+    format('Access-Control-Allow-Origin: ', []),
+    write_domains(List),
+    nl.
 
 write_domains([]).
 write_domains([H|T]) :-
-	write(H),
-	(   T == []
-	->  true
-	;   write(' '),
-	    write_domains(T)
-	).
+    write(H),
+    (   T == []
+    ->  true
+    ;   write(' '),
+        write_domains(T)
+    ).
 
-%%	cors_enable(+Request, +Options) is det.
+%!  cors_enable(+Request, +Options) is det.
 %
-%	CORS reply to a _Preflight_ =OPTIONS=   request.  Request is the
-%	HTTP request. Options provides:
+%   CORS reply to a _Preflight_ =OPTIONS=   request.  Request is the
+%   HTTP request. Options provides:
 %
-%	  - methods(+List)
-%	  List of supported HTTP methods.  The default is =GET=, only
-%	  allowing for read requests.
-%	  - headers(+List)
-%	  List of headers the client asks for and we allow.  The
-%	  default is to simply echo what has been requested for.
+%     - methods(+List)
+%     List of supported HTTP methods.  The default is =GET=, only
+%     allowing for read requests.
+%     - headers(+List)
+%     List of headers the client asks for and we allow.  The
+%     default is to simply echo what has been requested for.
 %
-%	Both methods and headers may use   Prolog friendly syntax, e.g.,
-%	=get= for a method and =content_type= for a header.
+%   Both methods and headers may use   Prolog friendly syntax, e.g.,
+%   =get= for a method and =content_type= for a header.
 %
-%	@see http://www.html5rocks.com/en/tutorials/cors/
+%   @see http://www.html5rocks.com/en/tutorials/cors/
 
 cors_enable(Request, Options) :-
-	cors_enable_domain, !,
-	option(methods(Methods), Options, [get]),
-	cors_methods(Methods),
-	(   option(headers(ReqHeaders), Options)
-	->  cors_request_headers(ReqHeaders)
-	;   option(access_control_request_headers(ReqHeader), Request)
-	->  format('Access-Control-Allow-Headers: ~w~n', [ReqHeader])
-	;   true
-	).
+    cors_enable_domain,
+    !,
+    option(methods(Methods), Options, [get]),
+    cors_methods(Methods),
+    (   option(headers(ReqHeaders), Options)
+    ->  cors_request_headers(ReqHeaders)
+    ;   option(access_control_request_headers(ReqHeader), Request)
+    ->  format('Access-Control-Allow-Headers: ~w~n', [ReqHeader])
+    ;   true
+    ).
 cors_enable(_, _).
 
 cors_methods([]) :- !.
 cors_methods(Methods) :-
-	format('Access-Control-Allow-Methods: '),
-	write_methods(Methods),
-	nl.
+    format('Access-Control-Allow-Methods: '),
+    write_methods(Methods),
+    nl.
 
 write_methods([H|T]) :-
-	upcase_atom(H, U),
-	write(U),
-	(   T == []
-	->  true
-	;   write(', '),
-	    write_methods(T)
-	).
+    upcase_atom(H, U),
+    write(U),
+    (   T == []
+    ->  true
+    ;   write(', '),
+        write_methods(T)
+    ).
 
 cors_request_headers([]) :- !.
 cors_request_headers(ReqHeaders) :-
-	phrase(field_names(ReqHeaders), String),
-	format('Access-Control-Allow-Headers: ~s', String).
+    phrase(field_names(ReqHeaders), String),
+    format('Access-Control-Allow-Headers: ~s', String).
 
 
 field_names([H|T]) -->
-	http_header:field_name(H),
-	(   {T==[]}
-	->  ""
-	;   ", ",
-	    field_names(T)
-	).
+    http_header:field_name(H),
+    (   {T==[]}
+    ->  ""
+    ;   ", ",
+        field_names(T)
+    ).

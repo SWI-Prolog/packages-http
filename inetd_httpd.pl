@@ -33,45 +33,46 @@
 */
 
 :- module(http_inetd,
-	  [ http_server/2		% :Goal, +Options
-	  ]).
+          [ http_server/2               % :Goal, +Options
+          ]).
 :- use_module(http_wrapper).
 
 :- meta_predicate
-	http_server(:, +),
-	server_loop(:, +).
+    http_server(:, +),
+    server_loop(:, +).
 
 /** <module> Run Prolog HTTP server from Unix inetd
 
 This module implements handling a single request (or multiple as long as
 =Keep-Alive= is respected), talking to stardard input and output.
 
-@deprecated	This type of handling of HTTP requests should be
-		considered outdated.  See library(http/thread_httpd).
+@deprecated     This type of handling of HTTP requests should be
+                considered outdated.  See library(http/thread_httpd).
 */
 
-%%	http_server(:Goal, +Options)
+%!  http_server(:Goal, +Options)
 %
-%	Start the server from inetd. This is really easy as user_input
-%	is connected to the HTTP input and user_output is the place to
-%	write our reply to.
+%   Start the server from inetd. This is really easy as user_input
+%   is connected to the HTTP input and user_output is the place to
+%   write our reply to.
 
 http_server(Goal, Options) :-
-	prompt(_, ''),
-	set_stream(user_output, buffer(full)),
-	set_stream(user_output, encoding(octet)),
-	set_stream(user_input, buffer(full)),
-	set_stream(user_input, encoding(octet)),
-	server_loop(Goal, Options).
+    prompt(_, ''),
+    set_stream(user_output, buffer(full)),
+    set_stream(user_output, encoding(octet)),
+    set_stream(user_input, buffer(full)),
+    set_stream(user_input, encoding(octet)),
+    server_loop(Goal, Options).
 
 server_loop(_, _) :-
-	at_end_of_stream(user_input), !,
-	halt.
+    at_end_of_stream(user_input),
+    !,
+    halt.
 server_loop(Goal, Options) :-
-	http_wrapper(Goal, user_input, user_output, Connection, []),
-	(   downcase_atom(Connection, 'keep-alive')
-	->  server_loop(Goal, Options)
-	;   halt
-	).
-server_loop(_, _) :-			% wrapper failed
-	halt.
+    http_wrapper(Goal, user_input, user_output, Connection, []),
+    (   downcase_atom(Connection, 'keep-alive')
+    ->  server_loop(Goal, Options)
+    ;   halt
+    ).
+server_loop(_, _) :-                    % wrapper failed
+    halt.

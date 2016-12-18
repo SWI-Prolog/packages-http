@@ -37,7 +37,7 @@
 :- use_module(library(uri)).
 
 :- multifile
-	user:prolog_load_file/2.
+    user:prolog_load_file/2.
 
 /** <module> Load Prolog code from a web server
 
@@ -57,71 +57,72 @@ code from HTTP and HTTPS servers.  Below is an example session:
 security.
 */
 
-%%	user:prolog_load_file(+URL, +Options)
+%!  user:prolog_load_file(+URL, +Options)
 %
-%	Hook into load_files/2 that loads   =|http://|= and =|https://|=
-%	resources directly from the web.
+%   Hook into load_files/2 that loads   =|http://|= and =|https://|=
+%   resources directly from the web.
 %
-%	@bug	Loading =https= does not validate the certificate.
+%   @bug    Loading =https= does not validate the certificate.
 
 user:prolog_load_file(Spec, Options) :-
-	strip_module(Spec, Module, URL),
-	atom(URL),
-	(   is_http_url(URL)
-	->  GlobalURL = URL
-	;   prolog_load_context(file, Parent),
-	    is_http_url(Parent),
-	    uri_resolve(URL, Parent, GlobalURL)
-	),
-	ensure_extension(GlobalURL, pl, FinalURL),
-	setup_call_cleanup(
-	    http_open(FinalURL, In,
-		      [ cert_verify_hook(ssl_verify)
-		      ]),
-	    load_files(Module:FinalURL, [stream(In)|Options]),
-	    close(In)).
+    strip_module(Spec, Module, URL),
+    atom(URL),
+    (   is_http_url(URL)
+    ->  GlobalURL = URL
+    ;   prolog_load_context(file, Parent),
+        is_http_url(Parent),
+        uri_resolve(URL, Parent, GlobalURL)
+    ),
+    ensure_extension(GlobalURL, pl, FinalURL),
+    setup_call_cleanup(
+        http_open(FinalURL, In,
+                  [ cert_verify_hook(ssl_verify)
+                  ]),
+        load_files(Module:FinalURL, [stream(In)|Options]),
+        close(In)).
 
 :- public ssl_verify/5.
 
-%%	ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
+%!  ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
 %
-%	Currently we accept  all  certificates.
+%   Currently we accept  all  certificates.
 
 ssl_verify(_SSL,
-	   _ProblemCertificate, _AllCertificates, _FirstCertificate,
-	   _Error).
+           _ProblemCertificate, _AllCertificates, _FirstCertificate,
+           _Error).
 
 is_http_url(URL) :-
-	uri_is_global(URL),
-	uri_components(URL, Components),
-        uri_data(scheme, Components, Scheme),
-        nonvar(Scheme),
-	http_scheme(Scheme).
+    uri_is_global(URL),
+    uri_components(URL, Components),
+    uri_data(scheme, Components, Scheme),
+    nonvar(Scheme),
+    http_scheme(Scheme).
 
 http_scheme(http).
 http_scheme(https) :-
-	catch(use_module(library(http/http_ssl_plugin)),
-	      E, (print_message(warning, E), fail)).
+    catch(use_module(library(http/http_ssl_plugin)),
+          E, (print_message(warning, E), fail)).
 
 
-%%	ensure_extension(+URL, +Ext, -PlParts)
+%!  ensure_extension(+URL, +Ext, -PlParts)
 %
-%	If the HTTP location is a plain path without extension, add the
-%	.pl extension. This ensures extension-less files appearing in
-%	file-loading directives are processed correctly.
+%   If the HTTP location is a plain path without extension, add the
+%   .pl extension. This ensures extension-less files appearing in
+%   file-loading directives are processed correctly.
 
 ensure_extension(URL0, Ext, URL) :-
-	uri_components(URL0, Components0),
-	uri_data(path, Components0, Path0),
-	ensure_path_extension(Path0, Ext, Path),
-	(   Path0 == Path
-	->  URL = URL0
-	;   uri_data(path, Components0, Path, Components),
-	    uri_components(URL, Components)
-	).
+    uri_components(URL0, Components0),
+    uri_data(path, Components0, Path0),
+    ensure_path_extension(Path0, Ext, Path),
+    (   Path0 == Path
+    ->  URL = URL0
+    ;   uri_data(path, Components0, Path, Components),
+        uri_components(URL, Components)
+    ).
 
 ensure_path_extension(Path0, Ext, Path) :-
-	file_name_extension(Base, '', Path0), !,
-	file_name_extension(Base, Ext, Path).
+    file_name_extension(Base, '', Path0),
+    !,
+    file_name_extension(Base, Ext, Path).
 ensure_path_extension(Path, _, Path).
 

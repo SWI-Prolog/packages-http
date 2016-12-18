@@ -33,8 +33,8 @@
 */
 
 :- module(test_cgi_stream,
-	  [ test_cgi_stream/0
-	  ]).
+          [ test_cgi_stream/0
+          ]).
 :- asserta(user:file_search_path(foreign, '.')).
 :- asserta(user:file_search_path(foreign, '../clib')).
 :- asserta(user:file_search_path(foreign, '../sgml')).
@@ -56,129 +56,131 @@ server to validate correct  processing  of   the  CGI  header,  handling
 different  encodings  and  transfer    encodings  (chunked/traditional).
 Instead of using real sockets, we use temporary storage on a file.
 
-@tbd	Validate error processing
+@tbd    Validate error processing
 */
 
 test_cgi_stream :-
-	run_tests([ cgi_stream,
-		    cgi_chunked,
-		    cgi_errors
-		  ]).
+    run_tests([ cgi_stream,
+                cgi_chunked,
+                cgi_errors
+              ]).
 
-		 /*******************************
-		 *	    DESTINATION		*
-		 *******************************/
+                 /*******************************
+                 *          DESTINATION         *
+                 *******************************/
 
 open_dest(TmpF, Out) :-
-	tmp_file(http, TmpF),
-	open(TmpF, write, Out, [type(binary)]).
+    tmp_file(http, TmpF),
+    open(TmpF, write, Out, [type(binary)]).
 
 free_dest(TmpF) :-
-	delete_file(TmpF).
+    delete_file(TmpF).
 
 free_dest(TmpF, Out) :-
-	close(Out),
-	delete_file(TmpF).
+    close(Out),
+    delete_file(TmpF).
 
 http_read_mf(TmpF, Header, Data) :-
-	open(TmpF, read, In, [type(binary)]),
-	http_read_reply_header(In, Header),
-	http_read_data(Header, Data, [to(atom)]),
-	close(In).
+    open(TmpF, read, In, [type(binary)]),
+    http_read_reply_header(In, Header),
+    http_read_data(Header, Data, [to(atom)]),
+    close(In).
 
 
 cat(TmpF) :-
-	open(TmpF, read, In),
-	call_cleanup(copy_stream_data(In, current_output),
-		     close(In)).
+    open(TmpF, read, In),
+    call_cleanup(copy_stream_data(In, current_output),
+                 close(In)).
 
 
-		 /*******************************
-		 *	      MAKE DATA		*
-		 *******************************/
+                 /*******************************
+                 *            MAKE DATA         *
+                 *******************************/
 
-%%	data_atom(+Length, +Min, +Max, -Atom) is det.
+%!  data_atom(+Length, +Min, +Max, -Atom) is det.
 %
-%	Create an atom of Length codes.  It contains repeating sequences
-%	Min..Max.
+%   Create an atom of Length codes.  It contains repeating sequences
+%   Min..Max.
 
 data_atom(Length, Min, Max, Atom) :-
-	data_list(Length, Min, Max, List),
-	atom_codes(Atom, List).
+    data_list(Length, Min, Max, List),
+    atom_codes(Atom, List).
 
 data_list(Length, Min, Max, List) :-
-	Span is Max - Min,
-	data_list(Length, Min, 0, Span, List).
+    Span is Max - Min,
+    data_list(Length, Min, 0, Span, List).
 
 data_list(Len, Min, I, Span, [H|T]) :-
-	Len > 0, !,
-	H is Min + I mod Span,
-	Len2 is Len - 1,
-	I2 is I+1,
-	data_list(Len2, Min, I2, Span, T).
+    Len > 0,
+    !,
+    H is Min + I mod Span,
+    Len2 is Len - 1,
+    I2 is I+1,
+    data_list(Len2, Min, I2, Span, T).
 data_list(_, _, _, _, []).
 
-%%	data(+Name, -Data, -ContentType) is det.
+%!  data(+Name, -Data, -ContentType) is det.
 %
-%	Create data-sets to be used with the PlUnit forall option.
+%   Create data-sets to be used with the PlUnit forall option.
 
 data(short_ascii, Data, 'text/plain') :-
-	data_atom(10, 97, 128, Data).
+    data_atom(10, 97, 128, Data).
 data(ascii, Data, 'text/plain') :-
-	data_atom(126, 1, 128, Data).
+    data_atom(126, 1, 128, Data).
 data(unicode, Data, 'text/plain') :-
-	data_atom(10, 1000, 1010, Data).
+    data_atom(10, 1000, 1010, Data).
 data(long_unicode, Data, 'text/plain') :-
-	data_atom(10000, 1, 1000, Data).
+    data_atom(10000, 1, 1000, Data).
 data(long_binary, Data, 'text/plain') :-
-	data_atom(10000, 0, 255, Data).
+    data_atom(10000, 0, 255, Data).
 
-%%	current_data(-Name) is nondet.
+%!  current_data(-Name) is nondet.
 %
-%	Enumerate available datasets.
+%   Enumerate available datasets.
 
 current_data(Name) :-
-	clause(data(Name, _, _), _).
+    clause(data(Name, _, _), _).
 
 
-		 /*******************************
-		 *	       TEST		*
-		 *******************************/
+                 /*******************************
+                 *             TEST             *
+                 *******************************/
 
 assert_header(Header, Field) :-
-	memberchk(Field, Header), !.
+    memberchk(Field, Header), 
+    !.
 assert_header(_Header, Field) :-
-	format(user_error, 'ERROR: ~p expected in header~n', [Field]),
-	fail.
+    format(user_error, 'ERROR: ~p expected in header~n', [Field]),
+    fail.
 
 
-		 /*******************************
-		 *	      HOOK		*
-		 *******************************/
+                 /*******************************
+                 *            HOOK              *
+                 *******************************/
 
 cgi_hook(What, _CGI) :-
-	debug(http(hook), 'Running hook: ~q', [What]),
-	fail.
+    debug(http(hook), 'Running hook: ~q', [What]),
+    fail.
 cgi_hook(header, CGI) :-
-	cgi_property(CGI, header_codes(HeadText)),
-	http_parse_header(HeadText, CgiHeader),
-	cgi_property(CGI, request(Request)),
-	http_update_connection(CgiHeader, Request, Connection, Header1),
-	http_update_transfer(Request, Header1, Transfer, Header2),
-	http_update_encoding(Header2, Encoding, Header),
-	set_stream(CGI, encoding(Encoding)),
-	cgi_set(CGI, connection(Connection)),
-	cgi_set(CGI, header(Header)),
-	cgi_set(CGI, transfer_encoding(Transfer)). % must be LAST
+    cgi_property(CGI, header_codes(HeadText)),
+    http_parse_header(HeadText, CgiHeader),
+    cgi_property(CGI, request(Request)),
+    http_update_connection(CgiHeader, Request, Connection, Header1),
+    http_update_transfer(Request, Header1, Transfer, Header2),
+    http_update_encoding(Header2, Encoding, Header),
+    set_stream(CGI, encoding(Encoding)),
+    cgi_set(CGI, connection(Connection)),
+    cgi_set(CGI, header(Header)),
+    cgi_set(CGI, transfer_encoding(Transfer)). % must be LAST
 cgi_hook(send_header, CGI) :-
-	cgi_property(CGI, header(Header)),
-	cgi_property(CGI, client(Out)),
-	(   cgi_property(CGI, transfer_encoding(chunked))
-	->  phrase(http_header:reply_header(chunked_data, Header, _), String)
-	;   cgi_property(CGI, content_length(Len))
-	->  phrase(http_header:reply_header(cgi_data(Len), Header, _), String)
-	),
-	format(Out, '~s', [String]).
+    cgi_property(CGI, header(Header)),
+    cgi_property(CGI, client(Out)),
+    (   cgi_property(CGI, transfer_encoding(chunked))
+    ->  phrase(http_header:reply_header(chunked_data, Header, _), String)
+    ;   cgi_property(CGI, content_length(Len))
+    ->  phrase(http_header:reply_header(cgi_data(Len), Header, _), String)
+    ),
+    format(Out, '~s', [String]).
 cgi_hook(close, _).
 
 
@@ -190,14 +192,14 @@ test(traditional,
        setup(open_dest(TmpF, Out)),
        cleanup(free_dest(TmpF))
      ]) :-
-	data(Name, Data, ContentType),
-	cgi_open(Out, CGI, cgi_hook, []),
-	format(CGI, 'Content-type: ~w\n\n', [ContentType]),
-	format(CGI, '~w', [Data]),
-	close(CGI),
-	close(Out),
-	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(_, ok, _)).
+    data(Name, Data, ContentType),
+    cgi_open(Out, CGI, cgi_hook, []),
+    format(CGI, 'Content-type: ~w\n\n', [ContentType]),
+    format(CGI, '~w', [Data]),
+    close(CGI),
+    close(Out),
+    http_read_mf(TmpF, Header, Reply),
+    assert_header(Header, status(_, ok, _)).
 
 test(unicode,
      [ forall(Name=unicode),
@@ -205,14 +207,14 @@ test(unicode,
        setup(open_dest(TmpF, Out)),
        cleanup(free_dest(TmpF))
      ]) :-
-	data(Name, Data, ContentType),
-	cgi_open(Out, CGI, cgi_hook, []),
-	format(CGI, 'Content-type: ~w\n\n', [ContentType]),
-	format(CGI, '~w', [Data]),
-	close(CGI),
-	close(Out),
-	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(_, ok, _)).
+    data(Name, Data, ContentType),
+    cgi_open(Out, CGI, cgi_hook, []),
+    format(CGI, 'Content-type: ~w\n\n', [ContentType]),
+    format(CGI, '~w', [Data]),
+    close(CGI),
+    close(Out),
+    http_read_mf(TmpF, Header, Reply),
+    assert_header(Header, status(_, ok, _)).
 
 :- end_tests(cgi_stream).
 
@@ -224,97 +226,100 @@ test(chunked,
        setup(open_dest(TmpF, Out)),
        cleanup(free_dest(TmpF))
      ]) :-
-	data(Name, Data, ContentType),
-	cgi_open(Out, CGI, cgi_hook,
-		 [ request([http_version(1-1)])
-		 ]),
-	format(CGI, 'Transfer-encoding: chunked\n', []),
-	format(CGI, 'Content-type: ~w\n\n', [ContentType]),
-	format(CGI, '~w', [Data]),
-	close(CGI),
-	close(Out),
-	http_read_mf(TmpF, Header, Reply),
-	assert_header(Header, status(_, ok, _)),
-	assert_header(Header, transfer_encoding(chunked)).
+    data(Name, Data, ContentType),
+    cgi_open(Out, CGI, cgi_hook,
+             [ request([http_version(1-1)])
+             ]),
+    format(CGI, 'Transfer-encoding: chunked\n', []),
+    format(CGI, 'Content-type: ~w\n\n', [ContentType]),
+    format(CGI, '~w', [Data]),
+    close(CGI),
+    close(Out),
+    http_read_mf(TmpF, Header, Reply),
+    assert_header(Header, status(_, ok, _)),
+    assert_header(Header, transfer_encoding(chunked)).
 
 :- end_tests(cgi_chunked).
 
 
-		 /*******************************
-		 *	   ERROR HANDLING	*
-		 *******************************/
+                 /*******************************
+                 *         ERROR HANDLING       *
+                 *******************************/
 
-%%	collect_messages(:Goal, -Messages) is semidet.
+%!  collect_messages(:Goal, -Messages) is semidet.
 %
-%	Run Goal as once/1, collecting possible messages in Messages.
+%   Run Goal as once/1, collecting possible messages in Messages.
 
 :- meta_predicate
-	collect_messages(0, -, -).
+    collect_messages(0, -, -).
 
 collect_messages(Goal, True, Messages) :-
-	strip_module(Goal, M, G),
-	collect_messages2(M:G, True, Messages).
+    strip_module(Goal, M, G),
+    collect_messages2(M:G, True, Messages).
 
 :- multifile
-	user:message_hook/3.
+    user:message_hook/3.
 :- dynamic
-	msg_collecting/0,
-	msg/2.
+    msg_collecting/0,
+    msg/2.
 
 user:message_hook(Term, Kind, _Lines) :-
-	msg_collecting, !,
-	assert(msg(Term, Kind)).
+    msg_collecting,
+    !,
+    assert(msg(Term, Kind)).
 
 collect_messages2(Goal, True, Messages) :-
-	assert(msg_collecting, Ref),
-	call_cleanup(call_result(Goal, True),
-		     (	 erase(Ref),
-			 findall(message(Term, Kind), retract(msg(Term, Kind)),
-				 Messages))).
+    assert(msg_collecting, Ref),
+    call_cleanup(call_result(Goal, True),
+                 (   erase(Ref),
+                     findall(message(Term, Kind), retract(msg(Term, Kind)),
+                             Messages))).
 
 call_result(Goal, true) :-
-	Goal, !.
+    Goal, 
+    !.
 call_result(_, false).
 
 
 :- begin_tests(cgi_errors, [sto(rational_trees)]).
 
 cgi_fail_hook(Event, _) :-
-	debug(http(hook), 'Failing hook for ~w', [Event]),
-	fail.
+    debug(http(hook), 'Failing hook for ~w', [Event]),
+    fail.
 
 cgi_error_hook(Event, _) :-
-	debug(http(hook), 'Error hook for ~w', [Event]),
-	throw(error(demo_error, _)).
+    debug(http(hook), 'Error hook for ~w', [Event]),
+    throw(error(demo_error, _)).
 
 test(hook_failed,
       [ setup(open_dest(TmpF, Out)),
         cleanup(free_dest(TmpF, Out)),
-	error(io_error(_,_))
+        error(io_error(_,_))
       ]) :-
-	cgi_open(Out, CGI, cgi_fail_hook, []),
-	close(CGI).
+    cgi_open(Out, CGI, cgi_fail_hook, []),
+    close(CGI).
 
 test(hook_error,
      [ setup(open_dest(TmpF, Out)),
        cleanup(free_dest(TmpF, Out)),
        error(demo_error)
      ]) :-
-	cgi_open(Out, CGI, cgi_error_hook, []),
-	close(CGI).
+    cgi_open(Out, CGI, cgi_error_hook, []),
+    close(CGI).
 
 :- end_tests(cgi_errors).
 
 
-		 /*******************************
-		 *	       PORTRAY		*
-		 *******************************/
+                 /*******************************
+                 *             PORTRAY          *
+                 *******************************/
 
 user:portray(Atom) :-
-	atom(Atom),
-	atom_length(Atom, Len),
-	Len > 100, !,
-	sub_atom(Atom, 0, 35, _, Start),
-	sub_atom(Atom, _, 35, 0, End),
-	format('~q...[~D codes]...~q', [Start, Len, End]).
+    atom(Atom),
+    atom_length(Atom, Len),
+    Len > 100,
+    !,
+    sub_atom(Atom, 0, 35, _, Start),
+    sub_atom(Atom, _, 35, 0, End),
+    format('~q...[~D codes]...~q', [Start, Len, End]).
 

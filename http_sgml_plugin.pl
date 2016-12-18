@@ -33,15 +33,15 @@
 */
 
 :- module(http_sgml_plugin, []).
-:- use_module(http_client, []).			% library we extend
+:- use_module(http_client, []).                 % library we extend
 :- use_module(library(sgml)).
 :- use_module(library(debug)).
 
 :- multifile
-	http_client:http_convert_data/4.
+    http_client:http_convert_data/4.
 
 :- multifile
-	markup_type/2.			% +MimeType, -ParseOptions
+    markup_type/2.                  % +MimeType, -ParseOptions
 
 /** <module> Parse of HTML and XML documents for the HTTP client libs
 
@@ -52,42 +52,43 @@ reads directly from the stream that established the HTTP connection.
 
 This is a plugin for http_get/3 and http_post/4
 
-@see	http_open/3 is now the preferred interface for client side
-	processing of HTTP.
+@see    http_open/3 is now the preferred interface for client side
+        processing of HTTP.
 */
 
 http_client:http_convert_data(In, Fields, Data, Options) :-
-	memberchk(content_type(Type), Fields),
-	debug(sgml_plugin, 'Content type: ~w', [Type]),
-	(   markup_type(Type, ParseOptions)
-	->  true
-	;   type_major_props(Type, Major, Props),
-	    default_markup_type(Major, ParseOptions0),
-	    type_props(Props, ParseOptions0, ParseOptions)
-	),
-	merge_options([ max_errors(-1),
-			syntax_errors(quiet)
-		      | ParseOptions
-		      ], Options, Merged),
-	markup_options(Fields, Merged, MarkupOptions),
-	debug(sgml_plugin, 'Markup options: ~p', [MarkupOptions]),
-	load_structure(stream(In), Data, MarkupOptions).
+    memberchk(content_type(Type), Fields),
+    debug(sgml_plugin, 'Content type: ~w', [Type]),
+    (   markup_type(Type, ParseOptions)
+    ->  true
+    ;   type_major_props(Type, Major, Props),
+        default_markup_type(Major, ParseOptions0),
+        type_props(Props, ParseOptions0, ParseOptions)
+    ),
+    merge_options([ max_errors(-1),
+                    syntax_errors(quiet)
+                  | ParseOptions
+                  ], Options, Merged),
+    markup_options(Fields, Merged, MarkupOptions),
+    debug(sgml_plugin, 'Markup options: ~p', [MarkupOptions]),
+    load_structure(stream(In), Data, MarkupOptions).
 
 
 type_major_props(Type0, Type, Props) :-
-	sub_atom(Type0, B, _, A, ;), !,
-	sub_atom(Type0, 0, B, _, Major),
-	sub_atom(Type0, _, A, 0, Props),
-	normalize_space(atom(Type), Major).
+    sub_atom(Type0, B, _, A, ;),
+    !,
+    sub_atom(Type0, 0, B, _, Major),
+    sub_atom(Type0, _, A, 0, Props),
+    normalize_space(atom(Type), Major).
 type_major_props(Type, Type, '').
 
 type_props('', L, L).
 type_props(Props, L0, L) :-
-	sub_atom(Props, _, _, A, 'charset='),
-	sub_atom(Props, _, A, 0, CharSet0),
-	downcase_atom(CharSet0, CharSet),
-	known_charset(CharSet),
-	L = [encoding(CharSet)|L0].
+    sub_atom(Props, _, _, A, 'charset='),
+    sub_atom(Props, _, A, 0, CharSet0),
+    downcase_atom(CharSet0, CharSet),
+    known_charset(CharSet),
+    L = [encoding(CharSet)|L0].
 type_props(_, L, L).
 
 known_charset('iso-8859-1').
@@ -95,41 +96,42 @@ known_charset('us-ascii').
 known_charset('utf-8').
 
 
-%%	default_markup_type(+MimeType, -ParseOptions)
+%!  default_markup_type(+MimeType, -ParseOptions)
 %
-%	State that the HTTP contents should be parsed with
-%	load_structure/3 using the returned options. This predicate may
-%	be hooked using the multifile predicate markup_type/2.
+%   State that the HTTP contents should be parsed with
+%   load_structure/3 using the returned options. This predicate may
+%   be hooked using the multifile predicate markup_type/2.
 
 default_markup_type('text/xml',
-	    [ dialect(xmlns)
-	    ]).
+            [ dialect(xmlns)
+            ]).
 default_markup_type('text/html',
-	    [ dtd(DTD),
-	      dialect(sgml),
-	      shorttag(false)
-	    ]) :-
-	dtd(html, DTD).
+            [ dtd(DTD),
+              dialect(sgml),
+              shorttag(false)
+            ]) :-
+    dtd(html, DTD).
 default_markup_type('text/x-sgml',
-	    [ dialect(sgml)
-	    ]).
+            [ dialect(sgml)
+            ]).
 
 markup_options(Fields, Opt0, Options) :-
-	(   memberchk(content_length(Bytes), Fields)
-	->  Options = [content_length(Bytes)|Opt0]
-	;   Options = Opt0
-	).
+    (   memberchk(content_length(Bytes), Fields)
+    ->  Options = [content_length(Bytes)|Opt0]
+    ;   Options = Opt0
+    ).
 
-%%	merge_options(+Defaults, +GivenOptions, -Options)
+%!  merge_options(+Defaults, +GivenOptions, -Options)
 %
-%	If an option is not in GivenOptions, use the one from
-%	Defaults.
+%   If an option is not in GivenOptions, use the one from
+%   Defaults.
 
 merge_options([], Options, Options).
 merge_options([H|T], Options0, Options) :-
-	functor(H, Name, Arity),
-	functor(H0, Name, Arity),
-	memberchk(H0, Options0), !,
-	merge_options(T, Options0, Options).
+    functor(H, Name, Arity),
+    functor(H0, Name, Arity),
+    memberchk(H0, Options0),
+    !,
+    merge_options(T, Options0, Options).
 merge_options([H|T], Options0, Options) :-
-	merge_options(T, [H|Options0], Options).
+    merge_options(T, [H|Options0], Options).

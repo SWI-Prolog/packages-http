@@ -40,7 +40,7 @@
 :- use_module(library(option)).
 
 :- initialization
-	mime_default_charset(_, 'UTF-8').
+    mime_default_charset(_, 'UTF-8').
 
 /** <module> MIME client plugin
 
@@ -62,63 +62,65 @@ data and does not include GPL foreign components.
 */
 
 :- multifile
-	http_client:http_convert_data/4,
-	http_parameters:form_data_content_type/1.
+    http_client:http_convert_data/4,
+    http_parameters:form_data_content_type/1.
 
-%%	http_client:http_convert_data(+In, +Fields, -Data, +Options) is semidet.
+%!  http_client:http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
-%	Convert =|multipart/form-data|= messages for http_read_data/3.
-%	Options:
+%   Convert =|multipart/form-data|= messages for http_read_data/3.
+%   Options:
 %
-%	  * form_data(AsForm)
-%	  If the content-type is =|multipart/form-data|=, return the
-%	  form-data either as a list of Name=Value (AsForm = =form=;
-%	  default) or as a part-list as defined by mime_parse/2.
+%     * form_data(AsForm)
+%     If the content-type is =|multipart/form-data|=, return the
+%     form-data either as a list of Name=Value (AsForm = =form=;
+%     default) or as a part-list as defined by mime_parse/2.
 
 http_client:http_convert_data(In, Fields, Data, Options) :-
-	memberchk(content_type(Type), Fields),
-	(   memberchk(mime_version(MimeVersion), Fields)
-	;   sub_atom(Type, 0, _, _, 'multipart/form-data'),
-	    MimeVersion = '1.0'
-	), !,
-	setup_call_cleanup(
-	    new_memory_file(MemFile),
-	    convert_mime_data(In, Fields, Data,
-			      MemFile, Type, MimeVersion, Options),
-	    free_memory_file(MemFile)).
+    memberchk(content_type(Type), Fields),
+    (   memberchk(mime_version(MimeVersion), Fields)
+    ;   sub_atom(Type, 0, _, _, 'multipart/form-data'),
+        MimeVersion = '1.0'
+    ),
+    !,
+    setup_call_cleanup(
+        new_memory_file(MemFile),
+        convert_mime_data(In, Fields, Data,
+                          MemFile, Type, MimeVersion, Options),
+        free_memory_file(MemFile)).
 
 convert_mime_data(In, Fields, Data, MemFile, Type, MimeVersion, Options) :-
-	option(form_data(AsForm), Options, form),
-	setup_call_cleanup(
-	    open_memory_file(MemFile, write, Tmp),
-	    ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
-	      format(Tmp, 'Content-Type: ~w\r\n\r\n', [Type]),
-	      http_read_data([input(In)|Fields], _,
-			     [ to(stream(Tmp))
-			     | Options
-			     ])
-	    ),
-	    close(Tmp)),
-	setup_call_cleanup(
-	    open_memory_file(MemFile, read, MimeIn),
-	    mime_parse(stream(MimeIn), Data0),
-	    close(MimeIn)),
-	mime_to_form(Data0, AsForm, Data).
+    option(form_data(AsForm), Options, form),
+    setup_call_cleanup(
+        open_memory_file(MemFile, write, Tmp),
+        ( format(Tmp, 'Mime-Version: ~w\r\n', [MimeVersion]),
+          format(Tmp, 'Content-Type: ~w\r\n\r\n', [Type]),
+          http_read_data([input(In)|Fields], _,
+                         [ to(stream(Tmp))
+                         | Options
+                         ])
+        ),
+        close(Tmp)),
+    setup_call_cleanup(
+        open_memory_file(MemFile, read, MimeIn),
+        mime_parse(stream(MimeIn), Data0),
+        close(MimeIn)),
+    mime_to_form(Data0, AsForm, Data).
 
 mime_to_form(mime(A,'',Parts), AsForm, Form) :-
-	memberchk(type('multipart/form-data'), A), !,
-	(   AsForm == mime
-	->  Form = Parts
-	;   mime_form_fields(Parts, Form0)
-	->  Form = Form0
-	;   Form = Parts
-	).
+    memberchk(type('multipart/form-data'), A),
+    !,
+    (   AsForm == mime
+    ->  Form = Parts
+    ;   mime_form_fields(Parts, Form0)
+    ->  Form = Form0
+    ;   Form = Parts
+    ).
 mime_to_form(Mime, _, Mime).
 
 mime_form_fields([], []).
 mime_form_fields([mime(A, V, [])|T0], [Name=V|T]) :-
-	memberchk(name(Name), A),
-	mime_form_fields(T0, T).
+    memberchk(name(Name), A),
+    mime_form_fields(T0, T).
 
 http_parameters:form_data_content_type(ContentType) :-
-	sub_atom(ContentType, 0, _, _, 'multipart/form-data').
+    sub_atom(ContentType, 0, _, _, 'multipart/form-data').

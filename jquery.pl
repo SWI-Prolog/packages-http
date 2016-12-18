@@ -39,7 +39,7 @@
 :- use_module(library(broadcast)).
 
 :- setting(version, atom, '1.11.3.min',
-	   'Version of jquery served by the html resource "jquery"').
+           'Version of jquery served by the html resource "jquery"').
 
 /** <module> Provide JQuery
 
@@ -70,17 +70,17 @@ before loading this file.
 */
 
 register_jquery :-
-	setting(version, Version),
-	atomic_list_concat(['jquery-', Version, '.js'], JQuery),
-	html_resource(jquery,
-		      [ virtual(true),
-			requires([ js(JQuery)
-				 ])
-		      ]).
+    setting(version, Version),
+    atomic_list_concat(['jquery-', Version, '.js'], JQuery),
+    html_resource(jquery,
+                  [ virtual(true),
+                    requires([ js(JQuery)
+                             ])
+                  ]).
 
 :- if(\+html_current_resource(jquery)).
 :- initialization register_jquery.
 :- listen(settings(changed(jquery:version, _, _)),
-	  register_jquery).
+          register_jquery).
 :- endif.
 

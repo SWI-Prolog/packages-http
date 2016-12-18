@@ -33,10 +33,10 @@
 */
 
 :- module(http_cookie,
-	  [ cookie_remove_client/1,	% +ClientId
-	    cookie_remove_all_clients/0,
-	    cookie_current_cookie/4	% ?ClientId, ?Name, ?Value, ?Options
-	  ]).
+          [ cookie_remove_client/1,     % +ClientId
+            cookie_remove_all_clients/0,
+            cookie_current_cookie/4     % ?ClientId, ?Name, ?Value, ?Options
+          ]).
 :- use_module(library(http/http_header)).
 :- use_module(library(option)).
 :- use_module(library(debug)).
@@ -62,180 +62,184 @@ predicates.
 */
 
 :- multifile
-	http:write_cookies/3,		% +Out, +Parts, +Options
-	http:update_cookies/3.		% +CookieData, +Parts, +Options
+    http:write_cookies/3,           % +Out, +Parts, +Options
+    http:update_cookies/3.          % +CookieData, +Parts, +Options
 
 :- dynamic
-	client_cookie/5.		% Id, CanName, Name, Value, Options
+    client_cookie/5.                % Id, CanName, Name, Value, Options
 
-%%	http:write_cookies(+Out, +Parts, +Options) is det.
+%!  http:write_cookies(+Out, +Parts, +Options) is det.
 %
-%	Emit a cookie header for the current request.
+%   Emit a cookie header for the current request.
 
 http:write_cookies(Out, Parts, Options) :-
-	option(client(ClientId), Options, default),
-	cookie(ClientId, Parts, Cookie),
-	format(Out, 'Cookie: ~s\r\n', [Cookie]).
+    option(client(ClientId), Options, default),
+    cookie(ClientId, Parts, Cookie),
+    format(Out, 'Cookie: ~s\r\n', [Cookie]).
 
-%%	cookie(+ClientId, +Parts, -Cookie) is semidet.
+%!  cookie(+ClientId, +Parts, -Cookie) is semidet.
 %
-%	Cookie is the cookie for Parts for the given ClientId
+%   Cookie is the cookie for Parts for the given ClientId
 
 cookie(ClientId, Parts, Cookie) :-
-	request_host(Parts, Host),
-	request_path(Parts, Path),
-	findall(N=V, current_cookie(ClientId, Host, Path, N, V), Cookies),
-	Cookies \== [], !,
-	debug(http(cookie), 'Cookies for ~w at ~w~w: ~p',
-	      [ClientId, Host, Path, Cookies]),
-	cookie_value(Cookies, Cookie).
+    request_host(Parts, Host),
+    request_path(Parts, Path),
+    findall(N=V, current_cookie(ClientId, Host, Path, N, V), Cookies),
+    Cookies \== [],
+    !,
+    debug(http(cookie), 'Cookies for ~w at ~w~w: ~p',
+          [ClientId, Host, Path, Cookies]),
+    cookie_value(Cookies, Cookie).
 
 request_host(Parts, Host) :-
-	memberchk(host(Host), Parts).
+    memberchk(host(Host), Parts).
 
 request_path(Parts, Path) :-
-	(   memberchk(path(Path), Parts)
-	->  true
-	;   Path = (/)
-	).
+    (   memberchk(path(Path), Parts)
+    ->  true
+    ;   Path = (/)
+    ).
 
-%%	cookie_value(+NameValueList, -CookieString) is det.
+%!  cookie_value(+NameValueList, -CookieString) is det.
 %
-%	Create a cookie value string with name=value, seperated by ";".
+%   Create a cookie value string with name=value, seperated by ";".
 
 cookie_value(List, Cookie) :-
-	with_output_to(string(Cookie),
-		       write_cookies(List)).
+    with_output_to(string(Cookie),
+                   write_cookies(List)).
 
 write_cookies([]).
 write_cookies([Name=Value|T]) :-
-	format('~w=~w', [Name, Value]),
-	(   T == []
-	->  true
-	;   format('; ', []),
-	    write_cookies(T)
-	).
+    format('~w=~w', [Name, Value]),
+    (   T == []
+    ->  true
+    ;   format('; ', []),
+        write_cookies(T)
+    ).
 
-%%	http:update_cookies(+CookieData, +Parts, +Options) is semidet.
+%!  http:update_cookies(+CookieData, +Parts, +Options) is semidet.
 %
-%	Update the client  cookie  database.
+%   Update the client  cookie  database.
 
 http:update_cookies(CookieData, Parts, Options) :-
-	http_parse_header_value(set_cookie, CookieData,
-				set_cookie(Name, Value, COptions)), !,
-	option(client(ClientId), Options, default),
-	request_host(Parts, Host),
-	request_path(Parts, Path),
-	with_mutex(http_cookie,
-		   update_cookie(ClientId, Host, Path, Name, Value, COptions)).
+    http_parse_header_value(set_cookie, CookieData,
+                            set_cookie(Name, Value, COptions)),
+    !,
+    option(client(ClientId), Options, default),
+    request_host(Parts, Host),
+    request_path(Parts, Path),
+    with_mutex(http_cookie,
+               update_cookie(ClientId, Host, Path, Name, Value, COptions)).
 
 update_cookie(ClientId, Host, Path, Name, Value, Options) :-
-	downcase_atom(Name, CName),
-	remove_cookies(ClientId, Host, Path, CName, Options),
-	debug(http(cookie), 'New for ~w: ~w=~p', [ClientId, Name, Value]),
-	assert(client_cookie(ClientId, CName, Name, Value, [host=Host|Options])).
+    downcase_atom(Name, CName),
+    remove_cookies(ClientId, Host, Path, CName, Options),
+    debug(http(cookie), 'New for ~w: ~w=~p', [ClientId, Name, Value]),
+    assert(client_cookie(ClientId, CName, Name, Value, [host=Host|Options])).
 
-%%	remove_cookies(+ClientId, +Host, +Path, +Name, +SetOptions) is det.
+%!  remove_cookies(+ClientId, +Host, +Path, +Name, +SetOptions) is det.
 %
-%	Remove all cookies that conflict with the new set-cookie
-%	command.
+%   Remove all cookies that conflict with the new set-cookie
+%   command.
 
 remove_cookies(ClientId, Host, Path, CName, SetOptions) :-
-	(   client_cookie(ClientId, CName, Name, Value, OldOptions),
-	    cookie_match_host(Host, SetOptions, OldOptions),
-	    cookie_match_path(Path, SetOptions, OldOptions),
-	    debug(cookie, 'Del for ~w: ~w=~p', [ClientId, Name, Value]),
-	    retract(client_cookie(ClientId, CName, Name, Value, OldOptions)),
-	    fail
-	;   true
-	).
+    (   client_cookie(ClientId, CName, Name, Value, OldOptions),
+        cookie_match_host(Host, SetOptions, OldOptions),
+        cookie_match_path(Path, SetOptions, OldOptions),
+        debug(cookie, 'Del for ~w: ~w=~p', [ClientId, Name, Value]),
+        retract(client_cookie(ClientId, CName, Name, Value, OldOptions)),
+        fail
+    ;   true
+    ).
 
 cookie_match_host(Host, SetOptions, OldOptions) :-
-	(   memberchk(domain=Domain, SetOptions)
-	->  cookie_match_host(Domain, OldOptions)
-	;   cookie_match_host(Host, OldOptions)
-	).
+    (   memberchk(domain=Domain, SetOptions)
+    ->  cookie_match_host(Domain, OldOptions)
+    ;   cookie_match_host(Host, OldOptions)
+    ).
 
 cookie_match_path(Path, SetOptions, OldOptions) :-
-	(   memberchk(path=PathO, SetOptions)
-	->  cookie_match_path(PathO, OldOptions)
-	;   cookie_match_path(Path, OldOptions)
-	).
+    (   memberchk(path=PathO, SetOptions)
+    ->  cookie_match_path(PathO, OldOptions)
+    ;   cookie_match_path(Path, OldOptions)
+    ).
 
-%%	current_cookie(+ClientId, +Host, +Path, -Name, -Value) is nondet.
+%!  current_cookie(+ClientId, +Host, +Path, -Name, -Value) is nondet.
 %
-%	Find cookies that match the given request.
+%   Find cookies that match the given request.
 
 current_cookie(ClientId, Host, Path, Name, Value) :-
-	client_cookie(ClientId, _CName, Name, Value, Options),
-	cookie_match_host(Host, Options),
-	cookie_match_path(Path, Options),
-	cookie_match_expire(Options).
+    client_cookie(ClientId, _CName, Name, Value, Options),
+    cookie_match_host(Host, Options),
+    cookie_match_path(Path, Options),
+    cookie_match_expire(Options).
 
 cookie_match_host(Host, Options) :-
-	(   memberchk(domain=Domain, Options)
-	->  downcase_atom(Host, LHost),
-	    downcase_atom(Domain, LDomain),
-	    sub_atom(LHost, _, _, 0, LDomain) 	% TBD: check '.'?
-	;   memberchk(host=CHost, Options),
-	    downcase_atom(Host, LHost),
-	    downcase_atom(CHost, LHost)
-	).
+    (   memberchk(domain=Domain, Options)
+    ->  downcase_atom(Host, LHost),
+        downcase_atom(Domain, LDomain),
+        sub_atom(LHost, _, _, 0, LDomain)   % TBD: check '.'?
+    ;   memberchk(host=CHost, Options),
+        downcase_atom(Host, LHost),
+        downcase_atom(CHost, LHost)
+    ).
 
 cookie_match_path(Path, Options) :-
-	(   memberchk(path=Root, Options)
-	->  sub_atom(Path, 0, _, _, Root)	% TBD: check '/'?
-	;   true
-	).
+    (   memberchk(path=Root, Options)
+    ->  sub_atom(Path, 0, _, _, Root)       % TBD: check '/'?
+    ;   true
+    ).
 
 cookie_match_expire(Options) :-
-	(   memberchk(expire=Expire, Options)
-	->  get_time(Now),
-	    Now =< Expire
-	;   true
-	).
+    (   memberchk(expire=Expire, Options)
+    ->  get_time(Now),
+        Now =< Expire
+    ;   true
+    ).
 
-%%	cookie_remove_client(+ClientId) is det.
+%!  cookie_remove_client(+ClientId) is det.
 %
-%	Fake user quitting a browser.   Removes all cookies that do
-%	not have an expire date.
+%   Fake user quitting a browser.   Removes all cookies that do
+%   not have an expire date.
 
 cookie_remove_client(ClientId) :-
-	var(ClientId), !,
-	throw(error(instantiation_error, _)).
+    var(ClientId),
+    !,
+    throw(error(instantiation_error, _)).
 cookie_remove_client(ClientId) :-
-	(   client_cookie(ClientId, CName, Name, Value, Options),
-	    \+ memberchk(expire=_, Options),
-	    retract(client_cookie(ClientId, CName, Name, Value, Options)),
-	    fail
-	;   true
-	).
+    (   client_cookie(ClientId, CName, Name, Value, Options),
+        \+ memberchk(expire=_, Options),
+        retract(client_cookie(ClientId, CName, Name, Value, Options)),
+        fail
+    ;   true
+    ).
 
-%%	cookie_remove_all_clients is det.
+%!  cookie_remove_all_clients is det.
 %
-%	Simply logout all clients.  See http_remove_client/1.
+%   Simply logout all clients.  See http_remove_client/1.
 
 cookie_remove_all_clients :-
-	forall(current_client(ClientId),
-	       cookie_remove_client(ClientId)).
+    forall(current_client(ClientId),
+           cookie_remove_client(ClientId)).
 
-%%	current_client(?ClientId) is nondet.
+%!  current_client(?ClientId) is nondet.
 %
-%	True if ClientId is the identifier of a client.
+%   True if ClientId is the identifier of a client.
 
 current_client(ClientId) :-
-	client_cookie(ClientId, _CName, _Name, _Value, _Options).
+    client_cookie(ClientId, _CName, _Name, _Value, _Options).
 
-%%	http_current_cookie(?ClientId, ?Name, ?Value, ?Options) is nondet.
+%!  http_current_cookie(?ClientId, ?Name, ?Value, ?Options) is nondet.
 %
-%	Query current cookie database. If Name   is given, it is matched
-%	case insensitive against the known cookies.   If  it is unbound,
-%	the  cookie  name  is  returned  in    its  oiginal  case  (case
-%	preserving).
+%   Query current cookie database. If Name   is given, it is matched
+%   case insensitive against the known cookies.   If  it is unbound,
+%   the  cookie  name  is  returned  in    its  oiginal  case  (case
+%   preserving).
 
 cookie_current_cookie(ClientId, Name, Value, Options) :-
-	nonvar(Name), !,
-	downcase_atom(Name, CName),
-	client_cookie(ClientId, CName, Name, Value, Options).
+    nonvar(Name),
+    !,
+    downcase_atom(Name, CName),
+    client_cookie(ClientId, CName, Name, Value, Options).
 cookie_current_cookie(ClientId, Name, Value, Options) :-
-	client_cookie(ClientId, _CName, Name, Value, Options).
+    client_cookie(ClientId, _CName, Name, Value, Options).

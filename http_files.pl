@@ -33,8 +33,8 @@
 */
 
 :- module(http_files,
-	  [ http_reply_from_files/3	% +Dir, +Options, +Request
-	  ]).
+          [ http_reply_from_files/3     % +Dir, +Options, +Request
+          ]).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_dirindex)).
 :- use_module(library(filesex)).
@@ -61,73 +61,73 @@ handle all paths that begin with the registed location of the handler.
   :- http_handler(root(.), http_reply_from_files('.', []), [prefix]).
 
   :- initialization
-	http_server(http_dispatch, [port(8080)]).
+        http_server(http_dispatch, [port(8080)]).
   ==
 
-@see	pwp_handler/2 provides similar facilities, where .pwp files
-	can be used to add dynamic behaviour.
+@see    pwp_handler/2 provides similar facilities, where .pwp files
+        can be used to add dynamic behaviour.
 */
 
 
-%%	http_reply_from_files(+Dir, +Options, +Request)
+%!  http_reply_from_files(+Dir, +Options, +Request)
 %
-%	HTTP handler that serves files  from   the  directory  Dir. This
-%	handler uses http_reply_file/3 to  reply   plain  files.  If the
-%	request resolves to a directory, it uses the option =indexes= to
-%	locate an index file (see   below) or uses http_reply_dirindex/3
-%	to create a listing of the directory.
+%   HTTP handler that serves files  from   the  directory  Dir. This
+%   handler uses http_reply_file/3 to  reply   plain  files.  If the
+%   request resolves to a directory, it uses the option =indexes= to
+%   locate an index file (see   below) or uses http_reply_dirindex/3
+%   to create a listing of the directory.
 %
-%	Options:
+%   Options:
 %
-%	  * indexes(+List)
-%	  List of files tried to find an index for a directory.  The
-%	  default is ['index.html'].
+%     * indexes(+List)
+%     List of files tried to find an index for a directory.  The
+%     default is ['index.html'].
 %
-%	Note that this handler must be tagged as a =prefix= handler (see
-%	http_handler/3 and module introduction). This  also implies that
-%	it is possible to  override  more   specific  locations  in  the
-%	hierarchy using http_handler/3 with a longer path-specifier.
+%   Note that this handler must be tagged as a =prefix= handler (see
+%   http_handler/3 and module introduction). This  also implies that
+%   it is possible to  override  more   specific  locations  in  the
+%   hierarchy using http_handler/3 with a longer path-specifier.
 %
-%	@param	Dir is either a directory or an path-specification as
-%		used by absolute_file_name/3.  This option provides
-%		great flexibility in (re-)locating the physical files
-%		and allows merging the files of multiple physical
-%		locations into one web-hierarchy by using multiple
-%		user:file_search_path/2 clauses that define the same
-%		alias.
-%	@see	The hookable predicate file_mime_type/2 is used to
-%		determine the =|Content-type|= from the file name.
+%   @param  Dir is either a directory or an path-specification as
+%           used by absolute_file_name/3.  This option provides
+%           great flexibility in (re-)locating the physical files
+%           and allows merging the files of multiple physical
+%           locations into one web-hierarchy by using multiple
+%           user:file_search_path/2 clauses that define the same
+%           alias.
+%   @see    The hookable predicate file_mime_type/2 is used to
+%           determine the =|Content-type|= from the file name.
 
 http_reply_from_files(Dir, Options, Request) :-
-	(   memberchk(path_info(PathInfo), Request)
-	->  true
-	;   PathInfo = ''
-	),
-	http_safe_file(PathInfo, []),
-	locate_file(Dir, PathInfo, Path, IsFile, Options),
-	(   IsFile == true
-	->  http_reply_file(Path, [unsafe(true)], Request)
-	;   http_reply_dirindex(Path, [unsafe(true)], Request)
-	).
+    (   memberchk(path_info(PathInfo), Request)
+    ->  true
+    ;   PathInfo = ''
+    ),
+    http_safe_file(PathInfo, []),
+    locate_file(Dir, PathInfo, Path, IsFile, Options),
+    (   IsFile == true
+    ->  http_reply_file(Path, [unsafe(true)], Request)
+    ;   http_reply_dirindex(Path, [unsafe(true)], Request)
+    ).
 
 locate_file(Dir, PathInfo, Result, IsFile, Options) :-
-	absolute_file_name(Dir, DirPath,
-			   [ file_type(directory),
-			     access(read),
-			     solutions(all)
-			   ]),
-	directory_file_path(DirPath, PathInfo, Path),
-	(   exists_file(Path)
-	->  IsFile = true,
-	    Result = Path
-	;   exists_directory(Path),
-	    (   option(indexes(Indexes), Options, ['index.html']),
-		member(Index, Indexes),
-		directory_file_path(Path, Index, IndexFile),
-		exists_file(IndexFile)
-	    ->  Result = IndexFile,
-		IsFile = true
-	    ;   Result = Path,
-		IsFile = false
-	    )
-	).
+    absolute_file_name(Dir, DirPath,
+                       [ file_type(directory),
+                         access(read),
+                         solutions(all)
+                       ]),
+    directory_file_path(DirPath, PathInfo, Path),
+    (   exists_file(Path)
+    ->  IsFile = true,
+        Result = Path
+    ;   exists_directory(Path),
+        (   option(indexes(Indexes), Options, ['index.html']),
+            member(Index, Indexes),
+            directory_file_path(Path, Index, IndexFile),
+            exists_file(IndexFile)
+        ->  Result = IndexFile,
+            IsFile = true
+        ;   Result = Path,
+            IsFile = false
+        )
+    ).

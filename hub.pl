@@ -4,7 +4,7 @@
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
     Copyright (c)  2014-2016, VU University Amsterdam
-			      CWI Amsterdam
+                              CWI Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,13 +34,13 @@
 */
 
 :- module(hub,
-	  [ hub_create/3,		% +HubName, -Hub, +Options
-	    hub_add/3,			% +HubName, +Websocket, ?Id
-	    hub_send/2,			% +ClientId, +Message
-	    hub_broadcast/2,		% +HubName, +Message
-	    hub_broadcast/3,		% +HubName, +Message, +Condition
-	    current_hub/2		% ?HubName, ?Hub
-	  ]).
+          [ hub_create/3,               % +HubName, -Hub, +Options
+            hub_add/3,                  % +HubName, +Websocket, ?Id
+            hub_send/2,                 % +ClientId, +Message
+            hub_broadcast/2,            % +HubName, +Message
+            hub_broadcast/3,            % +HubName, +Message, +Condition
+            current_hub/2               % ?HubName, ?Hub
+          ]).
 :- use_module(library(debug)).
 :- use_module(library(error)).
 :- use_module(library(apply)).
@@ -50,7 +50,7 @@
 :- use_module(library(http/websocket)).
 
 :- meta_predicate
-	hub_broadcast(+,+,1).
+    hub_broadcast(+,+,1).
 
 /** <module> Manage a hub for websockets
 
@@ -84,58 +84,58 @@ A hub consists of (currenty) four message   queues  and a simple dynamic
 fact. Threads that are needed for the communication tasks are created on
 demand and die if no more work needs to be done.
 
-@tbd	The current design does not use threads to perform tasks for
-	multiple hubs.  This implies that the design scales rather
-	poorly for hosting many hubs with few users.
+@tbd    The current design does not use threads to perform tasks for
+        multiple hubs.  This implies that the design scales rather
+        poorly for hosting many hubs with few users.
 */
 
 :- dynamic
-	hub/2,				% Hub, Queues ...
-	websocket/5.			% Hub, Socket, Queue, Lock, Id
+    hub/2,                          % Hub, Queues ...
+    websocket/5.                    % Hub, Socket, Queue, Lock, Id
 
-%%	hub_create(+Name, -Hub, +Options) is det.
+%!  hub_create(+Name, -Hub, +Options) is det.
 %
-%	Create a new hub. Hub is a  dict containing the following public
-%	information:
+%   Create a new hub. Hub is a  dict containing the following public
+%   information:
 %
-%	  - Hub.name
-%	    The name of the hub (the Name argument)
-%	  - queues.event
-%	    Message queue to which the hub thread(s) can listen.
+%     - Hub.name
+%       The name of the hub (the Name argument)
+%     - queues.event
+%       Message queue to which the hub thread(s) can listen.
 %
-%	After creating a hub, the application  normally creates a thread
-%	that listens to Hub.queues.event and  exposes some mechanisms to
-%	establish websockets and add them to the hub using hub_add/3.
+%   After creating a hub, the application  normally creates a thread
+%   that listens to Hub.queues.event and  exposes some mechanisms to
+%   establish websockets and add them to the hub using hub_add/3.
 %
-%	@see	http_upgrade_to_websocket/3 establishes a websocket from
-%		the SWI-Prolog webserver.
+%   @see    http_upgrade_to_websocket/3 establishes a websocket from
+%           the SWI-Prolog webserver.
 
 hub_create(HubName, Hub, _Options) :-
-	must_be(atom, HubName),
-	message_queue_create(WaitQueue),
-	message_queue_create(ReadyQueue),
-	message_queue_create(EventQueue),
-	message_queue_create(BroadcastQueue),
-	Hub = hub{name:HubName,
-		  queues:_{wait:WaitQueue,
-			   ready:ReadyQueue,
-			   event:EventQueue,
-			   broadcast:BroadcastQueue
-			  }},
-	assertz(hub(HubName, Hub)).
+    must_be(atom, HubName),
+    message_queue_create(WaitQueue),
+    message_queue_create(ReadyQueue),
+    message_queue_create(EventQueue),
+    message_queue_create(BroadcastQueue),
+    Hub = hub{name:HubName,
+              queues:_{wait:WaitQueue,
+                       ready:ReadyQueue,
+                       event:EventQueue,
+                       broadcast:BroadcastQueue
+                      }},
+    assertz(hub(HubName, Hub)).
 
 
-%%	current_hub(?Name, ?Hub) is nondet.
+%!  current_hub(?Name, ?Hub) is nondet.
 %
-%	True when there exists a hub Hub with Name.
+%   True when there exists a hub Hub with Name.
 
 current_hub(HubName, Hub) :-
-	hub(HubName, Hub).
+    hub(HubName, Hub).
 
 
-		 /*******************************
-		 *	      WAITERS		*
-		 *******************************/
+                 /*******************************
+                 *            WAITERS           *
+                 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The task of this layer is to wait   for  (a potentially large number of)
@@ -160,116 +160,119 @@ and the others commit suicide because there is nothing to wait for.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- meta_predicate
-	hub_thread(0, +, +).
+    hub_thread(0, +, +).
 
-%%	hub_add(+Hub, +WebSocket, ?Id) is det.
+%!  hub_add(+Hub, +WebSocket, ?Id) is det.
 %
-%	Add a WebSocket to the hub.  Id   is  used to identify this
-%	user. It may be provided (as a ground term) or is generated as a
-%	UUID.
+%   Add a WebSocket to the hub.  Id   is  used to identify this
+%   user. It may be provided (as a ground term) or is generated as a
+%   UUID.
 
 hub_add(HubName, WebSocket, Id) :-
-	must_be(atom, HubName),
-	hub(HubName, Hub),
-	(   var(Id)
-	->  uuid(Id)
-	;   true
-	),
-	message_queue_create(OutputQueue),
-	mutex_create(Lock),
-	assertz(websocket(HubName, WebSocket, OutputQueue, Lock, Id)),
-	thread_send_message(Hub.queues.wait, WebSocket),
-	thread_send_message(Hub.queues.event,
-			    hub{joined:Id}),
-	debug(hub(gate), 'Joined ~w: ~w', [HubName, Id]),
-	create_wait_thread(Hub).
+    must_be(atom, HubName),
+    hub(HubName, Hub),
+    (   var(Id)
+    ->  uuid(Id)
+    ;   true
+    ),
+    message_queue_create(OutputQueue),
+    mutex_create(Lock),
+    assertz(websocket(HubName, WebSocket, OutputQueue, Lock, Id)),
+    thread_send_message(Hub.queues.wait, WebSocket),
+    thread_send_message(Hub.queues.event,
+                        hub{joined:Id}),
+    debug(hub(gate), 'Joined ~w: ~w', [HubName, Id]),
+    create_wait_thread(Hub).
 
 create_wait_thread(Hub) :-
-	hub_thread(wait_for_sockets(Hub), Hub, hub_wait_).
+    hub_thread(wait_for_sockets(Hub), Hub, hub_wait_).
 
 wait_for_sockets(Hub) :-
-	wait_for_sockets(Hub, 64).
+    wait_for_sockets(Hub, 64).
 
 wait_for_sockets(Hub, Max) :-
-	Queues = Hub.queues,
-	repeat,
-	  get_messages(Queues.wait, Max, List),
-	  (   List \== []
-	  ->  create_new_waiter_if_needed(Hub),
-	      sort(List, Set),
-	      length(Set, Len),
-	      wait_timeout(List, Max, Timeout),
-	      debug(hub(wait),
-		    'Waiting for ~d queues for ~w sec', [Len, Timeout]),
-	      wait_for_input(Set, ReadySet, Timeout),
-	      (	  ReadySet \== []
-	      ->  debug(hub(ready), 'Data on ~p', [ReadySet]),
-		  Ready = Queues.ready,
-		  maplist(thread_send_message(Ready), ReadySet),
-		  create_reader_threads(Hub),
-		  ord_subtract(Set, ReadySet, NotReadySet)
-	      ;	  NotReadySet = Set		% timeout
-	      ),
-	      debug(hub(wait), 'Re-scheduling: ~p', [NotReadySet]),
-	      Wait = Queues.wait,
-	      maplist(thread_send_message(Wait), NotReadySet),
-	      fail
-	  ;   !
-	  ).
+    Queues = Hub.queues,
+    repeat,
+      get_messages(Queues.wait, Max, List),
+      (   List \== []
+      ->  create_new_waiter_if_needed(Hub),
+          sort(List, Set),
+          length(Set, Len),
+          wait_timeout(List, Max, Timeout),
+          debug(hub(wait),
+                'Waiting for ~d queues for ~w sec', [Len, Timeout]),
+          wait_for_input(Set, ReadySet, Timeout),
+          (   ReadySet \== []
+          ->  debug(hub(ready), 'Data on ~p', [ReadySet]),
+              Ready = Queues.ready,
+              maplist(thread_send_message(Ready), ReadySet),
+              create_reader_threads(Hub),
+              ord_subtract(Set, ReadySet, NotReadySet)
+          ;   NotReadySet = Set             % timeout
+          ),
+          debug(hub(wait), 'Re-scheduling: ~p', [NotReadySet]),
+          Wait = Queues.wait,
+          maplist(thread_send_message(Wait), NotReadySet),
+          fail
+      ;   !
+      ).
 
 create_new_waiter_if_needed(Hub) :-
-	message_queue_property(Hub.queues.wait, size(0)), !.
+    message_queue_property(Hub.queues.wait, size(0)), 
+    !.
 create_new_waiter_if_needed(Hub) :-
-	create_wait_thread(Hub).
+    create_wait_thread(Hub).
 
-%%	wait_timeout(+WaitForList, +Max, -TimeOut) is det.
+%!  wait_timeout(+WaitForList, +Max, -TimeOut) is det.
 %
-%	Determine the timeout, such that   multiple  threads waiting for
-%	less than the maximum number of  sockets   time  out at the same
-%	moment and we can combine them on a single thread.
+%   Determine the timeout, such that   multiple  threads waiting for
+%   less than the maximum number of  sockets   time  out at the same
+%   moment and we can combine them on a single thread.
 
 :- dynamic
-	scheduled_timeout/1.
+    scheduled_timeout/1.
 
 wait_timeout(List, Max, Timeout) :-
-	length(List, Max), !,
-	Timeout = infinite.
+    length(List, Max),
+    !,
+    Timeout = infinite.
 wait_timeout(_, _, Timeout) :-
-	get_time(Now),
-	(   scheduled_timeout(SchedAt)
-	->  (   SchedAt > Now
-	    ->	At = SchedAt
-	    ;	retractall(scheduled_timeout(_)),
-		At is ceiling(Now) + 1,
-		asserta(scheduled_timeout(At))
-	    )
-	;   At is ceiling(Now) + 1,
-	    asserta(scheduled_timeout(At))
-	),
-	Timeout is At - Now.
+    get_time(Now),
+    (   scheduled_timeout(SchedAt)
+    ->  (   SchedAt > Now
+        ->  At = SchedAt
+        ;   retractall(scheduled_timeout(_)),
+            At is ceiling(Now) + 1,
+            asserta(scheduled_timeout(At))
+        )
+    ;   At is ceiling(Now) + 1,
+        asserta(scheduled_timeout(At))
+    ),
+    Timeout is At - Now.
 
 
-%%	get_messages(+Queue, +Max, -List) is det.
+%!  get_messages(+Queue, +Max, -List) is det.
 %
-%	Get the next Max messages from  Queue   or  as many as there are
-%	available without blocking very long.   This routine is designed
-%	such that if multiple threads are running for messages, one gets
-%	all of them and the others nothing.
+%   Get the next Max messages from  Queue   or  as many as there are
+%   available without blocking very long.   This routine is designed
+%   such that if multiple threads are running for messages, one gets
+%   all of them and the others nothing.
 
 get_messages(Q, N, List) :-
-	with_mutex(hub_wait,
-		   get_messages_sync(Q, N, List)).
+    with_mutex(hub_wait,
+               get_messages_sync(Q, N, List)).
 
 get_messages_sync(Q, N, [H|T]) :-
-	succ(N2, N),
-	thread_get_message(Q, H, [timeout(0.01)]), !,
-	get_messages_sync(Q, N2, T).
+    succ(N2, N),
+    thread_get_message(Q, H, [timeout(0.01)]),
+    !,
+    get_messages_sync(Q, N2, T).
 get_messages_sync(_, _, []).
 
 
-		 /*******************************
-		 *	      READERS		*
-		 *******************************/
+                 /*******************************
+                 *            READERS           *
+                 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The next layer consists of `readers'.   Whenever  one or more websockets
@@ -290,70 +293,72 @@ messages on the same websockets.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 create_reader_threads(Hub) :-
-	message_queue_property(Hub.queues.ready, size(Ready)),
-	Threads is ceiling(sqrt(Ready)),
-	forall(between(1, Threads, _),
-	       create_reader_thread(Hub)).
+    message_queue_property(Hub.queues.ready, size(Ready)),
+    Threads is ceiling(sqrt(Ready)),
+    forall(between(1, Threads, _),
+           create_reader_thread(Hub)).
 
 create_reader_thread(Hub) :-
-	hub_thread(read_message(Hub), Hub, hub_read_ws_).
+    hub_thread(read_message(Hub), Hub, hub_read_ws_).
 
 read_message(Hub) :-
-	Queues = Hub.queues,
-	thread_get_message(Queues.ready, WS, [timeout(0)]), !,
-	catch(ws_receive(WS, Message), Error, true),
-	(   var(Error),
-	    websocket(HubName, WS, _, _, Id)
-	->  (   _{opcode:close, data:end_of_file} :< Message
-	    ->	eof(WS)
-	    ;	Event = Message.put(_{client:Id, hub:HubName}),
-		debug(hub(event), 'Event: ~p', [Event]),
-		thread_send_message(Queues.event, Event),
-		thread_send_message(Queues.wait, WS),
-		(   message_queue_property(Queues.ready, size(0))
-		->  !,
-		    wait_for_sockets(Hub)
-		;   create_wait_thread(Hub),
-		    read_message(Hub)
-		)
-	    )
-	;   websocket(_, WS, _, _, _)
-	->  io_error(WS, read, Error),
-	    read_message(Hub)
-	;   read_message(Hub)			% already destroyed
-	).
+    Queues = Hub.queues,
+    thread_get_message(Queues.ready, WS, [timeout(0)]),
+    !,
+    catch(ws_receive(WS, Message), Error, true),
+    (   var(Error),
+        websocket(HubName, WS, _, _, Id)
+    ->  (   _{opcode:close, data:end_of_file} :< Message
+        ->  eof(WS)
+        ;   Event = Message.put(_{client:Id, hub:HubName}),
+            debug(hub(event), 'Event: ~p', [Event]),
+            thread_send_message(Queues.event, Event),
+            thread_send_message(Queues.wait, WS),
+            (   message_queue_property(Queues.ready, size(0))
+            ->  !,
+                wait_for_sockets(Hub)
+            ;   create_wait_thread(Hub),
+                read_message(Hub)
+            )
+        )
+    ;   websocket(_, WS, _, _, _)
+    ->  io_error(WS, read, Error),
+        read_message(Hub)
+    ;   read_message(Hub)                   % already destroyed
+    ).
 read_message(_).
 
 
-%%	io_error(+WebSocket, +ReadWrite, +Error)
+%!  io_error(+WebSocket, +ReadWrite, +Error)
 %
-%	Called on a read or  write  error   to  WebSocket.  We close the
-%	websocket and send the hub an event  that we lost the connection
-%	to the specified client. Note that   we leave destruction of the
-%	anonymous  message  queue  and  mutex   to  the  Prolog  garbage
-%	collector.
+%   Called on a read or  write  error   to  WebSocket.  We close the
+%   websocket and send the hub an event  that we lost the connection
+%   to the specified client. Note that   we leave destruction of the
+%   anonymous  message  queue  and  mutex   to  the  Prolog  garbage
+%   collector.
 
 io_error(WebSocket, RW, Error) :-
-	debug(hub(gate), 'Got ~w error on ~w: ~p',
-	      [RW, WebSocket, Error]),
-	retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)), !,
-	catch(ws_close(WebSocket, 1011, Error), E,
-	      print_message(warning, E)),
-	hub(HubName, Hub),
-	thread_send_message(Hub.queues.event,
-			    hub{left:Id,
-				     hub:HubName,
-				     reason:RW,
-				     error:Error}).
-io_error(_, _, _).			% already considered gone
+    debug(hub(gate), 'Got ~w error on ~w: ~p',
+          [RW, WebSocket, Error]),
+    retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
+    !,
+    catch(ws_close(WebSocket, 1011, Error), E,
+          print_message(warning, E)),
+    hub(HubName, Hub),
+    thread_send_message(Hub.queues.event,
+                        hub{left:Id,
+                                 hub:HubName,
+                                 reason:RW,
+                                 error:Error}).
+io_error(_, _, _).                      % already considered gone
 
 eof(WebSocket) :-
-	io_error(WebSocket, read, end_of_file).
+    io_error(WebSocket, read, end_of_file).
 
 
-		 /*******************************
-		 *	  SENDING MESSAGES	*
-		 *******************************/
+                 /*******************************
+                 *        SENDING MESSAGES      *
+                 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 My  initial  thought  about  sending  messages    was  to  add  a  tuple
@@ -372,126 +377,129 @@ significant  problem,  we  could  mantain  a  queue  of  queues  holding
 messages.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-%%	hub_send(+ClientId, +Message) is det.
+%!  hub_send(+ClientId, +Message) is det.
 %
-%	Send message to the indicated ClientId.
+%   Send message to the indicated ClientId.
 %
-%	@arg	Message is either a single message (as accepted by
-%		ws_send/2) or a list of such messages.
+%   @arg    Message is either a single message (as accepted by
+%           ws_send/2) or a list of such messages.
 
 hub_send(ClientId, Message) :-
-	websocket(HubName, _WS, ClientQueue, _Lock, ClientId),
-	hub(HubName, Hub),
-	(   is_list(Message)
-	->  maplist(queue_output(ClientQueue), Message)
-	;   queue_output(ClientQueue, Message)
-	),
-	create_output_thread(Hub, ClientQueue).
+    websocket(HubName, _WS, ClientQueue, _Lock, ClientId),
+    hub(HubName, Hub),
+    (   is_list(Message)
+    ->  maplist(queue_output(ClientQueue), Message)
+    ;   queue_output(ClientQueue, Message)
+    ),
+    create_output_thread(Hub, ClientQueue).
 
 create_output_thread(Hub, Queue) :-
-	hub_thread(broadcast_from_queue(Queue, [timeout(0)]),
-			Hub, hub_out_q_).
+    hub_thread(broadcast_from_queue(Queue, [timeout(0)]),
+                    Hub, hub_out_q_).
 
-%%	hub_broadcast(+Hub, +Message) is det.
-%%	hub_broadcast(+Hub, +Message, :Condition) is det.
+%!  hub_broadcast(+Hub, +Message) is det.
+%!  hub_broadcast(+Hub, +Message, :Condition) is det.
 %
-%	Send Message to all websockets  associated   with  Hub for which
-%	call(Condition,  Id)  succeeds.  Note  that    this  process  is
-%	_asynchronous_: this predicate returns immediately after putting
-%	all requests in a  broadcast  queue.   If  a  message  cannot be
-%	delivered due to a network error,   the  hub is informed through
-%	io_error/3.
+%   Send Message to all websockets  associated   with  Hub for which
+%   call(Condition,  Id)  succeeds.  Note  that    this  process  is
+%   _asynchronous_: this predicate returns immediately after putting
+%   all requests in a  broadcast  queue.   If  a  message  cannot be
+%   delivered due to a network error,   the  hub is informed through
+%   io_error/3.
 
 hub_broadcast(HubName, Message) :-
-	hub_broadcast(HubName, Message, all).
+    hub_broadcast(HubName, Message, all).
 
 all(_).
 
 hub_broadcast(HubName, Message, Condition) :-
-	must_be(atom, HubName),
-	hub(HubName, Hub),
-	State = count(0),
-	forall(( websocket(HubName, _WS, ClientQueue, _Lock, Id),
-		 call(Condition, Id)
-	       ),
-	       ( queue_output(ClientQueue, Message),
-	         inc_count(State)
-	       )),
-	State = count(Count),
-	create_broadcast_threads(Hub, Count).
+    must_be(atom, HubName),
+    hub(HubName, Hub),
+    State = count(0),
+    forall(( websocket(HubName, _WS, ClientQueue, _Lock, Id),
+             call(Condition, Id)
+           ),
+           ( queue_output(ClientQueue, Message),
+             inc_count(State)
+           )),
+    State = count(Count),
+    create_broadcast_threads(Hub, Count).
 
 queue_output(Queue, Message) :-
-	thread_send_message(Queue, Message).
+    thread_send_message(Queue, Message).
 
 inc_count(State) :-
-	arg(1, State, C0),
-	C1 is C0+1,
-	nb_setarg(1, State, C1).
+    arg(1, State, C0),
+    C1 is C0+1,
+    nb_setarg(1, State, C1).
 
 create_broadcast_threads(Hub, Count) :-
-	Threads is ceiling(sqrt(Count)),
-	forall(between(1, Threads, _),
-	       create_broadcast_thread(Hub)).
+    Threads is ceiling(sqrt(Count)),
+    forall(between(1, Threads, _),
+           create_broadcast_thread(Hub)).
 
 create_broadcast_thread(Hub) :-
-	hub_thread(broadcast_from_queues(Hub, [timeout(0)]),
-			Hub, hub_out_all_).
+    hub_thread(broadcast_from_queues(Hub, [timeout(0)]),
+                    Hub, hub_out_all_).
 
 
-%%	broadcast_from_queues(+Hub, +Options) is det.
+%!  broadcast_from_queues(+Hub, +Options) is det.
 %
-%	Broadcast from over all known queues.
+%   Broadcast from over all known queues.
 
 broadcast_from_queues(Hub, Options) :-
-	forall(websocket(Hub.name, _WebSocket, Queue, _Lock, _Id),
-	       broadcast_from_queue(Queue, Options)).
+    forall(websocket(Hub.name, _WebSocket, Queue, _Lock, _Id),
+           broadcast_from_queue(Queue, Options)).
 
 
-%%	broadcast_from_queue(+Queue, +Options) is det.
+%!  broadcast_from_queue(+Queue, +Options) is det.
 %
-%	Send all messages pending for Queue.   Note  that this predicate
-%	locks the mutex associated  with  the   Queue,  such  that other
-%	workers cannot start sending messages to this client. Concurrent
-%	sending  would  lead  to  out-of-order    arrival  of  broadcast
-%	messages.  If  the  mutex  is  already  held,  someone  else  is
-%	processing this message queue, so we don't have to worry.
+%   Send all messages pending for Queue.   Note  that this predicate
+%   locks the mutex associated  with  the   Queue,  such  that other
+%   workers cannot start sending messages to this client. Concurrent
+%   sending  would  lead  to  out-of-order    arrival  of  broadcast
+%   messages.  If  the  mutex  is  already  held,  someone  else  is
+%   processing this message queue, so we don't have to worry.
 
 broadcast_from_queue(Queue, _Options) :-
-	message_queue_property(Queue, size(0)), !.
+    message_queue_property(Queue, size(0)), 
+    !.
 broadcast_from_queue(Queue, Options) :-
-	websocket(_Hub, _WebSocket, Queue, Lock, _Id), !,
-	(   setup_call_cleanup(
-		mutex_trylock(Lock),
-		broadcast_from_queue_sync(Queue, Options),
-		mutex_unlock(Lock))
-	->  true
-	;   true
-	).
+    websocket(_Hub, _WebSocket, Queue, Lock, _Id),
+    !,
+    (   setup_call_cleanup(
+            mutex_trylock(Lock),
+            broadcast_from_queue_sync(Queue, Options),
+            mutex_unlock(Lock))
+    ->  true
+    ;   true
+    ).
 broadcast_from_queue(_, _).
 
 % Note that we re-fetch websocket/5, such that we terminate if something
 % closed the websocket.
 
 broadcast_from_queue_sync(Queue, Options) :-
-	repeat,
-	  (   websocket(_Hub, WebSocket, Queue, _Lock, _Id),
-	      thread_get_message(Queue, Message, Options)
-	  ->  debug(hub(broadcast),
-		    'To: ~p messages: ~p', [WebSocket, Message]),
-	      catch(ws_send(WebSocket, Message), E,
-		    io_error(WebSocket, write, E)),
-	      fail
-	  ;   !
-	  ).
+    repeat,
+      (   websocket(_Hub, WebSocket, Queue, _Lock, _Id),
+          thread_get_message(Queue, Message, Options)
+      ->  debug(hub(broadcast),
+                'To: ~p messages: ~p', [WebSocket, Message]),
+          catch(ws_send(WebSocket, Message), E,
+                io_error(WebSocket, write, E)),
+          fail
+      ;   !
+      ).
 
-%%	hub_thread(:Goal, +Hub, +Task) is det.
+%!  hub_thread(:Goal, +Hub, +Task) is det.
 %
-%	Create a (temporary) thread for the hub to perform Task. We
-%	created named threads if debugging hub(thread) is enabled.
+%   Create a (temporary) thread for the hub to perform Task. We
+%   created named threads if debugging hub(thread) is enabled.
 
 hub_thread(Goal, _, Task) :-
-	debugging(hub(thread)), !,
-	gensym(Task, Alias),
-	thread_create(Goal, _, [detached(true), alias(Alias)]).
+    debugging(hub(thread)),
+    !,
+    gensym(Task, Alias),
+    thread_create(Goal, _, [detached(true), alias(Alias)]).
 hub_thread(Goal, _, _) :-
-	thread_create(Goal, _, [detached(true)]).
+    thread_create(Goal, _, [detached(true)]).

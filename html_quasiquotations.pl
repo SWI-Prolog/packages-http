@@ -48,60 +48,63 @@ content with variable that come from the surrounding Prolog clause.
 
 This module is included and re-exported from library(http/html_write).
 
-@see	library(http/js_write) provides quasi quotation for JavaScript.
+@see    library(http/js_write) provides quasi quotation for JavaScript.
 */
 
-%%	html(+Content, +Vars, +VarDict, -DOM) is det.
+%!  html(+Content, +Vars, +VarDict, -DOM) is det.
 %
-%	The predicate html/4 implements  HTML   quasi  quotations. These
-%	quotations produce a DOM term that   is suitable for html//1 and
-%	other predicates that are declared to   consume this format. The
-%	quasi quoter only  accepts  valid,   but  possibly  partial HTML
-%	documents. The document *must* begin  with   a  tag.  The quoter
-%	replaces attributes or content whose value  is a Prolog variable
-%	that appears in the argument list   of  the =html= indicator. If
-%	the variable defines content, it must  be the only content. Here
-%	is  an  example,  replacing  both  a   content  element  and  an
-%	attribute. Note that the document is valid HTML.
+%   The predicate html/4 implements  HTML   quasi  quotations. These
+%   quotations produce a DOM term that   is suitable for html//1 and
+%   other predicates that are declared to   consume this format. The
+%   quasi quoter only  accepts  valid,   but  possibly  partial HTML
+%   documents. The document *must* begin  with   a  tag.  The quoter
+%   replaces attributes or content whose value  is a Prolog variable
+%   that appears in the argument list   of  the =html= indicator. If
+%   the variable defines content, it must  be the only content. Here
+%   is  an  example,  replacing  both  a   content  element  and  an
+%   attribute. Note that the document is valid HTML.
 %
-%	  ==
-%	    html({|html(Name, URL)||
-%		   <p>Dear <span class="name">Name</span>,
+%     ==
+%       html({|html(Name, URL)||
+%              <p>Dear <span class="name">Name</span>,
 %
-%		   <p>You can <a href="URL">download</a> the requested
-%		   article now.
-%		   |}
-%	  ==
+%              <p>You can <a href="URL">download</a> the requested
+%              article now.
+%              |}
+%     ==
 
 :- quasi_quotation_syntax(html).
 
 html(Content, Vars, Dict, DOM) :-
-	must_be(list, Dict),
-	include(qq_var(Vars), Dict, QQDict),
-	with_quasi_quotation_input(
-	    Content, In,
-	    load_html(In, DOM0,
-		      [ max_errors(0),
-			syntax_errors(print),
-			case_preserving_attributes(true)
-		      ])),
-	xml_content(QQDict, DOM0, DOM).
+    must_be(list, Dict),
+    include(qq_var(Vars), Dict, QQDict),
+    with_quasi_quotation_input(
+        Content, In,
+        load_html(In, DOM0,
+                  [ max_errors(0),
+                    syntax_errors(print),
+                    case_preserving_attributes(true)
+                  ])),
+    xml_content(QQDict, DOM0, DOM).
 
 qq_var(Vars, _=Var) :- member(V, Vars), V == Var, !.
 
 xml_content(Dict, [Name], [Var]) :-
-	atom(Name),
-	memberchk(Name=Var, Dict), !.
+    atom(Name),
+    memberchk(Name=Var, Dict), 
+    !.
 xml_content(Dict, Content0, Content) :-
-	maplist(xml_content_element(Dict), Content0, Content).
+    maplist(xml_content_element(Dict), Content0, Content).
 
 xml_content_element(Dict,
-		    element(Tag, Attrs0, Content0),
-		    element(Tag, Attrs, Content)) :- !,
-	maplist(xml_attribute(Dict), Attrs0, Attrs),
-	xml_content(Dict, Content0, Content).
+                    element(Tag, Attrs0, Content0),
+                    element(Tag, Attrs, Content)) :-
+    !,
+    maplist(xml_attribute(Dict), Attrs0, Attrs),
+    xml_content(Dict, Content0, Content).
 xml_content_element(_, Element, Element).
 
 xml_attribute(Dict, Attr=Name, Attr=Var) :-
-	memberchk(Name=Var, Dict), !.
+    memberchk(Name=Var, Dict), 
+    !.
 xml_attribute(_, Attr, Attr).
