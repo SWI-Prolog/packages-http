@@ -193,7 +193,7 @@ http_server(_Goal, _Options) :-
 %   module-sensitive ssl option argument.
 
 make_socket(Port, Options0, Options) :-
-    make_socket_hook(Port, Options0, Options), 
+    make_socket_hook(Port, Options0, Options),
     !.
 make_socket(Port, _:Options0, Options) :-
     option(tcp_socket(_), Options0),
@@ -250,7 +250,7 @@ create_server(Goal, Address, Options) :-
     assert(current_server(Port, Goal, Alias, Queue, Scheme, StartTime)).
 
 scheme(Scheme, Options) :-
-    option(scheme(Scheme), Options), 
+    option(scheme(Scheme), Options),
     !.
 scheme(Scheme, Options) :-
     option(ssl(_), Options),
@@ -381,7 +381,7 @@ accept_server2(Goal, Options) :-
       ).
 
 accept_server3(Goal, Options) :-
-    accept_hook(Goal, Options), 
+    accept_hook(Goal, Options),
     !.
 accept_server3(Goal, Options) :-
     memberchk(tcp_socket(Socket), Options),
@@ -400,7 +400,7 @@ accept_rethrow_error('$aborted').
 %   Close the server socket.
 
 close_server_socket(Options) :-
-    close_hook(Options), 
+    close_hook(Options),
     !.
 close_server_socket(Options) :-
     memberchk(tcp_socket(Socket), Options),
@@ -502,7 +502,7 @@ create_workers(Options) :-
     assert(queue_options(Queue, Options)).
 
 create_workers(I, N, _, _, _) :-
-    I > N, 
+    I > N,
     !.
 create_workers(I, N, Queue, AliasBase, Options) :-
     gensym(AliasBase, Alias),
@@ -618,7 +618,7 @@ open_client(Message, Queue, Goal, In, Out, Opts,
 %!              -ClientOptions, +Options) is det.
 
 open_client(Message, Goal, In, Out, ClientOptions, Options) :-
-    open_client_hook(Message, Goal, In, Out, ClientOptions, Options), 
+    open_client_hook(Message, Goal, In, Out, ClientOptions, Options),
     !.
 open_client(tcp_client(Socket, Goal, Peer), Goal, In, Out,
             [ peer(Peer),
@@ -726,7 +726,7 @@ http_requeue(Header) :-
     memberchk(pool(client(Queue, Goal, In, Out)), ClientOptions),
     memberchk(peer(Peer), ClientOptions),
     http_enough_workers(Queue, keep_alive, Peer),
-    thread_send_message(Queue, requeue(In, Out, Goal, ClientOptions)), 
+    thread_send_message(Queue, requeue(In, Out, Goal, ClientOptions)),
     !.
 http_requeue(Header) :-
     debug(http(error), 'Re-queue failed: ~p', [Header]),
@@ -775,7 +775,7 @@ next(spawned(ThreadId), _) :-
     debug(http(spawn), 'Handler spawned to thread ~w', [ThreadId]).
 next(Connection, Request) :-
     downcase_atom(Connection, 'keep-alive'),
-    http_requeue(Request), 
+    http_requeue(Request),
     !.
 next(_, Request) :-
     http_close_connection(Request).

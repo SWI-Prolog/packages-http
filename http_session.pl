@@ -591,7 +591,7 @@ expire_session_cookie.
 
 in_header_state :-
     current_output(CGI),
-    cgi_property(CGI, state(header)), 
+    cgi_property(CGI, state(header)),
     !.
 
 
@@ -678,7 +678,7 @@ route(Route) :-
     Route \== ''.
 
 route_no_cache(Route) :-
-    session_setting(route(Route)), 
+    session_setting(route(Route)),
     !.
 route_no_cache(Route) :-
     gethostname(Host),

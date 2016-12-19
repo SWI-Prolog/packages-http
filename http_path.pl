@@ -259,7 +259,7 @@ http_location_path(prefix, Path, 0) :-
 
 relative_to(/, Path, Path) :- !.
 relative_to(_Base, Path, Path) :-
-    sub_atom(Path, 0, _, _, /), 
+    sub_atom(Path, 0, _, _, /),
     !.
 relative_to(Base, Local, Path) :-
     sub_atom(Base, 0, _, _, /),    % file version

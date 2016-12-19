@@ -75,7 +75,7 @@ can be controlled by
     saved_request/2.
 
 http_listen(_) :-
-    \+ debugging(http(error)), 
+    \+ debugging(http(error)),
     !.
 http_listen(request_start(Id, Request)) :-
     !,
@@ -92,7 +92,7 @@ http_listen(request_finished(Id, Code, Status, _CPU, _Bytes)) :-
           '~w ~w: [~w] ~w', [UMethod, Path, Code, Reply]).
 
 reply_status(Status, Reply) :-
-    map_exception(Status, Reply), 
+    map_exception(Status, Reply),
     !.
 reply_status(Status, Message) :-
     message_to_string(Status, Message).

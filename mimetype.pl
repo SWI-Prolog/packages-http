@@ -64,7 +64,7 @@ file_mime_type(File, MimeType) :-
     ->  MimeType = M0
     ;   downcase_atom(Ext, Lower),
         mime_extension(Lower, MimeType)
-    ), 
+    ),
     !.
 file_mime_type(File, MimeType) :-
     file_base_name(File, Base),

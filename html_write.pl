@@ -323,13 +323,13 @@ pagehead(Style, Head) -->
     { strip_module(Head, M, _),
       hook_module(M, HM, head//2)
     },
-    HM:head(Style, Head), 
+    HM:head(Style, Head),
     !.
 pagehead(_, Head) -->
     { strip_module(Head, M, _),
       hook_module(M, HM, head//1)
     },
-    HM:head(Head), 
+    HM:head(Head),
     !.
 pagehead(_, Head) -->
     html(head(Head)).
@@ -344,20 +344,20 @@ pagebody(Style, Body) -->
     { strip_module(Body, M, _),
       hook_module(M, HM, body//2)
     },
-    HM:body(Style, Body), 
+    HM:body(Style, Body),
     !.
 pagebody(_, Body) -->
     { strip_module(Body, M, _),
       hook_module(M, HM, body//1)
     },
-    HM:body(Body), 
+    HM:body(Body),
     !.
 pagebody(_, Body) -->
     html(body(Body)).
 
 
 hook_module(M, M, PI) :-
-    current_predicate(M:PI), 
+    current_predicate(M:PI),
     !.
 hook_module(_, user, PI) :-
     current_predicate(user:PI).
@@ -392,14 +392,14 @@ html_expand(Var, _) -->
       instantiation_error(Var)
     }.
 html_expand(Term, Module) -->
-    do_expand(Term, Module), 
+    do_expand(Term, Module),
     !.
 html_expand(Term, _Module) -->
     { print_message(error, html(expand_failed(Term))) }.
 
 
 do_expand(Token, _) -->                 % call user hooks
-    expand(Token), 
+    expand(Token),
     !.
 do_expand(Fmt-Args, _) -->
     !,
@@ -744,7 +744,7 @@ attribute_value_s(encode(Value)) -->
     { uri_encoded(query_value, Value, Encoded) },
     [ Encoded ].
 attribute_value_s(Value) -->
-    expand_attribute_value(Value), 
+    expand_attribute_value(Value),
     !.
 attribute_value_s(Fmt-Args) -->
     !,
@@ -1469,7 +1469,7 @@ prolog_colour:goal_colours(html_meta(_),
 
                                         % TBD: Check with do_expand!
 html_colours(Var, classify) :-
-    var(Var), 
+    var(Var),
     !.
 html_colours(\List, built_in-[built_in-Colours]) :-
     is_list(List),
@@ -1505,7 +1505,7 @@ html_colours(Term, TermColours) :-
 html_colours(_, classify).
 
 list_colours(Var, classify) :-
-    var(Var), 
+    var(Var),
     !.
 list_colours([], []).
 list_colours([H0|T0], [H|T]) :-
@@ -1516,7 +1516,7 @@ list_colours(Last, Colours) :-          % improper list
     html_colours(Last, Colours).
 
 attr_colours(Var, classify) :-
-    var(Var), 
+    var(Var),
     !.
 attr_colours([], classify) :- !.
 attr_colours(Term, list-Elements) :-
@@ -1538,16 +1538,16 @@ attr_colours(Term, html_attribute(Name)-[VColour]) :-
     Term =.. [Name,Value],
     attr_value_colour(Value, VColour).
 attr_colours(Name, html_attribute(Name)) :-
-    atom(Name), 
+    atom(Name),
     !.
 attr_colours(Term, classify) :-
     compound(Term),
-    compound_name_arity(Term, '.', 2), 
+    compound_name_arity(Term, '.', 2),
     !.
 attr_colours(_, error).
 
 attr_list_colours(Var, classify) :-
-    var(Var), 
+    var(Var),
     !.
 attr_list_colours([], []).
 attr_list_colours([H0|T0], [H|T]) :-
@@ -1565,18 +1565,18 @@ attr_value_colour(A+B, sgml_attr_function-[CA,CB]) :-
     attr_value_colour(B, CB).
 attr_value_colour(encode(_), sgml_attr_function-[classify]) :- !.
 attr_value_colour(Atom, classify) :-
-    atomic(Atom), 
+    atomic(Atom),
     !.
 attr_value_colour([_|_], classify) :- !.
 attr_value_colour(_Fmt-_Args, classify) :- !.
 attr_value_colour(Term, classify) :-
     compound(Term),
-    compound_name_arity(Term, '.', 2), 
+    compound_name_arity(Term, '.', 2),
     !.
 attr_value_colour(_, error).
 
 location_id(ID, classify) :-
-    var(ID), 
+    var(ID),
     !.
 location_id(ID, Class) :-
     (   catch(http_dispatch:http_location_by_id(ID, Location), _, fail)

@@ -136,7 +136,7 @@ javascript(Content, Vars, Dict, \Parts) :-
 
 qq_var(Vars, _=Var) :-
     member(V, Vars),
-    V == Var, 
+    V == Var,
     !.
 
 js(Dict, [Pre, Subst|More]) -->
@@ -272,7 +272,7 @@ js_args([H|T]) -->
 %       Emitted as quoted JavaScript string.
 
 js_expression(Expr) -->
-    js_arg(Expr), 
+    js_arg(Expr),
     !.
 js_expression(Expr) -->
     { type_error(js(expression), Expr) }.

@@ -208,7 +208,7 @@ openid_login(OpenID) :-
 %   Remove the association of the current session with any OpenID
 
 openid_logout(OpenID) :-
-    openid_hook(logout(OpenID)), 
+    openid_hook(logout(OpenID)),
     !.
 openid_logout(OpenID) :-
     http_session_retractall(openid(OpenID)).
@@ -218,7 +218,7 @@ openid_logout(OpenID) :-
 %   True if session is associated with OpenID.
 
 openid_logged_in(OpenID) :-
-    openid_hook(logged_in(OpenID)), 
+    openid_hook(logged_in(OpenID)),
     !.
 openid_logged_in(OpenID) :-
     http_in_session(_SessionId),            % test in session
@@ -271,7 +271,7 @@ openid_logged_in(OpenID) :-
 :- http_handler(openid(xrds),         openid_xrds,         []).
 
 openid_user(_Request, OpenID, _Options) :-
-    openid_logged_in(OpenID), 
+    openid_logged_in(OpenID),
     !.
 openid_user(Request, _OpenID, Options) :-
     http_link_to_id(openid_login_page, [], DefLoginPage),
@@ -596,7 +596,7 @@ public_url(Request, Path, URL) :-
     uri_components(URL, Components).
 
 set_port(Scheme, Port, _) :-
-    scheme_port(Scheme, Port), 
+    scheme_port(Scheme, Port),
     !.
 set_port(_, Port, AuthC) :-
     uri_authority_data(port, AuthC, Port).
@@ -1437,7 +1437,7 @@ field(Field) -->
     utf8_codes(Codes).
 
 to_codes(Codes, Codes) :-
-    is_list(Codes), 
+    is_list(Codes),
     !.
 to_codes(Atomic, Codes) :-
     atom_codes(Atomic, Codes).
@@ -1480,7 +1480,7 @@ int_to_bytes(Int, Bytes) :-
     int_to_bytes(Int, [], Bytes).
 
 int_to_bytes(Int, Bytes0, [Int|Bytes0]) :-
-    Int < 128, 
+    Int < 128,
     !.
 int_to_bytes(Int, Bytes0, Bytes) :-
     Last is Int /\ 0xff,

@@ -391,7 +391,7 @@ json_number_codes(C1, Stream, [C1|Codes], Next) :-
 json_number_codes(C, _, [], C).
 
 number_code(C) :-
-    between(0'0, 0'9, C), 
+    between(0'0, 0'9, C),
     !.
 number_code(0'.).
 number_code(0'-).
@@ -682,7 +682,7 @@ json_pair(Name=Value, Name, Value) :- !.
 json_pair(Name-Value, Name, Value) :- !.
 json_pair(NameValue, Name, Value) :-
     compound(NameValue),
-    NameValue =.. [Name, Value], 
+    NameValue =.. [Name, Value],
     !.
 json_pair(Pair, _, _) :-
     type_error(json_pair, Pair).
@@ -723,7 +723,7 @@ space_if_not_at_left_margin(Stream, State) :-
     line_position(Stream, LinePos),
     (   LinePos == 0
     ;   json_write_state_indent(State, LinePos)
-    ), 
+    ),
     !.
 space_if_not_at_left_margin(Stream, _) :-
     put_char(Stream, ' ').
@@ -875,7 +875,7 @@ is_json_term2(Options, List) :-
     !,
     maplist(is_json_term2(Options), List).
 is_json_term2(_, Primitive) :-
-    atomic(Primitive), 
+    atomic(Primitive),
     !.           % atom, string or number
 is_json_term2(Options, True) :-
     json_options_true(Options, True).

@@ -91,7 +91,7 @@ qq_var(Vars, _=Var) :- member(V, Vars), V == Var, !.
 
 xml_content(Dict, [Name], [Var]) :-
     atom(Name),
-    memberchk(Name=Var, Dict), 
+    memberchk(Name=Var, Dict),
     !.
 xml_content(Dict, Content0, Content) :-
     maplist(xml_content_element(Dict), Content0, Content).
@@ -105,6 +105,6 @@ xml_content_element(Dict,
 xml_content_element(_, Element, Element).
 
 xml_attribute(Dict, Attr=Name, Attr=Var) :-
-    memberchk(Name=Var, Dict), 
+    memberchk(Name=Var, Dict),
     !.
 xml_attribute(_, Attr, Attr).

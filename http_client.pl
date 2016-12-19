@@ -282,7 +282,7 @@ http_read_data(In, Fields, Data, Options) :-                    % call hook
     ->  delete(Fields, content_type(_), Fields1),
         http_convert_data(In, [content_type(Type)|Fields1], Data, Options1)
     ;   http_convert_data(In, Fields, Data, Options)
-    ), 
+    ),
     !.
 http_read_data(In, Fields, Data, Options) :-
     http_read_data(In, Fields, Data, [to(atom)|Options]).
@@ -300,7 +300,7 @@ encoding(Fields, utf8) :-
     (   sub_atom(Type, _, _, _, 'UTF-8')
     ->  true
     ;   sub_atom(Type, _, _, _, 'utf-8')
-    ), 
+    ),
     !.
 encoding(_, octet).
 

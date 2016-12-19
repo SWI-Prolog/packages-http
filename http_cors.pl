@@ -95,7 +95,7 @@ an appropriate reply.  For example:
 %   request that typically serve JSON or XML).
 
 cors_enable :-
-    cors_enable_domain, 
+    cors_enable_domain,
     !.
 cors_enable.                            % CORS not enabled
 

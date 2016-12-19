@@ -578,7 +578,7 @@ html_include(Path) -->
     html_include(Mime, Path).
 
 html_include(Mime, Path) -->
-    mime_include(Mime, Path), 
+    mime_include(Mime, Path),
     !.    % user hook
 html_include(text/css, Path) -->
     !,

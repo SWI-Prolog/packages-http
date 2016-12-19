@@ -163,7 +163,7 @@ pwp_handler(QOptions, Request) :-
 is_meta(index_hook).
 
 server_file(File, _, _) :-              % index-hook did the work
-    var(File), 
+    var(File),
     !.
 server_file(File, Request, Options) :-
     file_name_extension(_, pwp, File),

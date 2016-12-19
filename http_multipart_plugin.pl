@@ -180,7 +180,7 @@ media_type_encoding(media(Type/SubType, _Params), Encoding) :-
     media_encoding(Type, SubType, Encoding).
 
 charset_encoding(CharSet, utf8) :-
-    sub_atom_icasechk(CharSet, _, 'utf-8'), 
+    sub_atom_icasechk(CharSet, _, 'utf-8'),
     !.
 charset_encoding(_, octet).
 

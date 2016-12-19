@@ -145,7 +145,7 @@ http_public_host(Request, Host, Port, Options) :-
         ;   Host = Host0
         ),
         option(port(Port), Request, 80)
-    ), 
+    ),
     !.
 http_public_host(_Request, Host, Port, _Options) :-
     gethostname(Host),

@@ -35,7 +35,7 @@ test_proxy :-
     port/2.                                 % Role, Port
 
 assign_ports :-
-    port(unused, _), 
+    port(unused, _),
     !.
 assign_ports :-
     free_ports(5, [P1,P2,P3,P4,P5]),

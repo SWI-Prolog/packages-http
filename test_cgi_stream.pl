@@ -147,7 +147,7 @@ current_data(Name) :-
                  *******************************/
 
 assert_header(Header, Field) :-
-    memberchk(Field, Header), 
+    memberchk(Field, Header),
     !.
 assert_header(_Header, Field) :-
     format(user_error, 'ERROR: ~p expected in header~n', [Field]),
@@ -276,7 +276,7 @@ collect_messages2(Goal, True, Messages) :-
                              Messages))).
 
 call_result(Goal, true) :-
-    Goal, 
+    Goal,
     !.
 call_result(_, false).
 

@@ -225,7 +225,7 @@ canonical_pair(Name-Value, Name=Value) :-
     !,
     must_be(atom, Name).
 canonical_pair(NameValue, Name=Value) :-
-    NameValue =.. [Name,Value], 
+    NameValue =.. [Name,Value],
     !.
 canonical_pair(Pair, _) :-
     type_error(pair, Pair).
@@ -302,7 +302,7 @@ prolog_bool_to_json(@(True), True) :-
 
 type_goal(Type, Var, Body) :-
     clause(error:has_type(Type, Var), Body0),
-    primitive(Body0, Body), 
+    primitive(Body0, Body),
     !.
 type_goal(Type, Var, is_of_type(Type, Var)).
 
@@ -325,7 +325,7 @@ primitive(G, G) :-
     predicate_property(system:G, built_in).
 
 non_json_type(Type) :-
-    clause(error:has_type(Type, _), _), 
+    clause(error:has_type(Type, _), _),
     !.
 
 
@@ -336,7 +336,7 @@ non_json_type(Type) :-
 %   generated from the has_type/2 clauses in library(error).
 
 clean_body(Var, Var) :-
-    var(Var), 
+    var(Var),
     !.
 clean_body((A0,B0), G) :-
     !,
@@ -344,11 +344,11 @@ clean_body((A0,B0), G) :-
     clean_body(B0, B),
     conj(A, B, G).
 clean_body(ground(X), true) :-          % Generated from checking extra fields.
-    ground(X), 
+    ground(X),
     !.
 clean_body(memberchk(V, Values), true) :- % generated from oneof(List)
     ground(V), ground(Values),
-    memberchk(V, Values), 
+    memberchk(V, Values),
     !.
 clean_body((integer(Low) -> If ; Then), Goal) :- % generated from between(Low,High)
     number(Low),
@@ -448,17 +448,17 @@ prolog_to_json(Var, _, _) :-
     !,
     instantiation_error(Var).
 prolog_to_json(Atomic, Atomic, _) :-
-    atomic(Atomic), 
+    atomic(Atomic),
     !.
 prolog_to_json(List, JSON, Module) :-
     is_list(List),
     !,
     prolog_list_to_json(List, JSON, Module).
 prolog_to_json(Record, JSON, Module) :-
-    record_to_pairs(Record, JSON, Module), 
+    record_to_pairs(Record, JSON, Module),
     !.
 prolog_to_json(Term, Term, _) :-
-    is_json_term(Term), 
+    is_json_term(Term),
     !.
 prolog_to_json(Term, _, _) :-
     type_error(json_term, Term).
@@ -469,7 +469,7 @@ record_to_pairs(T, _, _) :-
     instantiation_error(T).
 record_to_pairs(T, JSON, M) :-
     object_module(M, Module),
-    json_object_to_pairs(T, Module, JSON), 
+    json_object_to_pairs(T, Module, JSON),
     !.
 
 object_module(user, user) :- !.

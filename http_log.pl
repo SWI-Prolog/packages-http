@@ -251,7 +251,7 @@ nolog(accept_charset(_)).
 nolog(pool(_)).
 nolog(protocol(_)).
 nolog(referer(R)) :-
-    sub_atom(R, _, _, _, password), 
+    sub_atom(R, _, _, _, password),
     !.
 
 %!  nolog_post_content_type(+Type) is semidet.

@@ -101,7 +101,7 @@ reply_source(Request):-
 contains_codes(String, Codes) :-
     string_codes(String, Needle),
     append(_Pre, Rest, Codes),
-    append(Needle, _Post, Rest), 
+    append(Needle, _Post, Rest),
     !.
 
 %!  chunked_data(-String) is det.

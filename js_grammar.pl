@@ -137,7 +137,7 @@ decimal_literal -->
     opt_exponent.
 
 decimal_integer -->
-    "0", 
+    "0",
     !.
 decimal_integer -->
     non_zero_digit, opt_decimal_digits.
@@ -158,7 +158,7 @@ decimal_digit --> [C], { code_type(C, digit) }.
 non_zero_digit --> [C], { code_type(C, digit), C \== 0'0 }.
 
 opt_exponent -->
-    exponent, 
+    exponent,
     !.
 opt_exponent -->
     [].

@@ -366,7 +366,7 @@ http_status_reply(Status, Out, HdrExtra, Context, Request, Code) :-
     setup_call_cleanup(
         set_stream(Out, encoding(utf8)),
         status_reply_flush(Status, Out, HdrExtra, Context, Method, Code),
-        set_stream(Out, encoding(octet))), 
+        set_stream(Out, encoding(octet))),
     !.
 
 status_reply_flush(Status, Out, HdrExtra, Context, Method, Code) :-
@@ -563,7 +563,7 @@ print_html_if_no_head(_, Out, HTML) :-
 status_page_hook(Term, Status, Context, HTML) :-
     (   http:status_page(Term, Context, HTML)
     ;   http:status_page(Status, Context, HTML) % deprecated
-    ), 
+    ),
     !.
 
 status_page_hook(authorise(_Method), 401, _Context, HTML):-
@@ -899,7 +899,7 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %     for details on the argument format.
 
 http_post_data(Data, Out, HdrExtra) :-
-    http:post_data_hook(Data, Out, HdrExtra), 
+    http:post_data_hook(Data, Out, HdrExtra),
     !.
 http_post_data(html(HTML), Out, HdrExtra) :-
     !,
@@ -1272,7 +1272,7 @@ status_number(Status, Code) -->
     { var(Status) },
     !,
     integer(Code),
-    { status_number(Status, Code) }, 
+    { status_number(Status, Code) },
     !.
 status_number(Status, Code) -->
     { status_number(Status, Code) },
@@ -1511,7 +1511,7 @@ content_length(Reply, Len) -->
 
 
 length_of(_, Len) :-
-    nonvar(Len), 
+    nonvar(Len),
     !.
 length_of(codes(String, Encoding), Len) :-
     !,
@@ -1585,7 +1585,7 @@ ctype(Type) -->
     atom(Type).
 
 charset(Var) -->
-    { var(Var) }, 
+    { var(Var) },
     !.
 charset(utf8) -->
     !,
@@ -1911,7 +1911,7 @@ media_type(Type/SubType) -->
     type(Type), "/", type(SubType).
 
 type(_) -->
-    "*", 
+    "*",
     !.
 type(Type) -->
     token(Type).
@@ -2018,7 +2018,7 @@ quoted_string(Text) -->
     { atom_codes(Text, Codes) }.
 
 quoted_text([]) -->
-    "\"", 
+    "\"",
     !.
 quoted_text([H|T]) -->
     "\\", !, [H],
@@ -2180,7 +2180,7 @@ request(Fd, [method(Method),request_uri(ReqURI)|Header]) -->
     { atom_codes(ReqURI, Query),
       request_uri_parts(ReqURI, Header, Rest)
     },
-    request_header(Fd, Rest), 
+    request_header(Fd, Rest),
     !.
 request(Fd, [unknown(What)|Header]) -->
     string(What),
@@ -2249,7 +2249,7 @@ uri_fragment(_) --> [].
 
 request_header(_, []) -->               % Old-style non-version header
     blanks,
-    eos, 
+    eos,
     !.
 request_header(Fd, [http_version(Version)|Header]) -->
     http_version(Version),
@@ -2310,7 +2310,7 @@ cookie_name(Name) -->
     { atom_codes(Name, Chars) }.
 
 cookie_value(Value) -->
-    quoted_string(Value), 
+    quoted_string(Value),
     !.
 cookie_value(Value) -->
     chars_to_semicolon_or_blank(Chars),
@@ -2371,7 +2371,7 @@ chars_to_semicolon([H|T]) -->
     !,
     chars_to_semicolon(T).
 chars_to_semicolon([]), ";" -->
-    ws, ";", 
+    ws, ";",
     !.
 chars_to_semicolon([H|T]) -->
     [H],
@@ -2477,7 +2477,7 @@ header(List) -->
     header(Tail).
 header([]) -->
     blanks,
-    eos, 
+    eos,
     !.
 header(_) -->
     string(S), blanks_to_nl,
@@ -2502,7 +2502,7 @@ header(_) -->
     http:http_address//0.
 
 address -->
-    http:http_address, 
+    http:http_address,
     !.
 address -->
     { gethostname(Host) },

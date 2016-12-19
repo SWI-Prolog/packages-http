@@ -478,7 +478,7 @@ peer_to_ip(ip(A,B,C,D), IP) :-
 http_relative_path(Path, RelPath) :-
     http_current_request(Request),
     memberchk(path(RelTo), Request),
-    http_relative_path(Path, RelTo, RelPath), 
+    http_relative_path(Path, RelTo, RelPath),
     !.
 http_relative_path(Path, Path).
 

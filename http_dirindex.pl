@@ -237,7 +237,7 @@ size(Name) -->
 %   file_mime_type/2.
 
 mime_type_icon(Ext, Icon) :-
-    http:mime_type_icon(Ext, Icon), 
+    http:mime_type_icon(Ext, Icon),
     !.
 mime_type_icon(_, 'generic.png').
 

@@ -111,7 +111,7 @@ map_exception_to_http_status(E,
               resource_error(E),
               [connection(close)],
               []) :-
-    resource_error(E), 
+    resource_error(E),
     !.
 map_exception_to_http_status(E,
               bad_request(E2),
@@ -134,7 +134,7 @@ bad_request_exception(error(Error, Context)) :-
     ->  true
     ;   Context = context(_Stack, ContextInstance)
     ->  subsumes_term(ContextGeneral, ContextInstance)
-    ), 
+    ),
     !.
 
 bad_request_error(Error, Context) :-
@@ -159,10 +159,10 @@ discard_stack_trace(error(Formal, context(_,Msg)),
 
 in_or_exclude_backtrace(Error, Error) :-
     current_setting(http:client_backtrace),
-    setting(http:client_backtrace, true), 
+    setting(http:client_backtrace, true),
     !.
 in_or_exclude_backtrace(Error0, Error) :-
-    discard_stack_trace(Error0, Error), 
+    discard_stack_trace(Error0, Error),
     !.
 in_or_exclude_backtrace(Exception, Exception).
 

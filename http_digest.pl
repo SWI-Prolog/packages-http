@@ -183,7 +183,7 @@ gc_nonce :-
     nonce_gc_time(Last),
     get_time(Now),
     setting(nonce_timeout, TimeOut),
-    Now-Last < TimeOut/4, 
+    Now-Last < TimeOut/4,
     !.
 gc_nonce :-
     with_mutex(http_digest_gc_nonce,
@@ -231,14 +231,14 @@ gc_nonce_nc(Nonce, Before, NC) :-
 %   Return our private key.
 
 private_key(PrivateKey) :-
-    nonce_key(PrivateKey), 
+    nonce_key(PrivateKey),
     !.
 private_key(PrivateKey) :-
     with_mutex(http_digest,
                private_key_sync(PrivateKey)).
 
 private_key_sync(PrivateKey) :-
-    nonce_key(PrivateKey), 
+    nonce_key(PrivateKey),
     !.
 private_key_sync(PrivateKey) :-
     PrivateKey is random(1<<63-1),
@@ -659,7 +659,7 @@ authenticate(digest(File, Realm, Options), Request,
     ).
 
 add_option(Option, Options0, _) :-
-    option(Option, Options0), 
+    option(Option, Options0),
     !.
 add_option(Option, Options0, [Option|Options0]).
 
@@ -746,12 +746,12 @@ authorization_data(digest(User, Password), User, Password).
 digest_credentials(Authority, Path, Nonce, Fields) :-
     client_nonce(Authority, Domains, Fields, _Created),
     in_domain(Path, Domains),
-    memberchk(nonce(Nonce), Fields), 
+    memberchk(nonce(Nonce), Fields),
     !.
 
 in_domain(Path, Domains) :-
     member(Domain, Domains),
-    sub_atom(Path, 0, _, _, Domain), 
+    sub_atom(Path, 0, _, _, Domain),
     !.
 
 next_nonce_count(Nonce, NC) :-
@@ -793,7 +793,7 @@ gc_client_nonce :-
     client_nonce_gc_time(Last),
     get_time(Now),
     setting(client_nonce_timeout, TimeOut),
-    Now-Last < TimeOut/4, 
+    Now-Last < TimeOut/4,
     !.
 gc_client_nonce :-
     get_time(Now),

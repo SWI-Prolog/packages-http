@@ -254,7 +254,7 @@ next_generation_unlocked :-
     assert(generation(1)).
 
 current_generation(G) :-
-    with_mutex(http_dispatch, generation(G)), 
+    with_mutex(http_dispatch, generation(G)),
     !.
 current_generation(0).
 
@@ -366,7 +366,7 @@ check_path(PathSpec, _) :-
     type_error(path_or_alias, PathSpec).
 
 to_atom(Atom, Atom) :-
-    atom(Atom), 
+    atom(Atom),
     !.
 to_atom(Path, Atom) :-
     phrase(path_to_list(Path), Components),
@@ -516,7 +516,7 @@ location_by_id_raw(ID, Location, Priority) :-
     functor(C, PN, _),
     (   ID = M:PN
     ;   ID = PN
-    ), 
+    ),
     !.
 
 
@@ -693,7 +693,7 @@ supports_method(Request, Options) :-
             memberchk(Method, Methods)
         )
     ;   true
-    ), 
+    ),
     !.
 supports_method(Request, _Options) :-
     memberchk(path(Location), Request),
@@ -767,7 +767,7 @@ call_action(Pred, Request) :-
     ).
 
 extend(Var, _, Var) :-
-    var(Var), 
+    var(Var),
     !.
 extend(M:G0, Extra, M:G) :-
     extend(G0, Extra, G).
@@ -868,7 +868,7 @@ http_safe_file(File, _) :-
     !,
     instantiation_error(File).
 http_safe_file(_, Options) :-
-    option(unsafe(true), Options, false), 
+    option(unsafe(true), Options, false),
     !.
 http_safe_file(File, _) :-
     http_safe_file(File).
@@ -889,7 +889,7 @@ http_safe_file(Name) :-
 safe_name(Name, _) :-
     must_be(atom, Name),
     prolog_to_os_filename(FileName, Name),
-    \+ unsafe_name(FileName), 
+    \+ unsafe_name(FileName),
     !.
 safe_name(_, Spec) :-
     permission_error(read, file, Spec).
@@ -1012,7 +1012,7 @@ http_switch_protocol(Goal, Options) :-
 
 path_tree(Tree) :-
     current_generation(G),
-    nb_current(http_dispatch_tree, G-Tree), 
+    nb_current(http_dispatch_tree, G-Tree),
     !. % Avoid existence error
 path_tree(Tree) :-
     path_tree_nocache(Tree),

@@ -209,7 +209,7 @@ write_mime_attributes([_|T], Out) :-
 %   the boundary is enclosed.
 
 make_boundary(_, Boundary) :-
-    atomic(Boundary), 
+    atomic(Boundary),
     !.
 make_boundary(_, Boundary) :-
     get_time(Now),

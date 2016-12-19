@@ -161,7 +161,7 @@ http_client:http_convert_data(In, Fields, Data, Options) :-
 is_json_type(String) :-
     http_parse_header_value(content_type, String,
                             media(Type, _Attributes)),
-    json_type(Type), 
+    json_type(Type),
     !.
 
 :- if(current_predicate(is_dict/1)).

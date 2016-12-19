@@ -279,7 +279,7 @@ request_websocket_info(Request, Info) :-
 connection_contains_upgrade(Connection) :-
     split_string(Connection, ",", " ", Tokens),
     member(Token, Tokens),
-    string_lower(Token, "upgrade"), 
+    string_lower(Token, "upgrade"),
     !.
 
 add_option(OptionName, Request, Key, Dict0, Dict) :-
@@ -390,7 +390,7 @@ write_message_data(Stream, Message) :-
     ;   format(Stream, '~w', [Data])
     ).
 write_message_data(_, Message) :-
-    atom(Message), 
+    atom(Message),
     !.
 write_message_data(Stream, close(Code, Data)) :-
     !,

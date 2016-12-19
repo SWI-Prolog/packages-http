@@ -218,7 +218,7 @@ wait_for_sockets(Hub, Max) :-
       ).
 
 create_new_waiter_if_needed(Hub) :-
-    message_queue_property(Hub.queues.wait, size(0)), 
+    message_queue_property(Hub.queues.wait, size(0)),
     !.
 create_new_waiter_if_needed(Hub) :-
     create_wait_thread(Hub).
@@ -462,7 +462,7 @@ broadcast_from_queues(Hub, Options) :-
 %   processing this message queue, so we don't have to worry.
 
 broadcast_from_queue(Queue, _Options) :-
-    message_queue_property(Queue, size(0)), 
+    message_queue_property(Queue, size(0)),
     !.
 broadcast_from_queue(Queue, Options) :-
     websocket(_Hub, _WebSocket, Queue, Lock, _Id),

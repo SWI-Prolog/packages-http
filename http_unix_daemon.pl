@@ -360,7 +360,7 @@ server_options([H|T], Rest, Options0, Options) :-
     append(Options1, [H], Options2),
     server_options(T, Rest, Options2, Options).
 server_options([H|T], [H|T], Options, Options) :-
-    server_start_option(H), 
+    server_start_option(H),
     !.
 server_options([_|T0], Rest, Options0, Options) :-
     server_options(T0, Rest, Options0, Options).
@@ -456,13 +456,13 @@ sni_contexts(Host-Options) :-
 %   --password=Password option was given.
 
 prepare_https_certificate(CertFile, KeyFile, Password) :-
-    http_certificate_hook(CertFile, KeyFile, Password), 
+    http_certificate_hook(CertFile, KeyFile, Password),
     !.
 prepare_https_certificate(_, _, _).
 
 
 options_password(Options, Passwd) :-
-    option(password(Passwd), Options), 
+    option(password(Passwd), Options),
     !.
 options_password(Options, Passwd) :-
     option(pwfile(File), Options),
@@ -497,7 +497,7 @@ start_server(server(_Scheme, Socket, Options)) :-
     !,
     http_server(server_redirect(To), [tcp_socket(Socket)|Options]).
 start_server(server(_Scheme, Socket, Options)) :-
-    http_server_hook([tcp_socket(Socket)|Options]), 
+    http_server_hook([tcp_socket(Socket)|Options]),
     !.
 start_server(server(_Scheme, Socket, Options)) :-
     http_server(http_dispatch, [tcp_socket(Socket)|Options]).
@@ -624,7 +624,7 @@ can_switch_user(_Options) :-
     verify_no_root.
 
 verify_root(_Task) :-
-    geteuid(0), 
+    geteuid(0),
     !.
 verify_root(Task) :-
     print_message(error, http_daemon(no_root(Task))),
@@ -724,7 +724,7 @@ kill_x11(_).
 %   make/0.
 
 setup_signals(Options) :-
-    option(interactive(true), Options, false), 
+    option(interactive(true), Options, false),
     !.
 setup_signals(Options) :-
     on_signal(int,  _, quit),

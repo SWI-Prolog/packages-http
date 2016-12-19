@@ -157,7 +157,7 @@ ident(User, Password) -->
 cached_authenticated(Authorization, File, User, Fields) :-
     authenticated(Authorization, File, User, Time, Fields),
     get_time(Now),
-    Now-Time =< 60, 
+    Now-Time =< 60,
     !.              % 60-second timeout
 cached_authenticated(_, _, _, _) :-
     get_time(Now),
@@ -216,7 +216,7 @@ update_passwd(File, Path) :-
     ).
 
 reload_passwd_file(Path, Stamp) :-
-    last_modified(Path, Stamp), 
+    last_modified(Path, Stamp),
     !.  % another thread did the work
 reload_passwd_file(Path, Stamp) :-
     http_read_passwd_file(Path, Data),

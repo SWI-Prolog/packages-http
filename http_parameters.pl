@@ -273,7 +273,7 @@ http_convert_parameter([H|T], Field, Value0, Value) :-
     ).
 
 check_type_no_error(Type, In, Out) :-
-    http:convert_parameter(Type, In, Out), 
+    http:convert_parameter(Type, In, Out),
     !.
 check_type_no_error(Type, In, Out) :-
     check_type3(Type, In, Out).
@@ -388,7 +388,7 @@ truth('0',     false).
 
 prolog:called_by(http_parameters(_,_,Options), [G+2]) :-
     option(attribute_declarations(G), Options, _),
-    callable(G), 
+    callable(G),
     !.
 
 emacs_prolog_colours:goal_colours(http_parameters(_,_,Options),
@@ -396,7 +396,7 @@ emacs_prolog_colours:goal_colours(http_parameters(_,_,Options),
     option_list_colours(Options, Colours).
 
 option_list_colours(Var, error) :-
-    var(Var), 
+    var(Var),
     !.
 option_list_colours([], classify) :- !.
 option_list_colours(Term, list-Elements) :-
@@ -413,14 +413,14 @@ option_list_colours_2([H0|T0], [H|T]) :-
     option_list_colours_2(T0, T).
 
 option_colours(Var,  classify) :-
-    var(Var), 
+    var(Var),
     !.
 option_colours(_=_,  built_in-[classify,classify]) :- !.
 option_colours(attribute_declarations(_),               % DCG = is a hack!
                option(attribute_declarations)-[dcg]) :- !.
 option_colours(Term, option(Name)-[classify]) :-
     compound(Term),
-    Term =.. [Name,_Value], 
+    Term =.. [Name,_Value],
     !.
 option_colours(_, error).
 
