@@ -33,9 +33,9 @@
 */
 
 :- module(http_stress_client,
-	  [ client/2,			% +Port, +Test
-	    client/3			% +Port, +Test, +Times
-	  ]).
+          [ client/2,                   % +Port, +Test
+            client/3                    % +Port, +Test, +Times
+          ]).
 
 :- use_module(library(http/http_client)).
 
@@ -44,12 +44,12 @@
 */
 
 client(Port, Action, Times) :-
-	forall(between(1, Times, _),
-	       client(Port, Action)).
+    forall(between(1, Times, _),
+           client(Port, Action)).
 
 
 client(Port, ping) :-
-	http_get([ host(localhost),
-		   port(Port),
-		   path('/ping')
-		 ], _, []).
+    http_get([ host(localhost),
+               port(Port),
+               path('/ping')
+             ], _, []).

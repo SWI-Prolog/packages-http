@@ -1,6 +1,6 @@
 :- module(demo_digest,
-	  [ run/1
-	  ]).
+          [ run/1
+          ]).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_digest)).
@@ -15,11 +15,11 @@ field user('Bob').
 */
 
 run(Port) :-
-	http_server(http_dispatch, [port(Port)]).
+    http_server(http_dispatch, [port(Port)]).
 
 home(Request) :-
-	format('Content-type: text/plain~n~n'),
-	print_term(Request, [output(current_output)]).
+    format('Content-type: text/plain~n~n'),
+    print_term(Request, [output(current_output)]).
 
 
 

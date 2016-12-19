@@ -36,8 +36,8 @@
 :- use_module(demo_body).
 
 server(Port) :-
-	http_server(reply,
-		    [ port(Port)
-		    ]).
+    http_server(reply,
+                [ port(Port)
+                ]).
 
 

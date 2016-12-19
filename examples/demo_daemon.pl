@@ -42,5 +42,5 @@ files.
 
 
 hello(_Request) :-
-	reply_html_page(title('Hello'),
-			p('Hello from SWI-Prolog!')).
+    reply_html_page(title('Hello'),
+                    p('Hello from SWI-Prolog!')).

@@ -47,131 +47,131 @@
 http:location(openid, root(openid), []).
 
 :- multifile
-	http_openid:openid_hook/1.
+    http_openid:openid_hook/1.
 
 http_openid:openid_hook(trusted(_OpenID, Server)) :-
-	debug(openid(test), 'Trusting server ~q', [Server]).
+    debug(openid(test), 'Trusting server ~q', [Server]).
 
 
-%%	server
+%!  server
 %
-%	Create demo server  and  client.   After  starting  the  server,
-%	contact http://localhost:8000/
+%   Create demo server  and  client.   After  starting  the  server,
+%   contact http://localhost:8000/
 
 server :-
-	debug(openid(_)),
-	Port = 8000,
-	http_server(http_dispatch,
-		    [ port(Port)
-		    ]).
+    debug(openid(_)),
+    Port = 8000,
+    http_server(http_dispatch,
+                [ port(Port)
+                ]).
 
 
 assoc :-
-	openid_associate('http://localhost:8000/openid/server', Handle, Assoc),
-	writeln(Handle-Assoc).
+    openid_associate('http://localhost:8000/openid/server', Handle, Assoc),
+    writeln(Handle-Assoc).
 
-%%	secret(+Request) is det.
+%!  secret(+Request) is det.
 %
-%	Example of a handler that requires an  OpenID login. If the user
-%	is not logged it, it will be  redirected to the login page, from
-%	there to the OpenID server and back here. All this is completely
-%	transparent to us.
+%   Example of a handler that requires an  OpenID login. If the user
+%   is not logged it, it will be  redirected to the login page, from
+%   there to the OpenID server and back here. All this is completely
+%   transparent to us.
 
 :- http_handler(root('secret'), secret, []).
 
 secret(Request) :-
-	openid_user(Request, User, []),
-	reply_html_page(title('Secret'),
-			[ 'You\'ve reached the secret page as user ', %'
-			  a(href(User), User)
-			]).
+    openid_user(Request, User, []),
+    reply_html_page(title('Secret'),
+                    [ 'You\'ve reached the secret page as user ', %'
+                      a(href(User), User)
+                    ]).
 
-%%	root(+Request).
-%%	allow(+Request).
+%!  root(+Request).
+%!  allow(+Request).
 %
-%	Shows an indirect login.
+%   Shows an indirect login.
 
-:- http_handler(root(.),	     root,				[]).
-:- http_handler(root('test/verify'), openid_verify([return_to(allow)]),	[]).
-:- http_handler(root('test/allow'),  allow,				[]).
+:- http_handler(root(.),             root,                              []).
+:- http_handler(root('test/verify'), openid_verify([return_to(allow)]), []).
+:- http_handler(root('test/allow'),  allow,                             []).
 
 root(_Request) :-
-	reply_html_page(title('Demo OpenID consumer'),
-			[ h1('OpenID consumer'),
-			  form([ name(login),
-				 action('/test/verify'),
-				 method('GET')
-			       ],
-			       [ div([ 'OpenID: ',
-				       input([ name(openid_url),
-					       size(40),
-					       value('http://localhost:8000/user/bob') % test
-					     ]),
-				       input([type(submit), value('Verify!')])
-				     ])
-			       ]),
-			  p([ 'Or go directly to the ', a(href=secret, 'secret page') ])
-			]).
+    reply_html_page(title('Demo OpenID consumer'),
+                    [ h1('OpenID consumer'),
+                      form([ name(login),
+                             action('/test/verify'),
+                             method('GET')
+                           ],
+                           [ div([ 'OpenID: ',
+                                   input([ name(openid_url),
+                                           size(40),
+                                           value('http://localhost:8000/user/bob') % test
+                                         ]),
+                                   input([type(submit), value('Verify!')])
+                                 ])
+                           ]),
+                      p([ 'Or go directly to the ', a(href=secret, 'secret page') ])
+                    ]).
 
 
 allow(Request) :-
-	openid_user(Request, OpenID, []),
-	openid_server(_OpenIDLogin, OpenID, Server),
-	reply_html_page(title('Success'),
-			[ h1('OpenID login succeeded'),
-			  p([ 'The OpenID server ',
-			      a(href(Server),Server),
-			      ' verified you as ',
-			      a(href(OpenID), OpenID)
-			    ])
-			]).
+    openid_user(Request, OpenID, []),
+    openid_server(_OpenIDLogin, OpenID, Server),
+    reply_html_page(title('Success'),
+                    [ h1('OpenID login succeeded'),
+                      p([ 'The OpenID server ',
+                          a(href(Server),Server),
+                          ' verified you as ',
+                          a(href(OpenID), OpenID)
+                        ])
+                    ]).
 
 
-		 /*******************************
-		 *	   OpenID SERVER	*
-		 *******************************/
+                 /*******************************
+                 *         OpenID SERVER        *
+                 *******************************/
 
-:- http_handler(root('user/'),	user_page,	   [prefix]).
-:- http_handler(openid(server),	openid_server([]), []).
-:- http_handler(openid(grant),	openid_grant, []).
+:- http_handler(root('user/'),  user_page,         [prefix]).
+:- http_handler(openid(server), openid_server([]), []).
+:- http_handler(openid(grant),  openid_grant, []).
 
 :- multifile
-	http_openid:openid_hook/1.
+    http_openid:openid_hook/1.
 
 http_openid:openid_hook(grant(_Request, Options)) :-
-	debug(openid(test), 'Granting access to ~p', [Options]).
+    debug(openid(test), 'Granting access to ~p', [Options]).
 
-%%	user_page(+Request) is det.
+%!  user_page(+Request) is det.
 %
-%	Generate a page for user as /user/<user>.
+%   Generate a page for user as /user/<user>.
 
 user_page(Request) :-
-	http_current_host(Request, Host, Port,
-			  [ global(true)
-			  ]),
-	http_location_by_id(openid_server, ServerLocation),
-	uri_authority_data(host, AComp, Host),
-	uri_authority_data(port, AComp, Port),
-	uri_authority_components(Authority, AComp),
-	uri_data(scheme, Components, http),
-	uri_data(authority, Components, Authority),
-	uri_data(path, Components, ServerLocation),
-	uri_components(OpenIDServer, Components),
-	memberchk(path_info(User), Request),
-	reply_html_page([ link([ rel('openid.server'),
-				 href(OpenIDServer)
-			       ]),
-			  title('OpenID page of ~w'-[User])
-			],
-			h1('OpenID page of ~w'-[User])).
+    http_current_host(Request, Host, Port,
+                      [ global(true)
+                      ]),
+    http_location_by_id(openid_server, ServerLocation),
+    uri_authority_data(host, AComp, Host),
+    uri_authority_data(port, AComp, Port),
+    uri_authority_components(Authority, AComp),
+    uri_data(scheme, Components, http),
+    uri_data(authority, Components, Authority),
+    uri_data(path, Components, ServerLocation),
+    uri_components(OpenIDServer, Components),
+    memberchk(path_info(User), Request),
+    reply_html_page([ link([ rel('openid.server'),
+                             href(OpenIDServer)
+                           ]),
+                      title('OpenID page of ~w'-[User])
+                    ],
+                    h1('OpenID page of ~w'-[User])).
 
 
-		 /*******************************
-		 *		DEBUG		*
-		 *******************************/
+                 /*******************************
+                 *              DEBUG           *
+                 *******************************/
 
 :- http_handler(root(.), print_request, [prefix]).
 
 print_request(Request) :-
-	format('Content-type: text/plain~n~n'),
-	pp(Request).
+    format('Content-type: text/plain~n~n'),
+    pp(Request).

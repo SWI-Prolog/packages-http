@@ -33,20 +33,20 @@
 */
 
 :- load_files([ demo_body,
-		library('http/thread_httpd')
-	      ],
-	      [ silent(true)
-	      ]).
+                library('http/thread_httpd')
+              ],
+              [ silent(true)
+              ]).
 
 server :-
-	server(3000, []).
+    server(3000, []).
 
 server(Port, Options) :-
-	http_server(reply,
-		    [ port(Port),
-		      timeout(20)
-		    | Options
-		    ]).
+    http_server(reply,
+                [ port(Port),
+                  timeout(20)
+                | Options
+                ]).
 
 tm :-
-	prolog_ide(thread_monitor).
+    prolog_ide(thread_monitor).

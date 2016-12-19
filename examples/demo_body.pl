@@ -34,18 +34,18 @@
 */
 
 :- module(demo_body,
-	  [ reply/1
-	  ]).
+          [ reply/1
+          ]).
 :- use_module(library(http/http_client)).
-:- use_module(library(http/http_mime_plugin)).	% Decode multipart data
+:- use_module(library(http/http_mime_plugin)).  % Decode multipart data
 
 :- if(exists_source(library(pce))).
 :- use_module(library(pce)).
-:- use_module(library(http/http_image)).	% make XPCE generate images
+:- use_module(library(http/http_image)).        % make XPCE generate images
 :- endif.
 
 :- discontiguous
-	reply/1.
+    reply/1.
 
 /** <module> Demo implementation of some HTTP handlers
 
@@ -58,102 +58,108 @@ CGI handlers in the sense that they need  to write a CGI document to the
     them is provided by http_handler/3 from library(http/http_dispatch).
   - High level HTML is generated with library(http/html_write).
 
-@see	http://www.swi-prolog.org/howto/http/ provides a much better
-	tutorial introduction to the SWI-Prolog HTTP services.
+@see    http://www.swi-prolog.org/howto/http/ provides a much better
+        tutorial introduction to the SWI-Prolog HTTP services.
 */
 
 
 reply(_) :-
-	flag(request, N, N+1),
-	fail.
+    flag(request, N, N+1),
+    fail.
 
-%	/
+%       /
 %
-%	Show available locations
+%       Show available locations
 
 reply(Request) :-
-	memberchk(path('/'), Request), !,
-	format('Content-type: text/html~n~n', []),
-	format('<html>~n', []),
-	format('<h1>Some simple demo queries</h1>', []),
-	format('<ul>~n', []),
-	format('  <li><a href="quit">Say bye bye</a>'),
-	format('  <li><a href="env">Print environment</a>'),
-	format('  <li><a href="upload">Upload some data</a>'),
-	format('  <li><a href="xml">Reply with an XML document</a>'),
-	format('  <li><a href="foreign">Reply Chinese characters</a>'),
-	format('  <li><a href="work">Work hard for a while</a>'),
-	format('  <li><a href="error">Show what happens on an error</a>'),
-	format('  <li><a href="xpce?class=box">Return image (requires xpce)</a>'),
-	format('  <li><a href="otherwise">Otherwise, print request</a>'),
-	format('</ul>~n', []),
-	format('</html>~n', []).
+    memberchk(path('/'), Request),
+    !,
+    format('Content-type: text/html~n~n', []),
+    format('<html>~n', []),
+    format('<h1>Some simple demo queries</h1>', []),
+    format('<ul>~n', []),
+    format('  <li><a href="quit">Say bye bye</a>'),
+    format('  <li><a href="env">Print environment</a>'),
+    format('  <li><a href="upload">Upload some data</a>'),
+    format('  <li><a href="xml">Reply with an XML document</a>'),
+    format('  <li><a href="foreign">Reply Chinese characters</a>'),
+    format('  <li><a href="work">Work hard for a while</a>'),
+    format('  <li><a href="error">Show what happens on an error</a>'),
+    format('  <li><a href="xpce?class=box">Return image (requires xpce)</a>'),
+    format('  <li><a href="otherwise">Otherwise, print request</a>'),
+    format('</ul>~n', []),
+    format('</html>~n', []).
 
-%	/quit
+%       /quit
 %
-%	Explicitely close the connection
+%       Explicitely close the connection
 
 reply(Request) :-
-	member(path('/quit'), Request), !,
-	format('Connection: close~n', []),
-	format('Content-type: text/html~n~n', []),
-	format('Bye Bye~n').
+    member(path('/quit'), Request),
+    !,
+    format('Connection: close~n', []),
+    format('Content-type: text/html~n~n', []),
+    format('Bye Bye~n').
 
-%	/env
+%       /env
 %
-%	Reply with the output of printenv (Unix systems only).
+%       Reply with the output of printenv (Unix systems only).
 
 reply(Request) :-
-	member(path('/env'), Request), !,
-	expand_file_name(~, Home),
-	format('Content-type: text/html~n~n', []),
-	format('<html>~n', []),
-	flag(request, RN, RN),
-	format('Request ~d~n', [RN]),
-	format('<pre>~n', []),
-	format('HOME = ~w~n~n', [Home]),
-	open(pipe(printenv), read, Fd),
-	copy_stream_data(Fd, current_output),
-	close(Fd),
-	format('</pre>~n', []),
-	format('</html>~n', []).
+    member(path('/env'), Request),
+    !,
+    expand_file_name(~, Home),
+    format('Content-type: text/html~n~n', []),
+    format('<html>~n', []),
+    flag(request, RN, RN),
+    format('Request ~d~n', [RN]),
+    format('<pre>~n', []),
+    format('HOME = ~w~n~n', [Home]),
+    open(pipe(printenv), read, Fd),
+    copy_stream_data(Fd, current_output),
+    close(Fd),
+    format('</pre>~n', []),
+    format('</html>~n', []).
 
-%	/upload
-%	/upload_reply
+%       /upload
+%       /upload_reply
 %
-%	Provide a form for uploading a file, and deal with the resulting
-%	upload.  Contributed by Nicos Angelopoulos.
+%       Provide a form for uploading a file, and deal with the resulting
+%       upload.  Contributed by Nicos Angelopoulos.
 
 reply(Request) :-
-        member(path('/upload'), Request), !,
-        format('Content-type: text/html~n~n', []),
-        format('<html>~n', []),
-	format('<form action="/upload_reply" enctype="multipart/form-data" method="post">~n', []),
-	format('<input type="file" name="datafile">'),
-	format('<input type="submit" name="sent">'),
-        format('</body>~n', []),
-        format('</html>~n', []).
+    member(path('/upload'), Request),
+    !,
+    format('Content-type: text/html~n~n', []),
+    format('<html>~n', []),
+    format('<form action="/upload_reply" enctype="multipart/form-data" method="post">~n', []),
+    format('<input type="file" name="datafile">'),
+    format('<input type="submit" name="sent">'),
+    format('</body>~n', []),
+    format('</html>~n', []).
 
 reply(Request) :-
-        member(path('/upload_reply'), Request), !,
-        format('Content-type: text/html~n~n', []),
-        format('<html>~n', []),
-        format('<pre>~n', []),
-	write( req(Request) ), nl,
-	http_read_data(Request, Data, []),
-	write( data(Data) ), nl,
-	format('</pre>'),
-        format('</body>~n', []),
-        format('</html>~n', []).
+    member(path('/upload_reply'), Request),
+    !,
+    format('Content-type: text/html~n~n', []),
+    format('<html>~n', []),
+    format('<pre>~n', []),
+    write( req(Request) ), nl,
+    http_read_data(Request, Data, []),
+    write( data(Data) ), nl,
+    format('</pre>'),
+    format('</body>~n', []),
+    format('</html>~n', []).
 
-%	/xml
+%       /xml
 %
-%	Return a simple formatted XML message.
+%       Return a simple formatted XML message.
 
 reply(Request) :-
-	member(path('/xml'), Request), !,
-	format('Content-type: text/xml~n~n', []),
-	format('\c
+    member(path('/xml'), Request),
+    !,
+    format('Content-type: text/xml~n~n', []),
+    format('\c
 <message>
   <head>
   <from>Jan Wielemaker</from>
@@ -168,14 +174,15 @@ This is the first demo of the web-server serving an XML message
 </message>
 ', []).
 
-%	/foreign
+%       /foreign
 %
-%	Test emitting text using UTF-8 encoding
+%       Test emitting text using UTF-8 encoding
 
 reply(Request) :-
-	member(path('/foreign'), Request), !,
-	format('Content-type: text/html~n~n', []),
-	format('\c
+    member(path('/foreign'), Request),
+    !,
+    format('Content-type: text/html~n~n', []),
+    format('\c
 <html>
 <head><title>Foreign characters</title></head>
 <body>
@@ -185,69 +192,70 @@ reply(Request) :-
 ').
 
 
-%	/work
+%       /work
 %
-%	Do a lot of work and then say 'ok'. Can be used to test
-%	concurrent access using the multi-threaded server.
+%       Do a lot of work and then say 'ok'. Can be used to test
+%       concurrent access using the multi-threaded server.
 
 reply(Request) :-
-	member(path('/work'), Request),
-	format(user_error, 'Starting work ...', []),
-	forall(between(1, 10000000, _), atom_codes(_, "hello")),
-	format(user_error, 'done!~n', []),
-	format('Content-type: text/plain~n~n', []),
-	format('ok~n').
+    member(path('/work'), Request),
+    format(user_error, 'Starting work ...', []),
+    forall(between(1, 10000000, _), atom_codes(_, "hello")),
+    format(user_error, 'done!~n', []),
+    format('Content-type: text/plain~n~n', []),
+    format('ok~n').
 
-%	/error
+%       /error
 %
-%	Produce an error.  Load http_error to see the effect.
+%       Produce an error.  Load http_error to see the effect.
 
 reply(Request) :-
-	member(path('/error'), Request),
-	A is 1/0,
-	format('Content-type: text/plain~n~n', []),
-	format('A = ~w~n', [A]).
+    member(path('/error'), Request),
+    A is 1/0,
+    format('Content-type: text/plain~n~n', []),
+    format('A = ~w~n', [A]).
 
-%	/xpce?class=box
+%       /xpce?class=box
 %
-%	Make XPCE reply with a graphics image. The demo-body pce_reply/1
-%	is called embedded in a  message  to   XPCE  to  force  the XPCE
-%	incremental garbage collector to reclaim   objects created while
-%	serving the request. pce_reply/1 replies   to ?class=box using a
-%	blue box with rounded corners.
+%       Make XPCE reply with a graphics image. The demo-body pce_reply/1
+%       is called embedded in a  message  to   XPCE  to  force  the XPCE
+%       incremental garbage collector to reclaim   objects created while
+%       serving the request. pce_reply/1 replies   to ?class=box using a
+%       blue box with rounded corners.
 
 :- if(current_predicate(send/3)).
 reply(Request) :-
-	member(path('/xpce'), Request), !,
-	send(@(prolog), call, demo_body:pce_reply(Request)).
+    member(path('/xpce'), Request),
+    !,
+    send(@(prolog), call, demo_body:pce_reply(Request)).
 
 pce_reply(Request) :-
-	memberchk(search(Search), Request),
-	memberchk(class=box, Search),
-	new(Box, box(200,200)),
-	send(Box, radius, 20),
-	send(Box, fill_pattern, colour(skyblue)),
-	reply_image(Box, []).
+    memberchk(search(Search), Request),
+    memberchk(class=box, Search),
+    new(Box, box(200,200)),
+    send(Box, radius, 20),
+    send(Box, fill_pattern, colour(skyblue)),
+    reply_image(Box, []).
 
 :- endif.
 
-%	... Otherwise
+%       ... Otherwise
 %
-%	Print the request itself.
+%       Print the request itself.
 
 reply(Request) :-
-	format('Content-type: text/html~n~n', []),
-	format('<html>~n', []),
-	format('<table border=1>~n'),
-	print_request(Request),
-	format('~n</table>~n'),
-	format('</html>~n', []).
+    format('Content-type: text/html~n~n', []),
+    format('<html>~n', []),
+    format('<table border=1>~n'),
+    print_request(Request),
+    format('~n</table>~n'),
+    format('</html>~n', []).
 
 print_request([]).
 print_request([H|T]) :-
-	H =.. [Name, Value],
-	format('<tr><td>~w<td>~w~n', [Name, Value]),
-	print_request(T).
+    H =.. [Name, Value],
+    format('<tr><td>~w<td>~w~n', [Name, Value]),
+    print_request(T).
 
 
 
