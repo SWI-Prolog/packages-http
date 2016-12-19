@@ -757,7 +757,7 @@ ws_header(char *hdr, ws_context *ctx, int fin, int mask, size_t payload_len)
 
     hdr[1] = ( (masked<<7) | 127 );
     for(i=0; i<8; i++)
-      hdr[1+i] = (payload_len >> ((7-i)*8)) & 0xff;
+      hdr[2+i] = (payload_len >> ((7-i)*8)) & 0xff;
     hdr_len += 8;
   }
   if ( masked )
