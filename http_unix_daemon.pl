@@ -431,19 +431,11 @@ make_address(Spec, _, _, _, _) :-
 
 :- dynamic sni/3.
 
-default_keyfile([],     ['https/server.key']).
-default_keyfile([F|Fs], [F|Fs]).
-
-default_certfile([],     ['https/server.crt']).
-default_certfile([F|Fs], [F|Fs]).
-
 options_certificates_keys(Options, Certs, Keys, Passwd0) :-
-    findall(CF, member(certfile(CF), Options), CFs0),
-    findall(KF, member(keyfile(KF), Options), KFs0),
-    same_length(CFs0, KFs0),
-    default_certfile(CFs0, CFs),
-    default_keyfile(KFs0, KFs),
-    maplist(prepare_https_certificate, CFs, KFs, [Passwd0|_]),
+    findall(CF, member(certfile(CF), Options), CFs),
+    findall(KF, member(keyfile(KF), Options), KFs),
+    maplist(prepare_https_certificate, CFs, KFs, Passwds),
+    ignore(Passwds = [Passwd0|_]),
     maplist(file_string, CFs, Certs),
     maplist(file_string, KFs, Keys).
 
