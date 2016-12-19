@@ -436,9 +436,8 @@ merge_https_options(Options, [SSL|Options]) :-
     read_file_to_string(KeyFile, Key, []),
     findall(HostName-HostOptions, http:sni_options(HostName, HostOptions), SNIs),
     maplist(sni_contexts, SNIs),
-    SSL = ssl([ certificate(Certificate),
+    SSL = ssl([ certificate_key_pairs([Certificate-Key]),
                 cipher_list(CipherList),
-                key(Key),
                 password(Passwd),
                 sni_hook(http_unix_daemon:sni)
               ]).
