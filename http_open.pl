@@ -206,8 +206,16 @@ user_agent('SWI-Prolog').
 %     is received.
 %
 %     * authorization(+Term)
-%     Send authorization.  Currently only supports basic(User,Password).
-%     See also http_set_authorization/2.
+%     Send authorization. See also http_set_authorization/2. Supported
+%     schemes:
+%
+%       - basic(+User, +Password)
+%       HTTP Basic authentication.
+%       - bearer(+Token)
+%       HTTP Bearer authentication.
+%       - digest(+User, +Password)
+%       HTTP Digest authentication.  This option is only provided
+%       if the plugin library(http/http_digest) is also loaded.
 %
 %     * connection(+Connection)
 %     Specify the =Connection= header.  Default is =close=.  The
@@ -633,6 +641,9 @@ auth_header(basic(User, Password), _, Header, Out) :-
     phrase(base64(Codes), Base64Codes),
     debug(http(send_request), "> ~w: Basic ~s", [Header, Base64Codes]),
     format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
+auth_header(bearer(Token), _, Header, Out) :-
+    !,
+    format(Out, '~w: Bearer ~w\r\n', [Header, Token]).
 auth_header(Auth, Options, _, Out) :-
     option(url(URL), Options),
     add_method(Options, Options1),
