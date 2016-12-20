@@ -226,10 +226,13 @@ events:
 %     this server.
 %
 %     $ --certfile=File :
-%     The server certificate for HTTPS.
+%     The server certificate for HTTPS. Multiple certificates can
+%     be specified by repeating the option with a different file.
 %
 %     $ --keyfile=File :
-%     The server private key for HTTPS.
+%     The server private key for HTTPS. The private keys
+%     correpsonding to different certificates must be specified in
+%     the same relative order as the certificates.
 %
 %     $ --pwfile=File :
 %     File holding the password for accessing  the private key. This
@@ -365,6 +368,11 @@ server_options([H|T], [H|T], Options, Options) :-
 server_options([_|T0], Rest, Options0, Options) :-
     server_options(T0, Rest, Options0, Options).
 
+% certfile/1 and keyfile/1 are allowed to occur multiple times in the
+% list of options, to support different types of certificates.
+
+generalise_option(certfile(F), certfile(F)) :- !.
+generalise_option(keyfile(F), keyfile(F))   :- !.
 generalise_option(H, G) :-
     H =.. [Name,_],
     G =.. [Name,_].
@@ -423,20 +431,27 @@ make_address(Spec, _, _, _, _) :-
 
 :- dynamic sni/3.
 
+options_certificates_keys(Options, Certs, Keys, Passwd0) :-
+    findall(CF, member(certfile(CF), Options), CFs),
+    findall(KF, member(keyfile(KF), Options), KFs),
+    maplist(prepare_https_certificate, CFs, KFs, Passwds),
+    ignore(Passwds = [Passwd0|_]),
+    maplist(file_string, CFs, Certs),
+    maplist(file_string, KFs, Keys).
+
+file_string(File, String) :- read_file_to_string(File, String, []).
+
 merge_https_options(Options, [SSL|Options]) :-
-    option(certfile(CertFile), Options, 'https/server.crt'),
-    option(keyfile(KeyFile), Options, 'https/server.key'),
+    options_certificates_keys(Options, Certs, Keys, Passwd0),
+    pairs_keys_values(Pairs, Certs, Keys),
     option(cipherlist(CipherList), Options, 'DEFAULT'),
-    prepare_https_certificate(CertFile, KeyFile, Passwd0),
     (   string(Passwd0)
     ->  Passwd = Passwd0
     ;   options_password(Options, Passwd)
     ),
-    read_file_to_string(CertFile, Certificate, []),
-    read_file_to_string(KeyFile, Key, []),
     findall(HostName-HostOptions, http:sni_options(HostName, HostOptions), SNIs),
     maplist(sni_contexts, SNIs),
-    SSL = ssl([ certificate_key_pairs([Certificate-Key]),
+    SSL = ssl([ certificate_key_pairs(Pairs),
                 cipher_list(CipherList),
                 password(Passwd),
                 sni_hook(http_unix_daemon:sni)
