@@ -424,19 +424,22 @@ make_address(Spec, _, _, _, _) :-
 :- dynamic sni/3.
 
 merge_https_options(Options, [SSL|Options]) :-
-    option(certfile(CertFile), Options, 'https/server.crt'),
-    option(keyfile(KeyFile), Options, 'https/server.key'),
+    (   option(certfile(CertFile), Options),
+        option(keyfile(KeyFile), Options)
+    ->  read_file_to_string(CertFile, Certificate, []),
+        read_file_to_string(KeyFile, Key, []),
+        Pairs = [Certificate-Key],
+        prepare_https_certificate(CertFile, KeyFile, Passwd0)
+    ;   Pairs = []
+    ),
     option(cipherlist(CipherList), Options, 'DEFAULT'),
-    prepare_https_certificate(CertFile, KeyFile, Passwd0),
     (   string(Passwd0)
     ->  Passwd = Passwd0
     ;   options_password(Options, Passwd)
     ),
-    read_file_to_string(CertFile, Certificate, []),
-    read_file_to_string(KeyFile, Key, []),
     findall(HostName-HostOptions, http:sni_options(HostName, HostOptions), SNIs),
     maplist(sni_contexts, SNIs),
-    SSL = ssl([ certificate_key_pairs([Certificate-Key]),
+    SSL = ssl([ certificate_key_pairs(Pairs),
                 cipher_list(CipherList),
                 password(Passwd),
                 sni_hook(http_unix_daemon:sni)
