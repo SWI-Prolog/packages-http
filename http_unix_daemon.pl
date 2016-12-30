@@ -402,7 +402,6 @@ make_address(Bind:Port, _, Bind:Port, Options0, Options) :-
     must_be(integer, Port),
     merge_options([port(Port), ip(Bind)], Options0, Options).
 make_address(Port, _, Address, Options0, Options) :-
-    !,
     integer(Port),
     !,
     (   option(ip(Bind), Options0)
