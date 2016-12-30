@@ -253,7 +253,9 @@ scheme(Scheme, Options) :-
     option(scheme(Scheme), Options),
     !.
 scheme(Scheme, Options) :-
-    option(ssl(_), Options),
+    (   option(ssl(_), Options)
+    ;   option(ssl_instance(_), Options)
+    ),
     !,
     Scheme = https.
 scheme(http, _).
