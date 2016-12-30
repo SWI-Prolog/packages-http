@@ -261,9 +261,37 @@ events:
 %
 %     $ --workers=Count :
 %     Set the number of workers for the multi-threaded server.
+%
+%   http_daemon/0 is defined as below.  The   start  code for a specific
+%   server can use this as a starting  point, for example for specifying
+%   defaults.
+%
+%   ```
+%   http_daemon :-
+%       current_prolog_flag(argv, Argv),
+%       argv_options(Argv, _RestArgv, Options),
+%       http_daemon(Options).
+%   ```
+%
+%   @see http_daemon/1
 
 http_daemon :-
-    catch(http_daemon_2, Error, start_failed(Error)).
+    current_prolog_flag(argv, Argv),
+    argv_options(Argv, _RestArgv, Options),
+    http_daemon(Options).
+
+%!  http_daemon(+Options)
+%
+%   Start the HTTP server as a  daemon process. This predicate processes
+%   a Prolog option list. It  is   normally  called  from http_daemon/0,
+%   which derives the option list from the command line arguments.
+%
+%   Error handling depends on whether  or   not  interactive(true) is in
+%   effect. If so, the error is printed before entering the toplevel. In
+%   non-interactive mode this predicate calls halt(1).
+
+http_daemon(Options) :-
+    catch(http_daemon_guarded(Options), Error, start_failed(Error)).
 
 start_failed(Error) :-
     interactive,
@@ -273,26 +301,17 @@ start_failed(Error) :-
     print_message(error, Error),
     halt(1).
 
-http_daemon_2 :-
-    current_prolog_flag(argv, Argv),
-    argv_options(Argv, _RestArgv, Options),
-    (   option(gtrace(true), Options)
-    ->  gtrace
-    ;   true
-    ),
-    http_daemon(Options).
-
-%!  http_daemon(+Options)
+%!  http_daemon_guarded(+Options)
 %
-%   Helper that is started from http_daemon/0. See http_daemon/0 for
+%   Helper that is started from http_daemon/1. See http_daemon/1 for
 %   options that are processed.
 
-http_daemon(Options) :-
+http_daemon_guarded(Options) :-
     option(help(true), Options),
     !,
     print_message(information, http_daemon(help)),
     halt.
-http_daemon(Options) :-
+http_daemon_guarded(Options) :-
     setup_debug(Options),
     kill_x11(Options),
     option_servers(Options, Servers0),
@@ -688,6 +707,7 @@ default_port(https, 443).
 %   multiple times.
 
 setup_debug(Options) :-
+    setup_trace(Options),
     nodebug(_),
     debug(daemon),
     enable_debug(Options).
@@ -700,6 +720,13 @@ enable_debug([debug(Topic)|T]) :-
     enable_debug(T).
 enable_debug([_|T]) :-
     enable_debug(T).
+
+setup_trace(Options) :-
+    option(gtrace(true), Options),
+    !,
+    gtrace.
+setup_trace(_).
+
 
 %!  kill_x11(+Options) is det.
 %
