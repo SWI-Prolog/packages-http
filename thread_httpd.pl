@@ -172,12 +172,12 @@ self-signed SSL certificate.
 %   and HTTPS server, where the HTTP   server redirects to the HTTPS
 %   server for handling sensitive requests.
 
-http_server(Goal, M:Options) :-
-    select_option(port(Port), Options, Options1),
+http_server(Goal, M:Options0) :-
+    option(port(Port), Options0),
     !,
-    make_socket(Port, M:Options1, Options2),
-    create_workers(Options2),
-    create_server(Goal, Port, Options2),
+    make_socket(Port, M:Options0, Options),
+    create_workers(Options),
+    create_server(Goal, Port, Options),
     print_message(informational,
                   httpd_started_server(Port)).
 http_server(_Goal, _Options) :-
