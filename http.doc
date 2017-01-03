@@ -743,7 +743,7 @@ Use SSL (Secure Socket Layer) rather than plain TCP/IP. A server created
 this way is accessed using the \const{https://} protocol. SSL allows for
 encrypted communication to avoid others from tapping the wire as well as
 improved authentication of client and server. The \arg{SSLOptions}
-option list is passed to ssl_init/3. The port option of the main option
+option list is passed to ssl_context/3. The port option of the main option
 list is forwarded to the SSL layer. See the \pllib{ssl} library for
 details.
 \end{description}
