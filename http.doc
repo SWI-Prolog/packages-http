@@ -754,7 +754,9 @@ True if \arg{Property} is a property of the HTTP server running at
 \begin{description}
     \termitem{goal}{:Goal}
 Goal used to start the server. This is often http_dispatch/1.
-    \termitem{start_time}{?Time}
+    \termitem{scheme}{-Scheme}
+Scheme is one of \const{http} or \const{https}.
+    \termitem{start_time}{-Time}
 Time-stamp when the server was created.  See format_time/3 for
 creating a human-readable representation.
 \end{description}
