@@ -73,7 +73,7 @@ The address is  established  from   the  settings `http:public_host` and
 %
 %   True when URL is  an  absolute   URL  for  the  current request.
 %   Typically, the login page should redirect   to this URL to avoid
-%   loosing the session.
+%   losing the session.
 
 http_public_url(Request, URL) :-
     http_public_host_url(Request, HostURL),
