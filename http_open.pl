@@ -643,6 +643,7 @@ auth_header(basic(User, Password), _, Header, Out) :-
     format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
 auth_header(bearer(Token), _, Header, Out) :-
     !,
+    debug(http(send_request), "> ~w: Bearer ~w", [Header,Token]),
     format(Out, '~w: Bearer ~w\r\n', [Header, Token]).
 auth_header(Auth, Options, _, Out) :-
     option(url(URL), Options),
