@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2015, University of Amsterdam
+    Copyright (c)  2002-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -37,7 +37,6 @@
           [ reply/1
           ]).
 :- use_module(library(http/http_client)).
-:- use_module(library(http/http_mime_plugin)).  % Decode multipart data
 
 :- if(exists_source(library(pce))).
 :- use_module(library(pce)).

@@ -607,9 +607,7 @@ reply(Request) :-
 
 If the POST is initiated from a browser, content-type is generally
 either \const{application/x-www-form-urlencoded} or
-\const{multipart/form-data}.  The latter is broken down automatically
-if the plug-in \pllib{http/http_mime_plugin} is loaded.
-
+\const{multipart/form-data}.
 
 \subsection{Running the server}
 \label{sec:http-running-server}

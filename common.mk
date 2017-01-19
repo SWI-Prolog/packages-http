@@ -1,8 +1,7 @@
 # Makefile fragments that are updated frequently and can be shared
 
 LIBPL=		html_write.pl http_client.pl http_header.pl \
-		http_mime_plugin.pl http_sgml_plugin.pl \
-		mimepack.pl mimetype.pl dcg_basics.pl \
+		http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl \
 		thread_httpd.pl xpce_httpd.pl inetd_httpd.pl \
 		http_wrapper.pl http_open.pl http_proxy.pl http_session.pl \
 		http_error.pl http_parameters.pl http_dispatch.pl \
