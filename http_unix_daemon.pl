@@ -53,6 +53,7 @@
 :- use_module(library(main)).
 
 :- if(exists_source(library(http/http_ssl_plugin))).
+:- use_module(library(ssl)).
 :- use_module(library(http/http_ssl_plugin)).
 :- endif.
 
