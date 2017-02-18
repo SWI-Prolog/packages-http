@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2016, University of Amsterdam
+    Copyright (c)  2002-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -449,16 +449,24 @@ http_current_request(Request) :-
 
 %!  http_peer(+Request, -PeerIP:atom) is semidet.
 %
-%   True when PeerIP is the IP address   of  the connection peer. If
-%   the connection is established via  a   proxy  that  supports the
-%   =X-Forwarded-For= HTTP header, PeerIP is the   IP address of the
-%   original initiater.
+%   True when PeerIP is the IP address   of  the connection peer. If the
+%   connection is established via a proxy  or   CDN  we  try to find the
+%   initiating peer.  Currently supports:
+%
+%     - =Fastly-client-ip=
+%     - =X-forwarded-for=
+%     - =X-real-ip=
+%     - Direct connections
 
+http_peer(Request, Peer) :-
+    memberchk(fastly_client_ip(Peer), Request), !.
 http_peer(Request, IP) :-
     memberchk(x_forwarded_for(IP0), Request),
     !,
     atomic_list_concat(Parts, ', ', IP0),
     last(Parts, IP).
+http_peer(Request, Peer) :-
+    memberchk(x_real_ip(Peer), Request), !.
 http_peer(Request, IP) :-
     memberchk(peer(Peer), Request),
     !,
