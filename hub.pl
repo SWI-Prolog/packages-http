@@ -164,9 +164,8 @@ and the others commit suicide because there is nothing to wait for.
 
 %!  hub_add(+Hub, +WebSocket, ?Id) is det.
 %
-%   Add a WebSocket to the hub.  Id   is  used to identify this
-%   user. It may be provided (as a ground term) or is generated as a
-%   UUID.
+%   Add a WebSocket to the hub. Id is used to identify this user. It may
+%   be provided (as a ground term) or is generated as a UUID.
 
 hub_add(HubName, WebSocket, Id) :-
     must_be(atom, HubName),
@@ -177,7 +176,8 @@ hub_add(HubName, WebSocket, Id) :-
     ),
     message_queue_create(OutputQueue),
     mutex_create(Lock),
-    assertz(websocket(HubName, WebSocket, OutputQueue, Lock, Id)),
+                                         % asserta/1 allows for reuse of Id
+    asserta(websocket(HubName, WebSocket, OutputQueue, Lock, Id)),
     thread_send_message(Hub.queues.wait, WebSocket),
     thread_send_message(Hub.queues.event,
                         hub{joined:Id}),
@@ -198,22 +198,23 @@ wait_for_sockets(Hub, Max) :-
       ->  create_new_waiter_if_needed(Hub),
           sort(List, Set),
           length(Set, Len),
-          wait_timeout(List, Max, Timeout),
-          debug(hub(wait),
-                'Waiting for ~d queues for ~w sec', [Len, Timeout]),
-          wait_for_input(Set, ReadySet, Timeout),
+          debug(hub(wait), 'Waiting for ~d queues', [Len]),
+          wait_for_set(Set, Left, ReadySet, Max),
           (   ReadySet \== []
           ->  debug(hub(ready), 'Data on ~p', [ReadySet]),
               Ready = Queues.ready,
               maplist(thread_send_message(Ready), ReadySet),
               create_reader_threads(Hub),
               ord_subtract(Set, ReadySet, NotReadySet)
-          ;   NotReadySet = Set             % timeout
+          ;   NotReadySet = Left             % timeout
           ),
-          debug(hub(wait), 'Re-scheduling: ~p', [NotReadySet]),
-          Wait = Queues.wait,
-          maplist(thread_send_message(Wait), NotReadySet),
-          fail
+          (   NotReadySet \== []
+          ->  debug(hub(wait), 'Re-scheduling: ~p', [NotReadySet]),
+              Wait = Queues.wait,
+              maplist(thread_send_message(Wait), NotReadySet),
+              fail
+          ;   true
+          )
       ;   !
       ).
 
@@ -222,6 +223,24 @@ create_new_waiter_if_needed(Hub) :-
     !.
 create_new_waiter_if_needed(Hub) :-
     create_wait_thread(Hub).
+
+%!  wait_for_set(+Set0, -Left, -Ready, +Max) is det.
+%
+%   Wait for input from Set0.  Note that Set0 may contain closed
+%   websockets.
+
+wait_for_set([], [], [], _) :-
+    !.
+wait_for_set(Set0, Set, ReadySet, Max) :-
+    wait_timeout(Set0, Max, Timeout),
+    catch(wait_for_input(Set0, ReadySet, Timeout),
+          error(existence_error(stream, S), _), true),
+    (   var(S)
+    ->  Set = Set0
+    ;   delete(Set0, S, Set1),
+        wait_for_set(Set1, Set, ReadySet, Max)
+    ).
+
 
 %!  wait_timeout(+WaitForList, +Max, -TimeOut) is det.
 %
@@ -322,24 +341,23 @@ read_message(Hub) :-
             )
         )
     ;   websocket(_, WS, _, _, _)
-    ->  io_error(WS, read, Error),
+    ->  io_read_error(WS, Error),
         read_message(Hub)
     ;   read_message(Hub)                   % already destroyed
     ).
 read_message(_).
 
 
-%!  io_error(+WebSocket, +ReadWrite, +Error)
+%!  io_read_error(+WebSocket, +Error)
 %
-%   Called on a read or  write  error   to  WebSocket.  We close the
-%   websocket and send the hub an event  that we lost the connection
-%   to the specified client. Note that   we leave destruction of the
-%   anonymous  message  queue  and  mutex   to  the  Prolog  garbage
-%   collector.
+%   Called on a read error from WebSocket.   We  close the websocket and
+%   send the hub an event that we   lost the connection to the specified
+%   client. Note that we leave  destruction   of  the  anonymous message
+%   queue and mutex to the Prolog garbage collector.
 
-io_error(WebSocket, RW, Error) :-
-    debug(hub(gate), 'Got ~w error on ~w: ~p',
-          [RW, WebSocket, Error]),
+io_read_error(WebSocket, Error) :-
+    debug(hub(gate), 'Got read error on ~w: ~p',
+          [WebSocket, Error]),
     retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
     !,
     catch(ws_close(WebSocket, 1011, Error), E,
@@ -348,12 +366,37 @@ io_error(WebSocket, RW, Error) :-
     thread_send_message(Hub.queues.event,
                         hub{left:Id,
                                  hub:HubName,
-                                 reason:RW,
+                                 reason:read,
                                  error:Error}).
-io_error(_, _, _).                      % already considered gone
+io_read_error(_, _).                      % already considered gone
 
 eof(WebSocket) :-
-    io_error(WebSocket, read, end_of_file).
+    io_read_error(WebSocket, end_of_file).
+
+%!  io_write_error(+WebSocket, +Message, +Error)
+%
+%   Failed to write Message to WebSocket due   to  Error. Note that this
+%   may be a pending but closed WebSocket.  We first check whether there
+%   is a new one and if not  send   a  `left` message and pass the error
+%   such that the client can re-send it when appropriate.
+
+io_write_error(WebSocket, Message, Error) :-
+    debug(hub(gate), 'Got write error on ~w: ~p',
+          [WebSocket, Error]),
+    retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
+    !,
+    catch(ws_close(WebSocket, 1011, Error), E,
+          print_message(warning, E)),
+    (   websocket(_, _, _, _, Id)
+    ->  true
+    ;   hub(HubName, Hub),
+        thread_send_message(Hub.queues.event,
+                            hub{left:Id,
+                                hub:HubName,
+                                reason:write(Message),
+                                error:Error})
+    ).
+io_write_error(_, _, _).                      % already considered gone
 
 
                  /*******************************
@@ -486,7 +529,7 @@ broadcast_from_queue_sync(Queue, Options) :-
       ->  debug(hub(broadcast),
                 'To: ~p messages: ~p', [WebSocket, Message]),
           catch(ws_send(WebSocket, Message), E,
-                io_error(WebSocket, write, E)),
+                io_write_error(WebSocket, Message, E)),
           fail
       ;   !
       ).
