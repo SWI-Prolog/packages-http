@@ -252,7 +252,7 @@ ws_property(term_t WsStream, term_t property, term_t value)
   } else
     rc = PL_domain_error("websocket_property", property);
 
-  PL_release_stream(ws);
+  PL_release_stream_noerror(ws);
   return rc;
 }
 
@@ -279,7 +279,7 @@ ws_set(term_t WsStream, term_t property, term_t value)
   } else
     rc = PL_domain_error("websocket_property", property);
 
-  PL_release_stream(ws);
+  PL_release_stream_noerror(ws);
   return rc;
 }
 
