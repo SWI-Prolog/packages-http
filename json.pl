@@ -143,15 +143,14 @@ default_json_dict_options(
                  *       MAP TO/FROM TEXT       *
                  *******************************/
 
-%!  atom_json_term(+Atom, -JSONTerm, +Options) is det.
-%!  atom_json_term(-Text, +JSONTerm, +Options) is det.
+%!  atom_json_term(?Atom, ?JSONTerm, +Options) is det.
 %
 %   Convert between textual  representation  and   a  JSON  term. In
-%   _write_ mode, the option
+%   _write_ mode (JSONTerm to Atom), the option
 %
 %       * as(Type)
-%       defines the output type, which is one of =atom=,
-%       =string= or =codes=.
+%       defines the output type, which is one of =atom= (default),
+%       =string=, =codes= or =chars=.
 
 atom_json_term(Atom, Term, Options) :-
     ground(Atom),
@@ -163,10 +162,10 @@ atom_json_term(Atom, Term, Options) :-
         json_read(In, Term, Options),
         close(In)).
 atom_json_term(Result, Term, Options) :-
-    select_option(as(Type), Options, Options1),
+    select_option(as(Type), Options, Options1, atom),
     (   type_term(Type, Result, Out)
     ->  true
-    ;   must_be(oneof([atom,string,codes]), Type)
+    ;   must_be(oneof([atom,string,codes,chars]), Type)
     ),
     with_output_to(Out,
                    json_write(current_output, Term, Options1)).
@@ -174,6 +173,7 @@ atom_json_term(Result, Term, Options) :-
 type_term(atom,   Result, atom(Result)).
 type_term(string, Result, string(Result)).
 type_term(codes,  Result, codes(Result)).
+type_term(chars,  Result, chars(Result)).
 
 
                  /*******************************
