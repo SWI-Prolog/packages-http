@@ -416,13 +416,14 @@ with the client and sends all waiting output messages.
 
 The price is that we might peek   a significant number of message queues
 before we find one that  contains  messages.   If  this  proves  to be a
-significant  problem,  we  could  mantain  a  queue  of  queues  holding
+significant problem, we  could  maintain  a   queue  of  queues  holding
 messages.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-%!  hub_send(+ClientId, +Message) is det.
+%!  hub_send(+ClientId, +Message) is semidet.
 %
-%   Send message to the indicated ClientId.
+%   Send message to the indicated ClientId.   Fails silently if ClientId
+%   does not exist.
 %
 %   @arg    Message is either a single message (as accepted by
 %           ws_send/2) or a list of such messages.
