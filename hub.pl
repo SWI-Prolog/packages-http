@@ -439,7 +439,7 @@ hub_send(ClientId, Message) :-
 
 create_output_thread(Hub, Queue) :-
     hub_thread(broadcast_from_queue(Queue, [timeout(0)]),
-                    Hub, hub_out_q_).
+               Hub, hub_out_q_).
 
 %!  hub_broadcast(+Hub, +Message) is det.
 %!  hub_broadcast(+Hub, +Message, :Condition) is det.
