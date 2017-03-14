@@ -591,6 +591,7 @@ expire_session_cookie.
 
 in_header_state :-
     current_output(CGI),
+    is_cgi_stream(CGI),
     cgi_property(CGI, state(header)),
     !.
 
