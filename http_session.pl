@@ -427,19 +427,26 @@ valid_session_id(SessionID, Peer) :-
 get_last_used(SessionID, Last) :-
     atom(SessionID),
     !,
-    with_mutex(http_session, last_used(SessionID, Last)).
+    once(last_used(SessionID, Last)).
 get_last_used(SessionID, Last) :-
-    with_mutex(http_session,
-               findall(SessionID-Last,
-                       last_used(SessionID, Last),
-                       Pairs)),
-    member(SessionID-Last, Pairs).
+    last_used(SessionID, Last).
+
+%!  set_last_used(+SessionID, +Now)
+%
+%   Set the last-used notion for SessionID  from the current time stamp.
+%   The time is rounded down  to  10   second  intervals  to  avoid many
+%   updates and simplify the scheduling of session GC.
 
 set_last_used(SessionID, Now) :-
-    with_mutex(http_session,
-              (   retractall(last_used(SessionID, _)),
-                  assert(last_used(SessionID, Now)))).
-
+    LastUsed is floor(Now/10)*10,
+    (   clause(last_used(SessionID, CurrentLast), _, Ref)
+    ->  (   CurrentLast == LastUsed
+        ->  true
+        ;   asserta(last_used(SessionID, LastUsed)),
+            erase(Ref)
+        )
+    ;   asserta(last_used(SessionID, LastUsed))
+    ).
 
 
                  /*******************************
