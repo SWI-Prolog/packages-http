@@ -351,8 +351,7 @@ create_session(Request0, Request, SessionID) :-
            [Cookie, SessionID, Path]),
     Request = [session(SessionID)|Request0],
     peer(Request0, Peer),
-    open_session(SessionID, Peer),
-    b_setval(http_session_id, SessionID).
+    open_session(SessionID, Peer).
 
 
 %!  http_open_session(-SessionID, +Options) is det.
@@ -420,6 +419,7 @@ open_session(SessionID, Peer) :-
     get_time(Now),
     assert(current_session(SessionID, Peer)),
     assert(last_used(SessionID, Now)),
+    b_setval(http_session_id, SessionID),
     broadcast(http_session(begin(SessionID, Peer))).
 
 
