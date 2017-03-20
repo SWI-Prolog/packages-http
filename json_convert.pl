@@ -301,7 +301,7 @@ prolog_bool_to_json(@(True), True) :-
 %   Inline type checking calls.
 
 type_goal(Type, Var, Body) :-
-    clause(error:has_type(Type, Var), Body0),
+    current_type(Type, Var, Body0),
     primitive(Body0, Body),
     !.
 type_goal(Type, Var, is_of_type(Type, Var)).
@@ -325,7 +325,7 @@ primitive(G, G) :-
     predicate_property(system:G, built_in).
 
 non_json_type(Type) :-
-    clause(error:has_type(Type, _), _),
+    current_type(Type, _, _),
     !.
 
 
