@@ -213,8 +213,6 @@ session_setting(SessionId, Setting) :-
 session_setting(_, Setting) :-
     session_setting(Setting).
 
-updated_session_setting(gc, _, active) :-
-    start_session_gc_thread, !.
 updated_session_setting(gc, _, passive) :-
     stop_session_gc_thread, !.
 updated_session_setting(_, _, _).               % broadcast?
@@ -638,6 +636,7 @@ in_header_state :-
     last_gc/1.
 
 http_gc_sessions :-
+    start_session_gc_thread,
     http_gc_sessions(60).
 http_gc_sessions(TimeOut) :-
     (   with_mutex(http_session_gc, need_sesion_gc(TimeOut))
@@ -679,19 +678,29 @@ do_http_gc_sessions :-
     session_gc_queue/1.
 
 start_session_gc_thread :-
-    catch(thread_create(session_gc_loop, Id,
-                        [ alias('__http_session_gc')
+    session_gc_queue(_),
+    !.
+start_session_gc_thread :-
+    session_setting(gc(active)),
+    !,
+    catch(thread_create(session_gc_loop, _,
+                        [ alias('__http_session_gc'),
+                          at_exit(retractall(session_gc_queue(_)))
                         ]),
           error(permission_error(create, thread, _),_),
-          true),
-    asserta(session_gc_queue(Id)).
+          true).
+start_session_gc_thread.
 
 stop_session_gc_thread :-
     retract(session_gc_queue(Id)),
+    !,
     thread_send_message(Id, done),
     thread_join(Id, _).
+stop_session_gc_thread.
 
 session_gc_loop :-
+    thread_self(GcQueue),
+    asserta(session_gc_queue(GcQueue)),
     repeat,
     thread_get_message(Message),
     (   Message == done
