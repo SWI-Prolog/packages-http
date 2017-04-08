@@ -683,11 +683,18 @@ done_status_message_level(_, informational).
 
 %!  recreate_worker(+Status, +Queue) is semidet.
 %
-%   Deal with the possibility that  threads are, during development,
-%   killed with abort/0. We  recreate  the   worker  to  avoid  that
-%   eventually we run out of workers.  If   we  are aborted due to a
-%   halt/0 call, thread_create/3 will raise a permission error.
+%   Deal with the possibility  that   threads  are,  during development,
+%   killed with abort/0. We recreate the worker to avoid that eventually
+%   we run out of workers. If  we  are   aborted  due  to a halt/0 call,
+%   thread_create/3 will raise a permission error.
+%
+%   The first option deals with the possibility that we cannot write the
+%   `user_error`. This is possible when Prolog   is started as a service
+%   using some service managers. Would be  nice   if  we  could write an
+%   error, but where?
 
+recreate_worker(exception(error(io_error(write,user_error),_)), _Queue) :-
+    halt(2).
 recreate_worker(exception(Error), Queue) :-
     recreate_on_error(Error),
     queue_options(Queue, Options),
