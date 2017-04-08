@@ -688,7 +688,7 @@ done_status_message_level(_, informational).
 %   we run out of workers. If  we  are   aborted  due  to a halt/0 call,
 %   thread_create/3 will raise a permission error.
 %
-%   The first option deals with the possibility that we cannot write the
+%   The first clause deals with the possibility  that we cannot write to
 %   `user_error`. This is possible when Prolog   is started as a service
 %   using some service managers. Would be  nice   if  we  could write an
 %   error, but where?
