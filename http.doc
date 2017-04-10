@@ -708,12 +708,11 @@ See also http_workers/2.
 
     \termitem{timeout}{+SecondsOrInfinite}
 Determines the maximum period of inactivity handling a request.  If no
-data arrives within the specified time since the last data arrived the
-connection raises an exception, the worker discards the client and
-returns to the pool-queue for a new client. Default is \const{infinite},
-making each worker wait forever for a request to complete.  Without a
-timeout, a worker may wait forever on an a client that doesn't complete
-its request.
+data arrives within the specified time since the last data arrived, the
+connection raises an exception, and the worker discards the client and
+returns to the pool-queue for a new client. If it is \const{infinite},
+a worker may wait forever on a client that doesn't complete its
+request. Default is 60~seconds.
 
     \termitem{keep_alive_timeout}{+SecondsOrInfinite}
 Maximum time to wait for new activity on \emph{Keep-Alive} connections.
