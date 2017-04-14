@@ -779,7 +779,8 @@ ws_send(term_t WsStream)
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_OUTPUT) )
     return FALSE;
-  PL_release_stream(ws);		/* release from ws_start_message/3 */
+  if ( !PL_release_stream(ws) )		/* release from ws_start_message/3 */
+    return PL_release_stream(ws);
 
   if ( ctx->state != WS_MSG_STARTED )
   { rc = PL_permission_error("send", "ws_stream", WsStream);
@@ -800,6 +801,10 @@ ws_send(term_t WsStream)
 
     if ( ctx->mode == WS_CLIENT )
     { mask = ws_random();
+      if ( PL_exception(0) )
+      { rc = FALSE;
+	goto out;
+      }
     } else
     { mask = 0;
     }
