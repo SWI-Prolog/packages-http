@@ -469,7 +469,7 @@ ws_receive(WsStream, Message, Options) :-
         read_data(OpCode, WsStream, Data, Options),
         (   OpCode == ping,
             reply_pong(WsStream, Data.data)
-        ->  ws_receive(WsStream, Message)
+        ->  ws_receive(WsStream, Message, Options)
         ;   (   RSV == 0
             ->  Message = Data
             ;   Message = Data.put(rsv, RSV)
