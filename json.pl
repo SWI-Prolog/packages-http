@@ -240,9 +240,6 @@ type_term(chars,  Result, chars(Result)).
 %           =chars= would produce ambiguous output and is therefore
 %           not supported.
 %
-%   If json_read/3 encounters end-of-file before any real data it
-%   binds Term to the term @(end_of_file).
-%
 %   @see    json_read_dict/3 to read a JSON term using the version 7
 %           extended data types.
 
@@ -263,8 +260,7 @@ json_value(Stream, Term, Next, Options) :-
     get_code(Stream, C0),
     ws(C0, Stream, C1),
     (   C1 == -1
-    ->  Term = @(end_of_file),
-        Next = -1
+    ->  syntax_error(unexpected_end_of_file, Stream)
     ;   json_term(C1, Stream, Term, Next, Options)
     ).
 
