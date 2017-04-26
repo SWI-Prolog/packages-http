@@ -160,7 +160,7 @@ mimepack.tex:	mimepack.pl
 ################################################################
 
 clean:
-		rm -f $(STREAMOBJ) $(JSONOBJ)
+		rm -f $(STREAMOBJ) $(JSONOBJ) $(WEBSOCKETOBJ)
 		rm -f *~ *% config.log
 		rm -f $(TEX) $(SUBTEX)
 		$(RUNTEX) --clean $(DOC)
