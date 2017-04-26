@@ -133,8 +133,6 @@ static void
 free_ws_context(ws_context *ctx)
 { if ( ctx->stream->upstream )
     Sset_filter(ctx->stream, NULL);
-  else
-    PL_release_stream(ctx->stream);
 
   if ( ctx->data )
     free(ctx->data);
@@ -612,7 +610,7 @@ ws_open(term_t org, term_t new, term_t options)
 { term_t tail = PL_copy_term_ref(options);
   term_t head = PL_new_term_ref();
   ws_context *ctx;
-  IOSTREAM *s, *s2;
+  IOSTREAM *s = NULL, *s2 = NULL;
   ws_mode mode = WS_CLIENT;
   int close_parent = TRUE;
   int bufsize = 0;
@@ -660,7 +658,7 @@ ws_open(term_t org, term_t new, term_t options)
     return FALSE;			/* Error */
 
   if ( !(ctx = alloc_ws_context(s)) )
-    return FALSE;
+    goto error;
 
   PL_register_atom(subprotocol);
 
@@ -671,9 +669,7 @@ ws_open(term_t org, term_t new, term_t options)
   if ( !(s2 = Snew(ctx,
 		   (s->flags&WS_COPY_FLAGS)|SIO_FBUF,
 		   &ws_functions)) )
-  { free_ws_context(ctx);			/* no memory */
-    return FALSE;
-  }
+    goto error;
 
   ctx->ws_stream = s2;
   if ( bufsize > 0 )
@@ -686,10 +682,18 @@ ws_open(term_t org, term_t new, term_t options)
     PL_release_stream(s);
 
     return TRUE;
-  } else					/* stack overflow */
-  { Sclose(s2);
-    return FALSE;
   }
+
+error:
+  if ( s )
+    PL_release_stream(s);
+  if ( s2 )
+  { ctx->close_parent = FALSE;
+    Sclose(s2);
+  } else if ( ctx )
+    free_ws_context(ctx);
+
+  return FALSE;
 }
 
 
