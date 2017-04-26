@@ -67,9 +67,11 @@ static chunked_context*
 alloc_chunked_context(IOSTREAM *s)
 { chunked_context *ctx = PL_malloc(sizeof(*ctx));
 
-  memset(ctx, 0, sizeof(*ctx));
-  ctx->stream       = s;
-  ctx->close_parent = FALSE;
+  if ( ctx )
+  { memset(ctx, 0, sizeof(*ctx));
+    ctx->stream       = s;
+    ctx->close_parent = FALSE;
+  }
 
   return ctx;
 }
@@ -79,8 +81,6 @@ static void
 free_chunked_context(chunked_context *ctx)
 { if ( ctx->stream->upstream )
     Sset_filter(ctx->stream, NULL);
-  else
-    PL_release_stream(ctx->stream);
 
   PL_free(ctx);
 }
@@ -236,7 +236,7 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
 { term_t tail = PL_copy_term_ref(options);
   term_t head = PL_new_term_ref();
   chunked_context *ctx;
-  IOSTREAM *s, *s2;
+  IOSTREAM *s = NULL, *s2 = NULL;
   int close_parent = FALSE;
   int max_chunk_size = 0;
 
@@ -264,16 +264,14 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
 
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
-  ctx = alloc_chunked_context(s);
+  if ( !(ctx = alloc_chunked_context(s)) )
+    goto error;
   ctx->close_parent = close_parent;
 
   if ( !(s2 = Snew(ctx,
 		   (s->flags&COPY_FLAGS)|SIO_FBUF,
 		   &chunked_functions))	)
-  { free_chunked_context(ctx);			/* no memory */
-
-    return FALSE;
-  }
+    goto error;
 
   if ( max_chunk_size > 0 )
   { char *buf = PL_malloc(max_chunk_size);
@@ -289,9 +287,18 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
     PL_release_stream(s);
 
     return TRUE;
-  } else
-  { return instantiation_error();
   }
+
+error:
+  if ( s )
+    PL_release_stream(s);
+  if ( s2 )
+  { ctx->close_parent = FALSE;
+    Sclose(s2);
+  } else if ( ctx )
+    free_chunked_context(ctx);
+
+  return FALSE;
 }
 
 
