@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2015, University of Amsterdam,
+    Copyright (c)  2007-2017, University of Amsterdam,
 			      VU University Amsterdam
     All rights reserved.
 
@@ -236,7 +236,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
   if ( !PL_get_nil(tail) )
     return type_error(tail, "list");
 
-  if ( !PL_get_stream_handle(org, &s) )
+  if ( !PL_get_stream(org, &s, SIO_INPUT) )
     return FALSE;			/* Error */
   ctx = alloc_range_context(s);
   ctx->size = size;
