@@ -453,9 +453,10 @@ syntax_error(Message, Stream) :-
     throw(error(syntax_error(json(Message)), Context)).
 
 stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
-    character_count(Stream, CharNo),
-    line_position(Stream, LinePos),
-    line_count(Stream, Line).
+    stream_pair(Stream, Read, _),
+    character_count(Read, CharNo),
+    line_position(Read, LinePos),
+    line_count(Read, Line).
 
 
                  /*******************************
@@ -716,7 +717,8 @@ step_indent(State0, State) :-
     set_indent_of_json_write_state(NewIndent, State0, State).
 
 space_if_not_at_left_margin(Stream, State) :-
-    line_position(Stream, LinePos),
+    stream_pair(Stream, _, Write),
+    line_position(Write, LinePos),
     (   LinePos == 0
     ;   json_write_state_indent(State, LinePos)
     ),
