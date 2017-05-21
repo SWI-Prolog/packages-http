@@ -103,11 +103,14 @@ http_wrapper(Goal, In, Out, Close, Options) :-
         extend_request(Options, [], _) % return request
     ;   var(ReqError)
     ->  extend_request(Options, Request0, Request1),
-        memberchk(method(Method), Request1),
-        memberchk(path(Location), Request1),
         cgi_open(Out, CGI, cgi_hook, [request(Request1)]),
         cgi_property(CGI, id(Id)),
-        debug(http(request), '[~D] ~w ~w ...', [Id, Method, Location]),
+        (   debugging(http(request))
+        ->  memberchk(method(Method), Request1),
+            memberchk(path(Location), Request1),
+            debug(http(request), "[~D] ~w ~w ...", [Id,Method,Location])
+        ;   true
+        ),
         handler_with_output_to(Goal, Id, Request1, CGI, Error),
         cgi_close(CGI, Request1, State0, Error, Close)
     ;   Id = 0,
