@@ -131,8 +131,11 @@ process_parts(Stream, [Part|More], Options) :-
 set_encoding(text, Stream, _) :-
     !,
     (   set_stream(Stream, encoding(bom))
-    ->  stream_property(Stream, encoding(Enc)),
-        debug(multipart(bom), 'BOM: ~q', [Enc])
+    ->  (   debugging(multipart(bom))
+        ->  stream_property(Stream, encoding(Enc)),
+            debug(multipart(bom), "BOM: ~q", [Enc])
+        ;   true
+        )
     ;   set_stream(Stream, encoding(iso_latin_1)) % RFC2616, sec. 3.7.1
     ).
 set_encoding(input, Stream, Options) :-

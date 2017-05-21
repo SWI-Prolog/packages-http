@@ -122,8 +122,11 @@ http_read_request(In, Request) :-
             ;   true
             )
         )
-    ;   message_to_string(E, Msg),
-        debug(http(request), 'Exception reading 1st line: ~s', [Msg]),
+    ;   (   debugging(http(request))
+        ->  message_to_string(E, Msg),
+            debug(http(request), "Exception reading 1st line: ~s", [Msg])
+        ;   true
+        ),
         Request = end_of_file
     ).
 
