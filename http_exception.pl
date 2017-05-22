@@ -53,7 +53,8 @@ to map exceptions into 400 bad request responses.
 */
 
 :- multifile
-    http:bad_request_error/2.       % Formal, Context
+    http:bad_request_error/2,       % Formal, Context
+    http:map_exception_to_http_status_hook/4.
 
 %!  map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
 %
@@ -61,6 +62,8 @@ to map exceptions into 400 bad request responses.
 %   http(not_modified)   provides   backward     compatibility    to
 %   http_reply(not_modified).
 
+map_exception_to_http_status(Exception, Reply, HdrExtra, Context) :-
+    http:map_exception_to_http_status_hook(Exception, Reply, HdrExtra, Context), !.
 map_exception_to_http_status(http(not_modified),
               not_modified,
               [connection('Keep-Alive')],
