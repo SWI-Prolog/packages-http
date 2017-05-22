@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2016, University of Amsterdam
+    Copyright (c)  2009-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -46,21 +46,28 @@ well as exceptions from user  handler   predicates  into meaningful HTTP
 error codes such as 4XX and 5XX  codes. For example, existence errors on
 http locations are mapped to 404 while out-of-stack is mapped to 503.
 
-This library provides one hook: http:bad_request_error/2 can be extended
-to map exceptions into 400 bad request responses.
+This library provides two hooks:
+
+  - http:map_exception_to_http_status_hook/4 can be used to map
+    additional exceptions to any HTTP status code.
+  - http:bad_request_error/2 can be extended to map exceptions into 400
+    bad request responses.
 
 @see    http_header.pl, http_wrapper.pl
 */
 
 :- multifile
-    http:bad_request_error/2.       % Formal, Context
+    http:bad_request_error/2,                 % Formal, Context
+    http:map_exception_to_http_status_hook/4. % Exception, Reply, HdrExtra, Ctx
 
 %!  map_exception_to_http_status(+Exception, -Reply, -HdrExtra, -Context)
 %
-%   Map certain defined  exceptions  to   special  reply  codes. The
-%   http(not_modified)   provides   backward     compatibility    to
-%   http_reply(not_modified).
+%   Map certain exceptions to HTTP  status codes. The http(not_modified)
+%   provides backward compatibility to http_reply(not_modified).
 
+map_exception_to_http_status(Exception, Reply, HdrExtra, Context) :-
+    http:map_exception_to_http_status_hook(Exception, Reply, HdrExtra, Context),
+    !.
 map_exception_to_http_status(http(not_modified),
               not_modified,
               [connection('Keep-Alive')],
