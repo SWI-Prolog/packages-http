@@ -92,6 +92,8 @@ demand and die if no more work needs to be done.
 :- dynamic
     hub/2,                          % Hub, Queues ...
     websocket/5.                    % Hub, Socket, Queue, Lock, Id
+    
+:- volatile hub/2, websocket/5.    
 
 %!  hub_create(+Name, -Hub, +Options) is det.
 %
