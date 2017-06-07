@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2013-2016, University of Amsterdam
+    Copyright (c)  2013-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -582,8 +582,8 @@ enable_development_system :-
     (   current_prolog_flag(xpce_version, _)
     ->  call(pce_dispatch([]))
     ;   true
-    ).
-
+    ),
+    '$cmd_option_set'(toplevel, prolog).
 
 %!  setup_syslog(+Options) is det.
 %
