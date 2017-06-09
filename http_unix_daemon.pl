@@ -572,8 +572,9 @@ disable_development_system :-
 
 %!  enable_development_system
 %
-%   Enable some development stuff.  Currently reenables xpce if this
-%   was loaded, but not initialised.
+%   Re-enable the development environment. Currently  re-enables xpce if
+%   this was loaded, but not  initialised   and  causes  the interactive
+%   toplevel to be re-enabled.
 
 enable_development_system :-
     assertz(interactive),
@@ -583,7 +584,7 @@ enable_development_system :-
     ->  call(pce_dispatch([]))
     ;   true
     ),
-    '$cmd_option_set'(toplevel, prolog).
+    set_prolog_flag(toplevel_goal, prolog).
 
 %!  setup_syslog(+Options) is det.
 %
