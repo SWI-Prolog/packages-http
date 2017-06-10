@@ -924,7 +924,11 @@ is_json_pair(Options, Name=Value) :-
 %     * false(+FalseTerm)
 %     Default the atom `false`
 %     * value_string_as(+Type)
-%     Type defaults to `string`, producing a packed string object.
+%     Prolog type used for strings used as value.  Default
+%     is =atom=.  The alternative is =string=, producing a
+%     packed string object.  Please note that =codes= or
+%     =chars= would produce ambiguous output and is therefore
+%     not supported.
 
 json_read_dict(Stream, Dict) :-
     json_read_dict(Stream, Dict, []).
