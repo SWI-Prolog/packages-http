@@ -681,8 +681,9 @@ http_update_encoding(Header, octet, Header).
 %
 %   Encoding is the (default) character encoding for MimeType.
 
-mime_type_encoding('application/json', utf8).
+mime_type_encoding('application/json',        utf8).
 mime_type_encoding('application/jsonrequest', utf8).
+mime_type_encoding('application/x-prolog',    utf8).
 
 
 %!  http_update_connection(+CGIHeader, +Request, -Connection, -Header)
