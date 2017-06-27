@@ -457,19 +457,25 @@ http_current_request(Request) :-
 %   initiating peer.  Currently supports:
 %
 %     - =Fastly-client-ip=
-%     - =X-forwarded-for=
 %     - =X-real-ip=
+%     - =X-forwarded-for=
 %     - Direct connections
+%
+%   @bug The =X-forwarded-for=  header  is   problematic.  According  to
+%   [Wikipedia](https://en.wikipedia.org/wiki/X-Forwarded-For),      the
+%   original   client   is   the    _first_,     while    according   to
+%   [AWS](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/x-forwarded-headers.html)
+%   it is the _last_.
 
 http_peer(Request, Peer) :-
     memberchk(fastly_client_ip(Peer), Request), !.
+http_peer(Request, Peer) :-
+    memberchk(x_real_ip(Peer), Request), !.
 http_peer(Request, IP) :-
     memberchk(x_forwarded_for(IP0), Request),
     !,
     atomic_list_concat(Parts, ', ', IP0),
     last(Parts, IP).
-http_peer(Request, Peer) :-
-    memberchk(x_real_ip(Peer), Request), !.
 http_peer(Request, IP) :-
     memberchk(peer(Peer), Request),
     !,
