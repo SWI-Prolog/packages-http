@@ -51,6 +51,7 @@
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_host)).
 :- use_module(library(main)).
+:- use_module(library(readutil)).
 
 :- if(exists_source(library(http/http_ssl_plugin))).
 :- use_module(library(ssl)).
@@ -463,10 +464,10 @@ make_address(Spec, _, _, _, _) :-
 merge_https_options(Options, [SSL|Options]) :-
     (   option(certfile(CertFile), Options),
         option(keyfile(KeyFile), Options)
-    ->  read_file_to_string(CertFile, Certificate, []),
+    ->  prepare_https_certificate(CertFile, KeyFile, Passwd0),
+        read_file_to_string(CertFile, Certificate, []),
         read_file_to_string(KeyFile, Key, []),
-        Pairs = [Certificate-Key],
-        prepare_https_certificate(CertFile, KeyFile, Passwd0)
+        Pairs = [Certificate-Key]
     ;   Pairs = []
     ),
     ssl_secure_ciphers(SecureCiphers),
