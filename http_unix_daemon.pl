@@ -460,24 +460,6 @@ make_address(Spec, _, _, _, _) :-
 
 :- dynamic sni/3.
 
-% Secure ciphers must guarantee forward secrecy, and must mitigate all
-% known critical attacks. As of 2017, using the following ciphers
-% allows you to obtain grade A on https://www.ssllabs.com. For A+, you
-% must also enable HTTP Strict Transport Security (HSTS) by sending a
-% suitable header field in replies.
-%
-% Note that obsolete ciphers *must* be disabled to reliably prevent
-% protocol downgrade attacks.
-%
-% **BEWARE**: This list must be changed when attacks on these ciphers
-%             become known! Keep an eye on this setting and adapt it
-%             as necessary in the future.
-%
-
-secure_ciphers(Cs) :-
-    Cs = 'EECDH+AESGCM:EDH+AESGCM:EECDH+AES256:EDH+AES256:EECDH+CHACHA20:EDH+CHACHA20'.
-
-
 merge_https_options(Options, [SSL|Options]) :-
     (   option(certfile(CertFile), Options),
         option(keyfile(KeyFile), Options)
@@ -487,7 +469,7 @@ merge_https_options(Options, [SSL|Options]) :-
         prepare_https_certificate(CertFile, KeyFile, Passwd0)
     ;   Pairs = []
     ),
-    secure_ciphers(SecureCiphers),
+    ssl_secure_ciphers(SecureCiphers),
     option(cipherlist(CipherList), Options, SecureCiphers),
     (   string(Passwd0)
     ->  Passwd = Passwd0
