@@ -146,7 +146,6 @@ events:
   - http(post_server_start)
   Run _after_ starting the HTTP server.
 
-@tbd    Provide options for client certificates with SSL.
 @tbd    Cleanup issues wrt. loading and initialization of xpce.
 @see    The file <swi-home>/doc/packages/examples/http/linux-init-script
         provides a /etc/init.d script for controlling a server as a normal
