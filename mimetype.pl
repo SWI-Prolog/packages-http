@@ -189,5 +189,7 @@ ext_mimetype(exe,  application/'x-executable').
 name_mimetype(makefile,       text/plain).
 name_mimetype(configure,      text/plain).
 name_mimetype('configure.in', text/plain).
+name_mimetype('configure.ac', text/plain).
 name_mimetype('makefile.in',  text/plain).
+name_mimetype('makefile.am',  text/plain).
 name_mimetype('readme.in',    text/plain).
