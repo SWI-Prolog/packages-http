@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2015, VU University Amsterdam
+    Copyright (c)  2014-2017, VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -758,10 +758,11 @@ ws_header(char *hdr, ws_context *ctx, int fin, int mask, size_t payload_len)
     hdr_len += 2;
   } else
   { int i;
+    uint64_t plen64 = payload_len;
 
     hdr[1] = ( (masked<<7) | 127 );
     for(i=0; i<8; i++)
-      hdr[2+i] = (payload_len >> ((7-i)*8)) & 0xff;
+      hdr[2+i] = (plen64 >> ((7-i)*8)) & 0xff;
     hdr_len += 8;
   }
   if ( masked )
