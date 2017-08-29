@@ -1028,7 +1028,11 @@ path_tree_nocache(Tree) :-
 
 prefix_handler(Prefix, Action, Options) :-
     handler(Spec, Action, true, Options),
-    http_absolute_location(Spec, Prefix, []).
+    Error = error(existence_error(http_alias,_),_),
+    catch(http_absolute_location(Spec, Prefix, []), Error,
+          (   print_message(warning, Error),
+              fail
+          )).
 
 %!  prefix_tree(PrefixList, +Tree0, -Tree)
 %
