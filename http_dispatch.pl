@@ -266,11 +266,6 @@ current_generation(0).
 %   presence of one or multiple prefix declarations. We can also use
 %   this to detect conflicts.
 
-compile_handler(prefix(Path), Pred, Options,
-                http_dispatch:handler(Path, Pred, true, Options)) :-
-    !,
-    check_path(Path, Path1),
-    print_message(warning, http_dispatch(prefix(Path1))).
 compile_handler(Path, Pred, Options0,
                 http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
     check_path(Path, Path1),
@@ -1133,9 +1128,6 @@ add_path_tree(Path, Action, Options, DefOptions, [H|T0], [H|T]) :-
 
 prolog:message(http_dispatch(ambiguous_id(ID, _List, Selected))) -->
     [ 'HTTP dispatch: ambiguous handler ID ~q (selected ~q)'-[ID, Selected]
-    ].
-prolog:message(http_dispatch(prefix(_Path))) -->
-    [ 'HTTP dispatch: prefix(Path) is replaced by the option prefix'-[]
     ].
 
 
