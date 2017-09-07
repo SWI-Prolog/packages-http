@@ -607,9 +607,24 @@ scheme_port(https, 443).
 
 %!  openid_current_url(+Request, -URL) is det.
 %
-%   @deprecated     New code should use http_public_url/2 with the
-%                   same semantics.
+%   Find the public URL for Request that   we  can make available to our
+%   identity provider. This must be an  absolute   URL  where  we can be
+%   contacted.   Before   trying   a     configured    version   through
+%   http_public_url/2, we try to see wether the login message contains a
+%   referer parameter or wether the browser provided one.
 
+openid_current_url(Request, URL) :-
+    option(request_uri(URI), Request),
+    uri_components(URI, Components),
+    uri_data(path, Components, Path),
+    (   uri_data(search, Components, QueryString),
+        nonvar(QueryString),
+        uri_query_components(QueryString, Query),
+        memberchk(referer=Base, Query)
+    ->  true
+    ;   option(referer(Base), Request)
+    ), !,
+    uri_normalized(Path, Base, URL).
 openid_current_url(Request, URL) :-
     http_public_url(Request, URL).
 
