@@ -10,9 +10,11 @@ m4_include([../ac_swi_c.m4])
 
 AC_MSG_CHECKING(jquery)
 JQUERY="$(ls web/js/jquery-*.min.js)"
-dnl Try jquery from Debian libjs-jquery package
-if test -r /usr/share/javascript/jquery/jquery.min.js; then
-  JQUERY=/usr/share/javascript/jquery/jquery.min.js
+if test "$CROSSCOMPILING" != yes; then
+  dnl Try jquery from Debian libjs-jquery package
+  if test -r /usr/share/javascript/jquery/jquery.min.js; then
+    JQUERY=/usr/share/javascript/jquery/jquery.min.js
+  fi
 fi
 AC_MSG_RESULT($JQUERY)
 JQUERYDIR="$(dirname "$JQUERY")"
