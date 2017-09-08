@@ -11,6 +11,7 @@ include common.mk
 CFLAGS+= -I.
 PKGPLLIBDIR=$(PLBASE)/library/http
 EXDIR=$(PKGEXDIR)/http
+JS=@JSFILES@
 
 SOLIB=@SOLIB@
 
@@ -44,7 +45,9 @@ install:	$(LIBPL) $(SOLIBS)
 		$(INSTALL_DATA) README $(DESTDIR)$(PKGPLLIBDIR)/README$(TXTEXT)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(PKGPLLIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(PKGPLLIBDIR)/web/css
-		$(INSTALL_DATA) web/js/*.js $(DESTDIR)$(PKGPLLIBDIR)/web/js
+		for f in $(JS); do \
+		  $(INSTALL_DATA) web/js/$$f $(DESTDIR)$(PKGPLLIBDIR)/web/js; \
+		done
 		$(MKPKGINDEX)
 		$(MKINDEX)
 
