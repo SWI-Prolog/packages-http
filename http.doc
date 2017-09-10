@@ -67,11 +67,11 @@ web-servers from SWI-Prolog and turn Prolog into a web-server.
 \label{sec:http-acknowledgements}
 
 This work has been carried out under the following projects:
-\url[GARP]{http://hcs.science.uva.nl/projects/GARP/},
-\url[MIA]{http://www.ins.cwi.nl/projects/MIA/},
-\url[IBROW]{http://hcs.science.uva.nl/projects/ibrow/home.html},
-\url[KITS]{http://kits.edte.utwente.nl/} and
-\url[MultiMediaN]{http://e-culture.multimedian.nl/}
+\href{http://hcs.science.uva.nl/projects/GARP/}{GARP},
+\href{http://www.ins.cwi.nl/projects/MIA/}{MIA},
+\href{http://hcs.science.uva.nl/projects/ibrow/home.html}{IBROW},
+\href{http://kits.edte.utwente.nl/}{KITS} and
+\href{http://e-culture.multimedian.nl/}{MultiMediaN}
 The following people have pioneered parts of this library and
 contributed with bug-report and suggestions for improvements: Anjo
 Anjewierden, Bert Bredeweg, Wouter Jansweijer, Bob Wielinga, Jacco
@@ -618,8 +618,8 @@ wanted server setup this `body' is wrapped into a small Prolog file
 combining the body with the appropriate server interface. There are
 three supported server-setups. For most applications we advice the
 multi-threaded server. Examples of this server architecture are the
-\url[PlDoc]{http://www.swi-prolog.org/packages/pldoc.html} documentation
-system and the \url[SeRQL]{http://www.swi-prolog.org/packages/SeRQL/}
+\href{http://www.swi-prolog.org/packages/pldoc.html}{PlDoc} documentation
+system and the \href{http://www.swi-prolog.org/packages/SeRQL/}{SeRQL}
 Semantic Web server infrastructure.
 
 All the server setups may be wrapped in a \jargon{reverse proxy} to
@@ -917,8 +917,8 @@ the other hand, using a non-standard port may cause problems with
 intermediate proxy- and/or firewall policies that may block the port
 when you try to access the service from some networks. In both cases,
 you can either use a physical or a virtual machine running ---for
-example--- under \url[VMWARE]{http://www.vmware.com} or
-\url[XEN]{http://www.cl.cam.ac.uk/research/srg/netos/xen/} to host the
+example--- under \href{http://www.vmware.com}{VMWARE} or
+\href{http://www.cl.cam.ac.uk/research/srg/netos/xen/}{XEN} to host the
 service. Using a dedicated (physical or virtual) machine to host a
 service isolates security threats. Isolation can also be achieved using
 a Unix \jargon{chroot} environment, which is however not a security
