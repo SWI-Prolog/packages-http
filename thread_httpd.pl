@@ -569,7 +569,8 @@ http_worker(Options) :-
           thread_detach(Self),
           (   Sender == idle
           ->  true
-          ;   thread_send_message(Sender, quitted(Self))
+          ;   retract(queue_worker(Queue, Self)),
+              thread_send_message(Sender, quitted(Self))
           )
       ;   open_client(Message, Queue, Goal, In, Out,
                       Options, ClientOptions),
@@ -666,7 +667,7 @@ check_keep_alive_connection(In, TMO, Peer, In, Out) :-
 done_worker :-
     thread_self(Self),
     thread_property(Self, status(Status)),
-    retract(queue_worker(Queue, Self)),
+    ignore(retract(queue_worker(Queue, Self))),
     (   catch(recreate_worker(Status, Queue), _, fail)
     ->  thread_detach(Self),
         print_message(informational,
