@@ -569,7 +569,8 @@ http_worker(Options) :-
           thread_detach(Self),
           (   Sender == idle
           ->  true
-          ;   thread_send_message(Sender, quitted(Self))
+          ;   retract(queue_worker(Queue, Self)),
+              thread_send_message(Sender, quitted(Self))
           )
       ;   open_client(Message, Queue, Goal, In, Out,
                       Options, ClientOptions),
@@ -665,8 +666,9 @@ check_keep_alive_connection(In, TMO, Peer, In, Out) :-
 
 done_worker :-
     thread_self(Self),
-    thread_property(Self, status(Status)),
     retract(queue_worker(Queue, Self)),
+    thread_property(Self, status(Status)),
+    !,
     (   catch(recreate_worker(Status, Queue), _, fail)
     ->  thread_detach(Self),
         print_message(informational,
@@ -675,6 +677,12 @@ done_worker :-
         print_message(Level,
                       httpd_stopped_worker(Self, Status))
     ).
+done_worker :-                                  % received quit(Sender)
+    thread_self(Self),
+    thread_property(Self, status(Status)),
+    done_status_message_level(Status, Level),
+    print_message(Level,
+                  httpd_stopped_worker(Self, Status)).
 
 done_status_message_level(true, silent) :- !.
 done_status_message_level(exception('$aborted'), silent) :- !.
