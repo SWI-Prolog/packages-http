@@ -244,9 +244,11 @@ create_server(Goal, Address, Options) :-
     scheme(Scheme, Options),
     address_port(Address, Port),
     make_addr_atom(Scheme, Port, Alias),
-    thread_create(accept_server(Goal, Options), _,
+    thread_self(Initiator),
+    thread_create(accept_server(Goal, Initiator, Options), _,
                   [ alias(Alias)
                   ]),
+    thread_get_message(server_started),
     assert(current_server(Port, Goal, Alias, Queue, Scheme, StartTime)).
 
 scheme(Scheme, Options) :-
@@ -356,18 +358,19 @@ http_current_worker(Port, ThreadID) :-
     queue_worker(Queue, ThreadID).
 
 
-%!  accept_server(:Goal, +Options)
+%!  accept_server(:Goal, +Initiator, +Options)
 %
 %   The goal of a small server-thread accepting new requests and
 %   posting them to the queue of workers.
 
-accept_server(Goal, Options) :-
-    catch(accept_server2(Goal, Options), http_stop, true),
+accept_server(Goal, Initiator, Options) :-
+    catch(accept_server2(Goal, Initiator, Options), http_stop, true),
     thread_self(Thread),
     retract(current_server(_Port, _, Thread, _Queue, _Scheme, _StartTime)),
     close_server_socket(Options).
 
-accept_server2(Goal, Options) :-
+accept_server2(Goal, Initiator, Options) :-
+    thread_send_message(Initiator, server_started),
     repeat,
       (   catch(accept_server3(Goal, Options), E, true)
       ->  (   var(E)
