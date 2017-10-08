@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2016, University of Amsterdam
+    Copyright (c)  2008-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -123,20 +123,27 @@ http_log_stream(Stream) :-
     setting(http:logfile, Term),
     catch(absolute_file_name(Term, File,
                              [ access(append)
-                             ]), E, open_error(E)),
-    with_mutex(http_log,
-               (   catch(open(File, append, Stream,
-                              [ close_on_abort(false),
-                                encoding(utf8),
-                                buffer(line)
-                              ]), E, open_error(E)),
-                   get_time(Time),
-                   format(Stream,
-                          'server(started, ~0f).~n',
-                          [ Time ]),
-                   assert(log_stream(Stream, Time)),
-                   at_halt(close_log(stopped))
-               )).
+                             ]),
+          E, open_error(E)),
+    with_mutex(http_log, open_log(File, Stream0)),
+    Stream = Stream0.
+
+open_log(_File, Stream) :-
+    log_stream(Stream, _Opened),
+    !,
+    Stream \== [].
+open_log(File, Stream) :-
+    catch(open(File, append, Stream,
+               [ close_on_abort(false),
+                 encoding(utf8),
+                 buffer(line)
+               ]), E, open_error(E)),
+    get_time(Time),
+    format(Stream,
+           'server(started, ~0f).~n',
+           [ Time ]),
+    assert(log_stream(Stream, Time)),
+    at_halt(close_log(stopped)).
 
 open_error(E) :-
     print_message(error, E),
