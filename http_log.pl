@@ -101,14 +101,17 @@ http_message(request_finished(Id, Code, Status, CPU, Bytes)) :-
 
 %!  http_log_stream(-Stream) is semidet.
 %
-%   True when Stream is a stream to  the opened HTTP log file. Opens
-%   the log file in =append= mode if the   file is not yet open. The
-%   log file is determined  from   the  setting =|http:logfile|=. If
-%   this setting is set  to  the   empty  atom  (''), this predicate
-%   fails.
+%   True when Stream is a stream to the  opened HTTP log file. Opens the
+%   log file in =append= mode if the file  is not yet open. The log file
+%   is determined from the setting =|http:logfile|=.  If this setting is
+%   set to the empty atom (''), this predicate fails.
 %
-%   If  a  file  error  is  encountered,   this  is  reported  using
+%   If  a  file  error  is   encountered,    this   is   reported  using
 %   print_message/2, after which this predicate silently fails.
+%
+%   Before opening the log  file,   the  message  http_log_open(Term) is
+%   broadcasted.  This  message  allows  for   creating  the  directory,
+%   renaming, deleting or truncating an existing log file.
 
 http_log_stream(Stream) :-
     log_stream(Stream, _Opened),
@@ -121,6 +124,7 @@ http_log_stream([]) :-
     assert(log_stream([], Now)).
 http_log_stream(Stream) :-
     setting(http:logfile, Term),
+    broadcast(http_log_open(Term)),
     catch(absolute_file_name(Term, File,
                              [ access(append)
                              ]),
