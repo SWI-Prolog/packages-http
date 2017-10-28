@@ -60,7 +60,7 @@ loading this file and ensure the setting   http:logfile is not the empty
 atom. The default  file  for  writing   the  log  is  =|httpd.log|=. See
 library(settings) for details.
 
-The  level  of  logging  can  modified  using  the  multifile  predicate
+The  level of  logging  can be modified  using  the  multifile predicate
 http_log:nolog/1 to hide HTTP  request  fields   from  the  logfile  and
 http_log:password_field/1   to   hide   passwords   from   HTTP   search
 specifications (e.g. =|/topsecret?password=secret|=).
