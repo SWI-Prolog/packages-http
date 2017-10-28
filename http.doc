@@ -502,8 +502,10 @@ requests from the same stream.  This field is always present.
 
     \termitem{method}{Method}
 \arg{Method} is the HTTP \jargon{method} represented as a lower-case
-atom, e.g., \const{get}, \const{put}, \const{post}. This
-field is present if the header has been parsed successfully.
+atom (i.e., \const{delete}, \const{get}, \const{head},
+\const{options}, \const{patch}, \const{post}, \const{put},
+\const{trace}).  This field is present if the header has been parsed
+successfully.
 
     \termitem{path}{Path}
 Path associated to the request.  This field is always present.
