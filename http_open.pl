@@ -341,7 +341,7 @@ user_agent('SWI-Prolog').
 %   that need to be be processed by the client code.
 %
 %   @param URL is either an atom or string (url) or a list of _parts_.
-
+%
 %               When provided, this list may contain the fields
 %               =scheme=, =user=, =password=, =host=, =port=, =path=
 %               and either =query_string= (whose argument is an atom)
