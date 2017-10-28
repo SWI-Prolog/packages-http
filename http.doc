@@ -525,7 +525,7 @@ due to different usage of percent encoding.
     \termitem{search}{ListOfNameValue}
 Search-specification of URI. This is the part after the \chr{?},
 normally used to transfer data from HTML forms that use the
-`\const{GET}' protocol. In the URL it consists of a www-form-encoded
+HTTP GET method.  In the URL it consists of a www-form-encoded
 list of \arg{Name}=\arg{Value} pairs.  This is mapped to a list of
 Prolog \arg{Name}=\arg{Value} terms with decoded names and values.
 This field is only present if the location contains a
