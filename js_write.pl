@@ -195,7 +195,7 @@ here(Here, Here, Here).
 %       ==
 %           ...
 %           html(script(type('text/javascript'),
-%                [ \js_call('x.y.z'(hello, 42)
+%                [ \js_call('x.y.z'(hello, 42))
 %                ]),
 %       ==
 

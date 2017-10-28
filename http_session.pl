@@ -71,7 +71,7 @@ management is enabled simply by  loading   this  module.  Details can be
 modified  using  http_set_session_options/1.  By  default,  this  module
 creates a session whenever a request  is   processes  that is inside the
 hierarchy  defined  for   session   handling    (see   path   option  in
-http_set_session_options/1. Automatic creation  of  a   session  can  be
+http_set_session_options/1).  Automatic creation  of  a session  can  be
 stopped    using    the    option    create(noauto).    The    predicate
 http_open_session/2 must be used to  create   a  session  if =noauto= is
 enabled. Sessions can be closed using http_close_session/1.
