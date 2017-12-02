@@ -374,13 +374,13 @@ Succeeds if the value is member of the given list.
 Succeeds if value is an atom of more than $N$ characters.
 
     \definition{length $>= N$}
-Succeeds if value is an atom of more or than equal to $N$ characters.
+Succeeds if value is an atom of more than or equal to $N$ characters.
 
     \definition{length $< N$}
 Succeeds if value is an atom of less than $N$ characters.
 
     \definition{length $=< N$}
-Succeeds if value is an atom of length than or equal to $N$ characters.
+Succeeds if value is an atom of length less than or equal to $N$ characters.
 
     \termitem{atom}{}
 No-op.  Allowed for consistency.
