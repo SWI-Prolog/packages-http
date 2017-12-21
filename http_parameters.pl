@@ -180,6 +180,8 @@ wipe_posted_data :-
 %
 %   Fill values from the parameter list
 
+:- meta_predicate fill_parameters(+, +, 2).
+
 fill_parameters([], _, _).
 fill_parameters([H|T], FormData, DeclGoal) :-
     fill_parameter(H, FormData, DeclGoal),
@@ -249,9 +251,11 @@ fill_param_list([_|Form], Name, VT, Options) :-
 %     ==
 
 http_convert_parameters(Data, ParamDecls) :-
-    fill_parameters(ParamDecls, Data, -).
+    fill_parameters(ParamDecls, Data, no_decl_goal).
 http_convert_parameters(Data, ParamDecls, DeclGoal) :-
     fill_parameters(ParamDecls, Data, DeclGoal).
+
+no_decl_goal(_,_) :- fail.
 
 %!  http_convert_parameter(+Options, +FieldName, +ValueIn, -ValueOut) is det.
 %
