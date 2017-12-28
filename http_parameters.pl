@@ -120,7 +120,7 @@ http_parameters(Request, Params) :-
 http_parameters(Request, Params, Options) :-
     must_be(list, Params),
     meta_options(is_meta, Options, QOptions),
-    option(attribute_declarations(DeclGoal), QOptions, -),
+    option(attribute_declarations(DeclGoal), QOptions, no_decl_goal),
     http_parms(Request, Params, DeclGoal, Form),
     (   memberchk(form_data(RForm), QOptions)
     ->  RForm = Form
