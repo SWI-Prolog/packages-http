@@ -58,6 +58,7 @@ typedef struct chunked_context
 { IOSTREAM	   *stream;		/* Original stream */
   IOSTREAM	   *chunked_stream;	/* Stream I'm handle of */
   int		    close_parent;	/* close parent on close */
+  int		    eof_seen;		/* We saw end-of-file */
   IOENC		    parent_encoding;	/* Saved encoding of parent */
   size_t	    avail;		/* data available */
 } chunked_context;
@@ -93,6 +94,9 @@ free_chunked_context(chunked_context *ctx)
 static ssize_t				/* decode */
 chunked_read(void *handle, char *buf, size_t size)
 { chunked_context *ctx = handle;
+
+  if ( ctx->eof_seen )
+    return 0;
 
   for(;;)
   { if ( ctx->avail > 0 )			/* data waiting */
@@ -137,7 +141,9 @@ chunked_read(void *handle, char *buf, size_t size)
 	  { s = Sfgets(hdr, sizeof(hdr), ctx->stream);
 	  } while ( s && strcmp(s, "\r\n") != 0 );
 	  if ( s )
+	  { ctx->eof_seen = TRUE;
 	    return 0;
+	  }
 	  Sseterr(ctx->chunked_stream, 0, "Bad end-of-stream");
 	  return -1;
 	}
