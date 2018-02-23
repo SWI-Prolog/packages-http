@@ -490,13 +490,21 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %   _stringified_ if it is not an atom or string. Stringification is
 %   based on term_string/2.
 %
-%   The version 7 _dict_ type is supported as well. If the dicts has
-%   a _tag_, a property "type":"tag" is   added  to the object. This
-%   behaviour can be changed using the =tag= option (see below). For
-%   example:
+%   The version 7 _dict_ type is supported as well.  Optionally,  if
+%   the dict has a _tag_,  a property  "type":"tag"  can be added to
+%   the object.  This behaviour can be controlled using the  =tag=
+%   option (see below). For example:
 %
 %     ==
 %     ?- json_write(current_output, point{x:1,y:2}).
+%     {
+%       "x":1,
+%       "y":2
+%     }
+%     ==
+%
+%     ==
+%     ?- json_write(current_output, point{x:1,y:2}, [tag(type)]).
 %     {
 %       "type":"point",
 %       "x":1,
@@ -904,7 +912,7 @@ is_json_pair(Options, Name=Value) :-
 %     * JSON =true=, =false= and =null= are represented using these
 %       Prolog atoms.
 %     * JSON objects are mapped to dicts.
-%     * By default, a =type= field in an object assigns a tag for
+%     * Optionally, a =type= field in an object assigns a tag for
 %       the dict.
 %
 %   The predicate json_read_dict/3 processes  the   same  options as
