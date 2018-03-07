@@ -846,9 +846,9 @@ http_reply_file(File, Options, Request) :-
         )
     ;   Reply = tmp_file(Type, Path)
     ),
-    (   option(mime_type(Type), Options)
-    ->  true
-    ;   file_mime_type(Path, Type)
+    (   option(mime_type(MediaType), Options)
+    ->  file_content_type(Path, MediaType, Type)
+    ;   file_content_type(Path, Type)
     ->  true
     ;   Type = text/plain           % fallback type
     ),
