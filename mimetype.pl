@@ -103,7 +103,7 @@ mime_extension(Ext, MimeType) :-
 %   The initial default mime-type   is  =|application/unknown|=. Use
 %   the value =|-|= to denote there is no default.
 
-:- create_prolog_flag(default_mimetype, application/unknown, []).
+:- create_prolog_flag(default_mimetype, application/unknown, [keep(true)]).
 
 default_mimetype(MimeType) :-
     current_prolog_flag(default_mimetype, MimeType),
