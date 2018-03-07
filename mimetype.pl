@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2014, University of Amsterdam
+    Copyright (c)  2002-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -34,7 +34,9 @@
 */
 
 :- module(mimetype,
-          [ file_mime_type/2            % +Path, -Type
+          [ file_mime_type/2,           % +Path, -Type
+            file_content_type/2,        % +Path, -Type
+            file_content_type/3         % +Path, ?MediaType, -Type
           ]).
 
 /** <module> Determine mime-type for a file
@@ -46,6 +48,11 @@ worthwhile to place this functionality in an extensible library.
 @tbd    Consider content handling (using the Unix file command)
 @tbd    Allow parameters? (e.g. text/html; charset=UTF-8)
 */
+
+:- multifile
+    mime:mime_extension/2,
+    mime:text_mimetype/1,
+    mime:charset/3.
 
 %!  file_mime_type(+FileName, -MimeType) is semidet.
 %
@@ -79,9 +86,6 @@ file_mime_type(_, MimeType) :-
 %
 %   Hook that is called by file_mime_type/2 before the default table
 %   is examined.
-
-:- multifile
-    mime:mime_extension/2.
 
 mime_extension(Ext, MimeType) :-
     (   mime:mime_extension(Ext, Mime)
@@ -193,3 +197,71 @@ name_mimetype('configure.ac', text/plain).
 name_mimetype('makefile.in',  text/plain).
 name_mimetype('makefile.am',  text/plain).
 name_mimetype('readme.in',    text/plain).
+
+%!  text_mimetype(+MimeType) is semidet.
+%
+%   True when documents of MimeType are text documents and thus may need
+%   a charset specification.
+
+text_mimetype(MimeType) :-
+    mime:text_mimetype(MimeType),
+    !.
+text_mimetype(text/_).
+
+%!  file_content_type(+File:atom, -ContentType:atom) is det.
+%!  file_content_type(+File:atom, ?MediaType, -ContentType:atom) is det.
+%
+%   True if File should be served using =|ContentType:|= ContentType. It
+%   takes the following steps:
+%
+%     1. Determine the media type using file_mime_type/2
+%     2. Determine it is a text file using text_mimetype/1
+%     3. Use the charset from the Prolog flag `default_charset`
+%
+%   The behavior is controlled by several hooks and a flag.
+%
+%     - mime:mime_extension/2 defines the media type
+%     - mime:text_mimetype/1 defines the media type is text
+%     - mime:charset/3 derives the charset for a file with a given
+%       media type.
+%     - If mime:text_mimetype/1 succeeds mime:charset/3 fails, the
+%       flag `default_charset` defines the charset unless it is set
+%       to `-`.  The flag set by default to =UTF-8= if the Prolog
+%       flag `encoding` is set to `utf8`.
+
+file_content_type(File, ContentType) :-
+    file_content_type(File, _, ContentType).
+file_content_type(File, MediaType, ContentType) :-
+    (   ground(MediaType)
+    ->  true
+    ;   file_mime_type(File, MediaType)
+    ),
+    (   text_mimetype(MediaType)
+    ->  (   mime:charset(File, MediaType, Charset0)
+        ->  Charset = Charset0
+        ;   default_charset(Charset)
+        ),
+        format(atom(ContentType), '~w; charset=~w', [MediaType, Charset])
+    ;   format(atom(ContentType), '~w', [MediaType])
+    ).
+
+%!  mime:charset(+File, +MediaType, -Charset) is semidet.
+%
+%   Hook that determines the  Charset  for   File  that  has  media type
+%   MediaType. This hook allows overruling file_content_type/2.
+%
+%   @see mime:text_mimetype/1.
+
+default_charset(Charset) :-
+    current_prolog_flag(default_charset, Charset),
+    Charset \== (-).
+
+set_default_charset :-
+    current_prolog_flag(default_charset, _),
+    !.
+set_default_charset :-
+    current_prolog_flag(encoding, utf8),
+    !,
+    set_prolog_flag(default_charset, 'UTF-8').
+
+:- initialization(set_default_charset).
