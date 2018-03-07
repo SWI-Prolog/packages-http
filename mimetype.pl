@@ -128,7 +128,7 @@ ext_mimetype(sgm,  text/'x-sgml').
 ext_mimetype(xml,  text/xml).
 ext_mimetype(css,  text/css).
 ext_mimetype(xsl,  text/xml).           % Unclear what this should be.
-ext_mimetype(md,   text/'x-markdown').
+ext_mimetype(md,   text/markdown).
                                         % semantic web stuff
 ext_mimetype(rdf,  application/'rdf+xml').
 ext_mimetype(rdfs, application/'rdf+xml').
