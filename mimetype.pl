@@ -214,7 +214,8 @@ text_mimetype(text/_).
 %   True if File should be served using =|ContentType:|= ContentType. It
 %   takes the following steps:
 %
-%     1. Determine the media type using file_mime_type/2
+%     1. Determine the media type using file_mime_type/2, unless
+%        already specified using file_content_type/3.
 %     2. Determine it is a text file using text_mimetype/1
 %     3. Use the charset from the Prolog flag `default_charset`
 %
@@ -223,8 +224,9 @@ text_mimetype(text/_).
 %     - mime:mime_extension/2 defines the media type
 %     - mime:text_mimetype/1 defines the media type is text
 %     - mime:charset/3 derives the charset for a file with a given
-%       media type.
-%     - If mime:text_mimetype/1 succeeds mime:charset/3 fails, the
+%       media type, if the media type is text according to
+%	mime:text_mimetype/1.
+%     - If mime:text_mimetype/1 succeeds and mime:charset/3 fails, the
 %       flag `default_charset` defines the charset unless it is set
 %       to `-`.  The flag set by default to =UTF-8= if the Prolog
 %       flag `encoding` is set to `utf8`.
