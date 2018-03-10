@@ -49,6 +49,9 @@
 :- use_module(library(error)).
 :- use_module(library(broadcast)).
 
+:- multifile
+    http:convert_parameter/3.
+
 :- predicate_options(http_parameters/3, 3,
                      [ form_data(-list),
                        attribute_declarations(callable)
