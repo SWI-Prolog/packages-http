@@ -323,15 +323,8 @@ call_handler(Goal, Id, Request0) :-
 %
 %   CPU is the CPU time used by the calling thread.
 
-:- if(current_prolog_flag(threads, true)).
-thread_cputime(CPU) :-
-    thread_self(Me),
-    thread_statistics(Me, cputime, CPU).
-:- else.
 thread_cputime(CPU) :-
     statistics(cputime, CPU).
-:- endif.
-
 
 %!  cgi_hook(+Event, +CGI) is det.
 %
