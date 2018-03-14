@@ -133,6 +133,9 @@ ext_mimetype(xml,  text/xml).
 ext_mimetype(css,  text/css).
 ext_mimetype(xsl,  text/xml).           % Unclear what this should be.
 ext_mimetype(md,   text/markdown).
+                                        % Other data markup
+ext_mimetype(json, application/json).
+ext_mimetype(yaml, application/yaml).   % Not official
                                         % semantic web stuff
 ext_mimetype(rdf,  application/'rdf+xml').
 ext_mimetype(rdfs, application/'rdf+xml').
