@@ -233,7 +233,7 @@ http_reply(Status, Out, HdrExtra, Context, Request, Code) :-
     http_status_reply(Status, Out, HdrExtra, Context, Request, Code).
 
 :- meta_predicate
-    if_no_head(+, 0).
+    if_no_head(0, +).
 
 %!  http_reply_data(+Data, +Out, +HdrExtra, +Method, -Code) is semidet.
 %
@@ -285,8 +285,10 @@ http_reply_data_(cgi_stream(In, Len), Out, HdrExtra, Method, Code) :-
     phrase(reply_header(cgi_data(Size), Hdr2, Code), Header),
     copy_stream(Out, In, Header, Method, 0, end).
 
-if_no_head(head, _) :- !.
-if_no_head(_, Goal) :-
+if_no_head(_, Options) :-
+    Options.method == head,
+    !.
+if_no_head(Goal, _) :-
     call(Goal).
 
 reply_file(Out, _File, Header, head) :-
@@ -358,6 +360,10 @@ copy_stream(Out, In, Header, From, To) :-
 %      - server_error(ErrorTerm)
 %      - unavailable(WhyHtml)
 
+http_status_reply(Status, Out, Options) :-
+    _{header:HdrExtra, context:Context, code:Code, method:Method} :< Options,
+    http_status_reply(Status, Out, HdrExtra, Context, [method(Method)], Code).
+
 http_status_reply(Status, Out, HdrExtra, Code) :-
     http_status_reply(Status, Out, HdrExtra, [], Code).
 
@@ -366,31 +372,58 @@ http_status_reply(Status, Out, HdrExtra, Context, Code) :-
 
 http_status_reply(Status, Out, HdrExtra, Context, Request, Code) :-
     option(method(Method), Request, get),
+    parsed_accept(Request, Accept),
     setup_call_cleanup(
         set_stream(Out, encoding(utf8)),
-        status_reply_flush(Status, Out, HdrExtra, Context, Method, Code),
-        set_stream(Out, encoding(octet))),
-    !.
+        status_reply_flush(Status, Out,
+                           _{ context: Context,
+                              method:  Method,
+                              code:    Code,
+                              accept:  Accept,
+                              header:  HdrExtra
+                            }),
+        set_stream(Out, encoding(octet))).
 
-status_reply_flush(Status, Out, HdrExtra, Context, Method, Code) :-
-    status_reply(Status, Out, HdrExtra, Context, Method, Code),
+parsed_accept(Request, Accept) :-
+    memberchk(accept(Accept0), Request),
+    http_parse_header_value(accept, Accept0, Accept1),
+    !,
+    Accept = Accept1.
+parsed_accept(_, [ media(text/html, [], 0.1,  []),
+                   media(_,         [], 0.01, [])
+                 ]).
+
+status_reply_flush(Status, Out, Options) :-
+    status_reply(Status, Out, Options),
+    !,
     flush_output(Out).
 
-status_reply(no_content, Out, HdrExtra, _Context, _Method, Code) :-
+%!  status_reply(+Status, +Out, +Options:Dict)
+%
+%   Formulate a non-200 reply and send it to the stream Out.  Options
+%   is a dict containing:
+%
+%     - header
+%     - context
+%     - method
+%     - code
+%     - accept
+
+status_reply(no_content, Out, Options) :-
     !,
-    phrase(reply_header(status(no_content), HdrExtra, Code), Header),
+    phrase(reply_header(status(no_content), Options), Header),
     format(Out, '~s', [Header]).
-status_reply(switching_protocols(_Goal,Options), Out,
-             HdrExtra0, _Context, _Method, Code) :-
+status_reply(switching_protocols(_Goal,SwitchOptions), Out, Options) :-
     !,
-    (   option(headers(Extra1), Options)
+    (   option(headers(Extra1), SwitchOptions)
     ->  true
-    ;   option(header(Extra1), Options, [])
+    ;   option(header(Extra1), SwitchOptions, [])
     ),
-    http_join_headers(HdrExtra0, Extra1, HdrExtra),
-    phrase(reply_header(status(switching_protocols), HdrExtra, Code), Header),
+    http_join_headers(Options.header, Extra1, HdrExtra),
+    phrase(reply_header(status(switching_protocols),
+                        Options.put(header,HdrExtra)), Header),
     format(Out, '~s', [Header]).
-status_reply(created(Location), Out, HdrExtra, _Context, Method, Code) :-
+status_reply(created(Location), Out, Options) :-
     !,
     phrase(page([ title('201 Created')
                 ],
@@ -401,10 +434,10 @@ status_reply(created(Location), Out, HdrExtra, _Context, Method, Code) :-
                   \address
                 ]),
            HTML),
-    phrase(reply_header(created(Location, HTML), HdrExtra, Code), Header),
+    phrase(reply_header(created(Location, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(moved(To), Out, HdrExtra, _Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(moved(To), Out, Options) :-
     !,
     phrase(page([ title('301 Moved Permanently')
                 ],
@@ -415,10 +448,10 @@ status_reply(moved(To), Out, HdrExtra, _Context, Method, Code) :-
                   \address
                 ]),
            HTML),
-    phrase(reply_header(moved(To, HTML), HdrExtra, Code), Header),
+    phrase(reply_header(moved(To, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(moved_temporary(To), Out, HdrExtra, _Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(moved_temporary(To), Out, Options) :-
     !,
     phrase(page([ title('302 Moved Temporary')
                 ],
@@ -430,10 +463,10 @@ status_reply(moved_temporary(To), Out, HdrExtra, _Context, Method, Code) :-
                 ]),
            HTML),
     phrase(reply_header(moved_temporary(To, HTML),
-                        HdrExtra, Code), Header),
+                        Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(see_other(To),Out,HdrExtra, _Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(see_other(To),Out, Options) :-
     !,
     phrase(page([ title('303 See Other')
                  ],
@@ -444,10 +477,10 @@ status_reply(see_other(To),Out,HdrExtra, _Context, Method, Code) :-
                    \address
                  ]),
             HTML),
-     phrase(reply_header(see_other(To, HTML), HdrExtra, Code), Header),
+     phrase(reply_header(see_other(To, HTML), Options), Header),
      format(Out, '~s', [Header]),
-     print_html_if_no_head(Method, Out, HTML).
-status_reply(bad_request(ErrorTerm), Out, HdrExtra, _Context, Method, Code) :-
+     print_html_if_no_head(Out, HTML, Options).
+status_reply(bad_request(ErrorTerm), Out, Options) :-
     !,
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('400 Bad Request')
@@ -458,48 +491,46 @@ status_reply(bad_request(ErrorTerm), Out, HdrExtra, _Context, Method, Code) :-
                 ]),
            HTML),
     phrase(reply_header(status(bad_request, HTML),
-                        HdrExtra, Code), Header),
+                        Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(not_found(URL), Out, HdrExtra, Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(not_found(URL), Out, Options) :-
     !,
-    status_page_hook(not_found(URL), 404, Context, HTML),
-    phrase(reply_header(status(not_found, HTML), HdrExtra, Code), Header),
+    status_page_hook(not_found(URL), 404, HTML, Options),
+    phrase(reply_header(status(not_found, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(method_not_allowed(Method, URL), Out, HdrExtra, Context, QMethod, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(method_not_allowed(Method, URL), Out, Options) :-
     !,
     upcase_atom(Method, UMethod),
-    status_page_hook(method_not_allowed(UMethod,URL), 405, Context, HTML),
+    status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, Options),
     phrase(reply_header(status(method_not_allowed, HTML),
-                        HdrExtra, Code), Header),
+                        Options), Header),
     format(Out, '~s', [Header]),
-    if_no_head(QMethod, print_html(Out, HTML)).
-status_reply(forbidden(URL), Out, HdrExtra, Context, Method, Code) :-
+    if_no_head(print_html(Out, HTML), Options).
+status_reply(forbidden(URL), Out, Options) :-
     !,
-    status_page_hook(forbidden(URL), 403, Context, HTML),
-    phrase(reply_header(status(forbidden, HTML), HdrExtra, Code), Header),
+    status_page_hook(forbidden(URL), 403, HTML, Options),
+    phrase(reply_header(status(forbidden, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(authorise(basic, ''), Out, HdrExtra, Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(authorise(basic, ''), Out, Options) :-
     !,
-    status_reply(authorise(basic), Out, HdrExtra, Context, Method, Code).
-status_reply(authorise(basic, Realm), Out, HdrExtra, Context, Method, Code) :-
+    status_reply(authorise(basic), Out, Options).
+status_reply(authorise(basic, Realm), Out, Options) :-
     !,
-    status_reply(authorise(basic(Realm)), Out, HdrExtra, Context,
-                 Method, Code).
-status_reply(authorise(Method), Out, HdrExtra, Context, QMethod, Code) :-
+    status_reply(authorise(basic(Realm)), Out, Options).
+status_reply(authorise(Method), Out, Options) :-
     !,
-    status_page_hook(authorise(Method), 401, Context, HTML),
-    phrase(reply_header(authorise(Method, HTML),
-                        HdrExtra, Code), Header),
+    status_page_hook(authorise(Method), 401, HTML, Options),
+    phrase(reply_header(authorise(Method, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(QMethod, Out, HTML).
-status_reply(not_modified, Out, HdrExtra, _Context, _Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(not_modified, Out, Options) :-
     !,
-    phrase(reply_header(status(not_modified), HdrExtra, Code), Header),
+    phrase(reply_header(status(not_modified), Options), Header),
     format(Out, '~s', [Header]).
-status_reply(server_error(ErrorTerm), Out, HdrExtra, _Context, Method, Code) :-
+status_reply(server_error(ErrorTerm), Out, Options) :-
     in_or_exclude_backtrace(ErrorTerm, ErrorTerm1),
     '$messages':translate_message(ErrorTerm1, Lines, []),
     phrase(page([ title('500 Internal server error')
@@ -510,11 +541,10 @@ status_reply(server_error(ErrorTerm), Out, HdrExtra, _Context, Method, Code) :-
                 ]),
            HTML),
     phrase(reply_header(status(server_error, HTML),
-                        HdrExtra, Code), Header),
+                        Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(not_acceptable(WhyHTML), Out, HdrExtra, _Context,
-             Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(not_acceptable(WhyHTML), Out, Options) :-
     !,
     phrase(page([ title('406 Not Acceptable')
                 ],
@@ -523,10 +553,10 @@ status_reply(not_acceptable(WhyHTML), Out, HdrExtra, _Context,
                   \address
                 ]),
            HTML),
-    phrase(reply_header(status(not_acceptable, HTML), HdrExtra, Code), Header),
+    phrase(reply_header(status(not_acceptable, HTML), Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(unavailable(WhyHTML), Out, HdrExtra, _Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(unavailable(WhyHTML), Out, Options) :-
     !,
     phrase(page([ title('503 Service Unavailable')
                 ],
@@ -535,41 +565,46 @@ status_reply(unavailable(WhyHTML), Out, HdrExtra, _Context, Method, Code) :-
                   \address
                 ]),
            HTML),
-    phrase(reply_header(status(service_unavailable, HTML), HdrExtra, Code),
+    phrase(reply_header(status(service_unavailable, HTML), Options),
            Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Method, Out, HTML).
-status_reply(resource_error(ErrorTerm), Out, HdrExtra, Context, Method, Code) :-
+    print_html_if_no_head(Out, HTML, Options).
+status_reply(resource_error(ErrorTerm), Out, Options) :-
     !,
     '$messages':translate_message(ErrorTerm, Lines, []),
     status_reply(unavailable(p(\html_message_lines(Lines))),
-                 Out, HdrExtra, Context, Method, Code).
-status_reply(busy, Out, HdrExtra, Context, Method, Code) :-
+                 Out, Options).
+status_reply(busy, Out, Options) :-
     !,
     HTML = p(['The server is temporarily out of resources, ',
               'please try again later']),
-    http_status_reply(unavailable(HTML), Out, HdrExtra, Context,
-                      Method, Code).
+    http_status_reply(unavailable(HTML), Out, Options).
 
-print_html_if_no_head(head, _, _) :- !.
-print_html_if_no_head(_, Out, HTML) :-
+print_html_if_no_head(_, _, Options) :-
+    Options.method == head,
+    !.
+print_html_if_no_head(Out, HTML, _Options) :-
     print_html(Out, HTML).
 
-%!  status_page_hook(+Term, +Code, +Context, -HTMLTokens) is det.
+%!  status_page_hook(+Term, +Code, -HTMLTokens, +Options) is det.
 %
 %   Calls the following two hooks to generate an HTML page from a
 %   status reply.
 %
-%     - http:status_page(Term, Context, HTML)
-%     - http:status_page(Status, Context, HTML)
+%     - http:status_page(+Term, +Context, -HTML)
+%     - http:status_page(+Code, +Context, -HTML)
+%
+%   @arg Term is the status term, e.g., not_found(URL)
+%   @arg Code is the HTTP status code, e.g., 404
+%   @see http:status_page/3
 
-status_page_hook(Term, Status, Context, HTML) :-
+status_page_hook(Term, Status, HTML, Options) :-
+    Context = Options.context,
     (   http:status_page(Term, Context, HTML)
     ;   http:status_page(Status, Context, HTML) % deprecated
     ),
     !.
-
-status_page_hook(authorise(_Method), 401, _Context, HTML):-
+status_page_hook(authorise(_Method), 401, HTML, _Options):-
     phrase(page([ title('401 Authorization Required')
                 ],
                 [ h1('Authorization Required'),
@@ -583,7 +618,7 @@ status_page_hook(authorise(_Method), 401, _Context, HTML):-
                   \address
                 ]),
            HTML).
-status_page_hook(forbidden(URL), 403, _Context, HTML) :-
+status_page_hook(forbidden(URL), 403, HTML, _Options) :-
     phrase(page([ title('403 Forbidden')
                 ],
                 [ h1('Forbidden'),
@@ -593,7 +628,7 @@ status_page_hook(forbidden(URL), 403, _Context, HTML) :-
                   \address
                 ]),
            HTML).
-status_page_hook(not_found(URL), 404, _Context, HTML) :-
+status_page_hook(not_found(URL), 404, HTML, _Options) :-
     phrase(page([ title('404 Not Found')
                 ],
                 [ h1('Not Found'),
@@ -603,7 +638,7 @@ status_page_hook(not_found(URL), 404, _Context, HTML) :-
                   \address
                 ]),
            HTML).
-status_page_hook(method_not_allowed(UMethod,URL), 405, _Context, HTML) :-
+status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, _Options) :-
     phrase(page([ title('405 Method not allowed')
                 ],
                 [ h1('Method not allowed'),
@@ -1138,6 +1173,10 @@ http_reply_header(Out, What, HdrExtra) :-
 %
 %   @see http_status_reply/4 formulates the not-200-ok HTTP replies.
 
+reply_header(Data, Dict) -->
+    { _{header:HdrExtra, code:Code} :< Dict },
+    reply_header(Data, HdrExtra, Code).
+
 reply_header(string(String), HdrExtra, Code) -->
     reply_header(string(text/plain, String), HdrExtra, Code).
 reply_header(string(Type, String), HdrExtra, Code) -->
@@ -1663,6 +1702,8 @@ read_field_value([H|T]) -->
 %
 %     * content_length
 %     Converted into an integer
+%     * status
+%     Converted into an integer
 %     * cookie
 %     Converted into a list with Name=Value by cookies//1.
 %     * set_cookie
@@ -1684,26 +1725,40 @@ read_field_value([H|T]) -->
 %     * content_type
 %     Parsed into media(Type/SubType, Attributes), where Attributes
 %     is a list of Name=Value pairs.
+%
+%   As some fields are already parsed in the `Request`, this predicate
+%   is a no-op when called on an already parsed field.
+%
+%   @arg Value is either an atom, a list of codes or an already parsed
+%   header value.
 
 http_parse_header_value(Field, Value, Prolog) :-
-    known_field(Field, _),
-    to_codes(Value, Codes),
-    parse_header_value(Field, Codes, Prolog).
+    known_field(Field, _, Type),
+    (   already_parsed(Type, Value)
+    ->  Prolog = Value
+    ;   to_codes(Value, Codes),
+        parse_header_value(Field, Codes, Prolog)
+    ).
 
-%!  known_field(?FieldName, ?AutoConvert)
+already_parsed(integer, V)    :- !, integer(V).
+already_parsed(list(Type), L) :- !, is_list(L), maplist(already_parsed(Type), L).
+already_parsed(Term, V)       :- subsumes_term(Term, V).
+
+
+%!  known_field(?FieldName, ?AutoConvert, -Type)
 %
 %   True if the value of FieldName is   by default translated into a
 %   Prolog data structure.
 
-known_field(content_length,      true).
-known_field(status,              true).
-known_field(cookie,              true).
-known_field(set_cookie,          true).
-known_field(host,                true).
-known_field(range,               maybe).
-known_field(accept,              maybe).
-known_field(content_disposition, maybe).
-known_field(content_type,        false).
+known_field(content_length,      true,  integer).
+known_field(status,              true,  integer).
+known_field(cookie,              true,  list(_=_)).
+known_field(set_cookie,          true,  list(set_cookie(_Name,_Value,_Options))).
+known_field(host,                true,  _Host:_Port).
+known_field(range,               maybe, bytes(_,_)).
+known_field(accept,              maybe, list(media(_Type, _Parms, _Q, _Exts))).
+known_field(content_disposition, maybe, disposition(_Name, _Attributes)).
+known_field(content_type,        false, media(_Type/_Sub, _Attributes)).
 
 to_codes(In, Codes) :-
     (   is_list(In)
@@ -1718,13 +1773,13 @@ to_codes(In, Codes) :-
 %   return the atom if the translation fails.
 
 field_to_prolog(Field, Codes, Prolog) :-
-    known_field(Field, true),
+    known_field(Field, true, _Type),
     !,
     (   parse_header_value(Field, Codes, Prolog0)
     ->  Prolog = Prolog0
     ).
 field_to_prolog(Field, Codes, Prolog) :-
-    known_field(Field, maybe),
+    known_field(Field, maybe, _Type),
     parse_header_value(Field, Codes, Prolog0),
     !,
     Prolog = Prolog0.
