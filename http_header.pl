@@ -482,14 +482,7 @@ status_reply(see_other(To),Out, Options) :-
      print_html_if_no_head(Out, HTML, Options).
 status_reply(bad_request(ErrorTerm), Out, Options) :-
     !,
-    '$messages':translate_message(ErrorTerm, Lines, []),
-    phrase(page([ title('400 Bad Request')
-                ],
-                [ h1('Bad Request'),
-                  p(\html_message_lines(Lines)),
-                  \address
-                ]),
-           HTML),
+    status_page_hook(bad_request(ErrorTerm), 400, HTML, Options),
     phrase(reply_header(status(bad_request, HTML),
                         Options), Header),
     format(Out, '~s', [Header]),
@@ -531,40 +524,22 @@ status_reply(not_modified, Out, Options) :-
     phrase(reply_header(status(not_modified), Options), Header),
     format(Out, '~s', [Header]).
 status_reply(server_error(ErrorTerm), Out, Options) :-
+    !,
     in_or_exclude_backtrace(ErrorTerm, ErrorTerm1),
-    '$messages':translate_message(ErrorTerm1, Lines, []),
-    phrase(page([ title('500 Internal server error')
-                ],
-                [ h1('Internal server error'),
-                  p(\html_message_lines(Lines)),
-                  \address
-                ]),
-           HTML),
+    status_page_hook(server_error(ErrorTerm1), 500, HTML, Options),
     phrase(reply_header(status(server_error, HTML),
                         Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
-status_reply(not_acceptable(WhyHTML), Out, Options) :-
+status_reply(not_acceptable(Why), Out, Options) :-
     !,
-    phrase(page([ title('406 Not Acceptable')
-                ],
-                [ h1('Not Acceptable'),
-                  WhyHTML,
-                  \address
-                ]),
-           HTML),
+    status_page_hook(not_acceptable(Why), 406, HTML, Options),
     phrase(reply_header(status(not_acceptable, HTML), Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
-status_reply(unavailable(WhyHTML), Out, Options) :-
+status_reply(unavailable(Why), Out, Options) :-
     !,
-    phrase(page([ title('503 Service Unavailable')
-                ],
-                [ h1('Service Unavailable'),
-                  WhyHTML,
-                  \address
-                ]),
-           HTML),
+    status_page_hook(unavailable(Why), 503, HTML, Options),
     phrase(reply_header(status(service_unavailable, HTML), Options),
            Header),
     format(Out, '~s', [Header]),
@@ -576,9 +551,11 @@ status_reply(resource_error(ErrorTerm), Out, Options) :-
                  Out, Options).
 status_reply(busy, Out, Options) :-
     !,
-    HTML = p(['The server is temporarily out of resources, ',
-              'please try again later']),
-    http_status_reply(unavailable(HTML), Out, Options).
+    status_page_hook(unavailable(busy), 503, HTML, Options),
+    phrase(reply_header(status(service_unavailable, HTML), Options),
+           Header),
+    format(Out, '~s', [Header]),
+    print_html_if_no_head(Out, HTML, Options).
 
 print_html_if_no_head(_, _, Options) :-
     Options.method == head,
@@ -604,6 +581,15 @@ status_page_hook(Term, Status, HTML, Options) :-
     ;   http:status_page(Status, Context, HTML) % deprecated
     ),
     !.
+status_page_hook(bad_request(ErrorTerm), 400, HTML, _Options) :-
+    '$messages':translate_message(ErrorTerm, Lines, []),
+    phrase(page([ title('400 Bad Request')
+                ],
+                [ h1('Bad Request'),
+                  p(\html_message_lines(Lines)),
+                  \address
+                ]),
+           HTML).
 status_page_hook(authorise(_Method), 401, HTML, _Options):-
     phrase(page([ title('401 Authorization Required')
                 ],
@@ -645,6 +631,41 @@ status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, _Options) :-
                   p(['The requested URL ', tt(URL),
                      ' does not support method ', tt(UMethod), '.'
                     ]),
+                  \address
+                ]),
+           HTML).
+status_page_hook(not_acceptable(WhyHTML), 406, HTML, _Options) :-
+    phrase(page([ title('406 Not Acceptable')
+                ],
+                [ h1('Not Acceptable'),
+                  WhyHTML,
+                  \address
+                ]),
+           HTML).
+status_page_hook(server_error(ErrorTerm), 500, HTML, _Options) :-
+    '$messages':translate_message(ErrorTerm, Lines, []),
+    phrase(page([ title('500 Internal server error')
+                ],
+                [ h1('Internal server error'),
+                  p(\html_message_lines(Lines)),
+                  \address
+                ]),
+           HTML).
+status_page_hook(unavailable(busy), 503, HTML, _Options) :-
+    !,
+    phrase(page([ title('503 Service Unavailable')
+                ],
+                [ h1('Busy'),
+                  p(['The server is temporarily out of resources, ',
+                     'please try again later']),
+                  \address
+                ]),
+           HTML).
+status_page_hook(unavailable(WhyHTML), 503, HTML, _Options) :-
+    phrase(page([ title('503 Service Unavailable')
+                ],
+                [ h1('Service Unavailable'),
+                  WhyHTML,
                   \address
                 ]),
            HTML).
@@ -2600,10 +2621,14 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 %   allows for emitting custom error pages   for  the following HTTP
 %   page types:
 %
+%     - 400 - bad_request(ErrorTerm)
 %     - 401 - authorise(AuthMethod)
 %     - 403 - forbidden(URL)
 %     - 404 - not_found(URL)
 %     - 405 - method_not_allowed(Method,URL)
+%     - 406 - not_acceptable(Why)
+%     - 500 - server_error(ErrorTerm)
+%     - 503 - unavailable(Why)
 %
 %   The hook is tried twice,  first   using  the  status term, e.g.,
 %   not_found(URL) and than with the code,   e.g.  `404`. The second
