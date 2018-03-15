@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2017, University of Amsterdam
+    Copyright (c)  2002-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -80,8 +80,9 @@
 
 :- multifile
     http:status_page/3,             % +Status, +Context, -HTML
+    http:status_reply/3,            % +Status, -Reply, +Options
     http:post_data_hook/3,          % +Data, +Out, +HdrExtra
-    http:mime_type_encoding/2.       % +MimeType, -Encoding
+    http:mime_type_encoding/2.      % +MimeType, -Encoding
 
 % see http_update_transfer/4.
 
@@ -575,10 +576,12 @@ print_html_if_no_head(Out, HTML, _Options) :-
 %   @arg Code is the HTTP status code, e.g., 404
 %   @see http:status_page/3
 
-status_page_hook(Term, Status, HTML, Options) :-
+status_page_hook(Term, Code, HTML, Options) :-
     Context = Options.context,
-    (   http:status_page(Term, Context, HTML)
-    ;   http:status_page(Status, Context, HTML) % deprecated
+    (   Options.code = Code,
+        http:status_reply(Term, HTML, Options)
+    ;   http:status_page(Term, Context, HTML)
+    ;   http:status_page(Code, Context, HTML) % deprecated
     ),
     !.
 status_page_hook(bad_request(ErrorTerm), 400, HTML, _Options) :-
