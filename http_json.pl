@@ -78,9 +78,26 @@
 
 /** <module> HTTP JSON Plugin module
 
-This  module  inserts  the  JSON  parser  for  documents  of  MIME  type
-=|application/jsonrequest|= and =|application/json|=   requested through
-the http_client.pl library.
+This module adds hooks to several parts   of  the HTTP libraries, making
+them JSON-aware.  Notably:
+
+  - Make http_read_data/3 convert `application/json` and
+    `application/jsonrequest` content to a JSON term.
+  - Cause http_open/3 to accept post(json(Term)) to issue a POST
+    request with JSON content.
+  - Provide HTTP server and client utility predicates for reading
+    and replying JSON:
+    - http_read_json/2
+    - http_read_json/3
+    - http_read_json_dict/2
+    - http_read_json_dict/3
+    - reply_json/1
+    - reply_json/2
+    - reply_json_dict/1
+    - reply_json_dict/2
+  - Reply to exceptions in the server using an JSON document rather
+    then HTML if the =|Accept|= header prefers application/json over
+    text/html.
 
 Typically JSON is used by Prolog HTTP  servers. This module supports two
 JSON  representations:  the  classical  representation    and   the  new
@@ -397,6 +414,40 @@ prefer_json(Accept) :-
 
 %!  json_status_reply(+Term, -MsgLines, -ExtraJSON) is semidet.
 
+json_status_reply(created(Location),
+                  [ 'Created: ~w'-[Location] ],
+                  _{location:Location}).
+json_status_reply(moved(Location),
+                  [ 'Moved to: ~w'-[Location] ],
+                  _{location:Location}).
+json_status_reply(moved_temporary(Location),
+                  [ 'Moved temporary to: ~w'-[Location] ],
+                  _{location:Location}).
+json_status_reply(see_other(Location),
+                  [ 'See: ~w'-[Location] ],
+                  _{location:Location}).
+json_status_reply(bad_request(ErrorTerm), Lines, _{}) :-
+    '$messages':translate_message(ErrorTerm, Lines, []).
+json_status_reply(authorise(Method),
+                  [ 'Authorization (~p) required'-[Method] ],
+                  _{}).
+json_status_reply(forbidden(Location),
+                  [ 'You have no permission to access: ~w'-[Location] ],
+                  _{location:Location}).
 json_status_reply(not_found(Location),
                   [ 'Path not found: ~w'-[Location] ],
                   _{location:Location}).
+json_status_reply(method_not_allowed(Method,Location),
+                  [ 'Method not allowed: ~w'-[UMethod] ],
+                  _{location:Location, method:UMethod}) :-
+    upcase_atom(Method, UMethod).
+json_status_reply(not_acceptable(Why),
+                  [ 'Request is not aceptable: ~p'-[Why]
+                  ],
+                  _{}).
+json_status_reply(server_error(ErrorTerm), Lines, _{}) :-
+    '$messages':translate_message(ErrorTerm, Lines, []).
+json_status_reply(service_unavailable(Why),
+                  [ 'Service unavailable: ~p'-[Why]
+                  ],
+                  _{}).

@@ -623,7 +623,8 @@ status_page_hook(not_found(URL), html_tokens(HTML), _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(method_not_allowed(UMethod,URL), html_tokens(HTML), _Options) :-
+status_page_hook(method_not_allowed(Method,URL), html_tokens(HTML), _Options) :-
+    upcase_atom(Method, UMethod),
     phrase(page([ title('405 Method not allowed')
                 ],
                 [ h1('Method not allowed'),
