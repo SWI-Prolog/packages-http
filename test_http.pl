@@ -13,12 +13,16 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_parameters)).
+:- use_module(library(http/http_json)).
+:- use_module(library(http/http_header)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_stream)).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
 :- use_module(library(debug)).
+:- use_module(library(option)).
 :- use_module(library(lists)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -71,7 +75,7 @@ test(chunked, true(Data == Ref)) :-
 
 test(connection, Close == close) :-
     setup_call_cleanup(
-        http_server(http_dispatch, [port(localhost:Port)]),
+        http_server(http_dispatch, [silent(true), port(localhost:Port)]),
         ( format(atom(URL), 'http://localhost:~w/reply-source', [Port]),
           setup_call_cleanup(
               open_null_stream(Out),
@@ -85,11 +89,129 @@ test(connection, Close == close) :-
         ),
         http_stop_server(Port, [])).
 
-:- http_handler('/reply-source', reply_source, []).
+test(not_found, Code == 404) :-
+    request('/not-found', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "was not found on this server")).
+test(forbidden, Code == 403) :-
+    request('/forbidden', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "permission to access")).
+test(method_not_allowed, Code == 405) :-
+    request('/method_not_allowed', Code, Type, Content,
+            [ method(delete) ]),
+    assertion(html_content(Type, Content,
+                           "not support method")).
+test(not_modified, Code == 304) :-
+    request('/not_modified', Code, _Type, Content, [redirect(false)]),
+    assertion(Content == "").
+test(moved, Code == 301) :-
+    request('/moved', Code, Type, Content, [redirect(false)]),
+    assertion(html_content(Type, Content,
+                           "has moved")).
+test(moved_temporary, Code == 302) :-
+    request('/moved-temporary', Code, Type, Content, [redirect(false)]),
+    assertion(html_content(Type, Content,
+                           "is currently")).
+test(see_also, Code == 303) :-
+    request('/see-also', Code, Type, Content, [redirect(false)]),
+    assertion(html_content(Type, Content,
+                           "other document")).
+test(server_error, Code == 500) :-
+    request('/server-error', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "zero_divisor")).
+test(unavailable, Code == 503) :-
+    request('/unavailable', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "Shut down")).
+test(resource_error, Code == 503) :-
+    request('/resource-error', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "patience")).
+test(not_acceptable, Code == 406) :-
+    request('/not_acceptable', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "I reject")).
+test(bad_request, Code == 400) :-
+    request('/bad-request', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "hello")).
+test(created, Code == 201) :-
+    request('/created', Code, Type, Content,
+            [ post(json("world")),
+              header(location, Location)
+            ]),
+    assertion(Location == '/brave-new-world'),
+    assertion(html_content(Type, Content,
+                           "brave-new-world")).
 
-reply_source(Request):-
+request(Path, Code, Type, Content, ExtraHdrs) :-
+    setup_call_cleanup(
+        http_server(http_dispatch, [silent(true), port(localhost:Port)]),
+        ( format(atom(URL), 'http://localhost:~w~w', [Port, Path]),
+          setup_call_cleanup(
+              http_open(URL, Stream,
+                        [ status_code(Code),
+                          header(content_type, Type)
+                        | ExtraHdrs
+                        ]),
+              read_string(Stream, _, Content),
+              close(Stream))
+        ),
+        http_stop_server(Port, [])).
+
+:- http_handler('/reply-source', reply_source, []).
+:- http_handler('/forbidden', forbidden, []).
+:- http_handler('/method_not_allowed', method_not_allowed,
+                [methods([get])]).
+:- http_handler('/moved', http_redirect(moved, '/moved-to'), []).
+:- http_handler('/moved-temporary', http_redirect(moved_temporary, '/moved-to'), []).
+:- http_handler('/see-also', http_redirect(see_other, '/moved-to'), []).
+:- http_handler('/server-error', server_error, []).
+:- http_handler('/not_modified', not_modified, []).
+:- http_handler('/unavailable', unavailable, []).
+:- http_handler('/not_acceptable', not_acceptable, []).
+:- http_handler('/resource-error', resource_error_handler, []).
+:- http_handler('/bad-request', bad_request_handler, []).
+:- http_handler('/created', created, []).
+
+reply_source(Request) :-
     module_property(test_http, file(File)),
     http_reply_file(File, [unsafe(true)], Request).
+
+forbidden(Request) :-
+    option(path(Path), Request),
+    throw(http_reply(forbidden(Path))).
+
+method_not_allowed(Request) :-
+    option(method(Method), Request),
+    format('Content-type: text/plain~n~n'),
+    format('Method ~p should not have been alowed', [Method]).
+
+server_error(_Request) :-
+    X is 1/0,
+    format('Content-type: text/plain~n~n'),
+    format('X = ~q~n', [X]).
+
+not_modified(_Request) :-
+    throw(http_reply(not_modified)).
+
+unavailable(_Request) :-
+    throw(http_reply(unavailable(p(['Shut down'])))).
+
+not_acceptable(_Request) :-
+    throw(http_reply(not_acceptable(p(['I reject'])))).
+
+resource_error_handler(_Request) :-
+    resource_error(patience).
+
+bad_request_handler(Request) :-
+    http_parameters(Request, [ hello(_,[]) ]).
+
+created(Request) :-
+    http_read_json_dict(Request, _Dict),
+    throw(http_reply(created('/brave-new-world'))).
 
 :- end_tests(http_server).
 
@@ -98,11 +220,27 @@ reply_source(Request):-
                  *             UTIL             *
                  *******************************/
 
-contains_codes(String, Codes) :-
-    string_codes(String, Needle),
-    append(_Pre, Rest, Codes),
-    append(Needle, _Post, Rest),
+html_content(Type, Content, Needle) :-
+    http_parse_header_value(content_type, Type, media(text/html, _Attributes)),
+    contains_codes(Needle, Content).
+
+contains_codes(Needle, Haystack) :-
+    to_string(Needle, NeedleS),
+    to_string(Haystack, HaystackS),
+    sub_string(HaystackS, _, _, _, NeedleS),
     !.
+
+to_string(S, S) :-
+    string(S),
+    !.
+to_string(A, S) :-
+    atom(A),
+    !,
+    atom_string(A, S).
+to_string(Codes, S) :-
+    string_codes(S, Codes).
+
+
 
 %!  chunked_data(-String) is det.
 %

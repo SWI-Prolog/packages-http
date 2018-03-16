@@ -608,6 +608,15 @@ status_page_hook(server_error(ErrorTerm), 500, HTML, _Options) :-
                   \address
                 ]),
            HTML).
+status_page_hook(resource_error(ErrorTerm), 503, HTML, _Options) :-
+    '$messages':translate_message(ErrorTerm, Lines, []),
+    phrase(page([ title('503 Service Unavailable')
+                ],
+                [ h1('Insufficient resources'),
+                  p(\html_message_lines(Lines)),
+                  \address
+                ]),
+           HTML).
 status_page_hook(unavailable(busy), 503, HTML, _Options) :-
     !,
     phrase(page([ title('503 Service Unavailable')
@@ -1148,6 +1157,10 @@ http_reply_header(Out, What, HdrExtra) :-
 %     * status(+Status, +HTMLTokens)
 %     * authorise(+Method, +Realm, +Tokens)
 %     * authorise(+Method, +Tokens)
+%     * not_found(+URL, +HTMLTokens)
+%     * server_error(+Error, +Tokens)
+%     * resource_error(+Error, +Tokens)
+%     * unavailable(+Why, +Tokens)
 %
 %   @see http_status_reply/4 formulates the not-200-ok HTTP replies.
 
@@ -1259,6 +1272,20 @@ reply_header(see_other(To, Tokens), HdrExtra, Code) -->
     "\r\n".
 reply_header(not_found(_URL, Tokens), HdrExtra, Code) -->
     reply_header(status(not_found, Tokens), HdrExtra, Code).
+reply_header(forbidden(_URL, Tokens), HdrExtra, Code) -->
+    reply_header(status(forbidden, Tokens), HdrExtra, Code).
+reply_header(method_not_allowed(_Method, _URL, Tokens), HdrExtra, Code) -->
+    reply_header(status(method_not_allowed, Tokens), HdrExtra, Code).
+reply_header(server_error(_Error, Tokens), HdrExtra, Code) -->
+    reply_header(status(server_error, Tokens), HdrExtra, Code).
+reply_header(unavailable(_Why, Tokens), HdrExtra, Code) -->
+    reply_header(status(service_unavailable, Tokens), HdrExtra, Code).
+reply_header(not_acceptable(_Why, Tokens), HdrExtra, Code) -->
+    reply_header(status(not_acceptable, Tokens), HdrExtra, Code).
+reply_header(bad_request(_Error, Tokens), HdrExtra, Code) -->
+    reply_header(status(bad_request, Tokens), HdrExtra, Code).
+reply_header(resource_error(_Error, Tokens), HdrExtra, Code) -->
+    reply_header(status(service_unavailable, Tokens), HdrExtra, Code).
 reply_header(status(Status), HdrExtra, Code) --> % Empty messages: 1xx, 204 and 304
     vstatus(Status, Code),
     header_fields(HdrExtra, Clen),
