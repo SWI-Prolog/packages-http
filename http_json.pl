@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2015, University of Amsterdam
+    Copyright (c)  2007-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -33,7 +33,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- if(current_predicate(is_dict/1)).
 :- module(http_json,
           [ reply_json/1,               % +JSON
             reply_json/2,               % +JSON, Options
@@ -44,14 +43,6 @@
             http_read_json_dict/2,      % +Request, -Dict
             http_read_json_dict/3       % +Request, -Dict, +Options
           ]).
-:- else.
-:- module(http_json,
-          [ reply_json/1,               % +JSON
-            reply_json/2,               % +JSON, Options
-            http_read_json/2,           % +Request, -JSON
-            http_read_json/3            % +Request, -JSON, +Options
-          ]).
-:- endif.
 :- use_module(http_client).
 :- use_module(http_header).
 :- use_module(http_stream).
@@ -164,12 +155,10 @@ is_json_type(String) :-
     json_type(Type),
     !.
 
-:- if(current_predicate(is_dict/1)).
 json_read_to(In, Data, Options) :-
     memberchk(json_object(dict), Options),
     !,
     json_read_dict(In, Data, Options).
-:- endif.
 json_read_to(In, Data, Options) :-
     json_read(In, Data, Options).
 
@@ -205,13 +194,11 @@ json_type(application/json).
 %
 %   @tbd avoid creation of intermediate data using chunked output.
 
-:- if(current_predicate(is_dict/1)).
 http:post_data_hook(json(Dict), Out, HdrExtra) :-
     is_dict(Dict),
     !,
     http:post_data_hook(json(Dict, [json_object(dict)]),
                         Out, HdrExtra).
-:- endif.
 http:post_data_hook(json(Term), Out, HdrExtra) :-
     http:post_data_hook(json(Term, []), Out, HdrExtra).
 http:post_data_hook(json(Term, Options), Out, HdrExtra) :-
@@ -231,12 +218,10 @@ http:post_data_hook(json(Term, Options), Out, HdrExtra) :-
         http_post_data(cgi_stream(RdHandle), Out, HdrExtra),
         close(RdHandle)).
 
-:- if(current_predicate(is_dict/1)).
 json_write_to(Out, Term, Options) :-
     memberchk(json_object(dict), Options),
     !,
     json_write_dict(Out, Term, Options).
-:- endif.
 json_write_to(Out, Term, Options) :-
     json_write(Out, Term, Options).
 
@@ -285,8 +270,6 @@ data_method(post).
 data_method(put).
 data_method(patch).
 
-:- if(current_predicate(is_dict/1)).
-
 %!  http_read_json_dict(+Request, -Dict) is det.
 %!  http_read_json_dict(+Request, -Dict, +Options) is det.
 %
@@ -299,8 +282,6 @@ http_read_json_dict(Request, Dict) :-
 http_read_json_dict(Request, Dict, Options) :-
     merge_options([json_object(dict)], Options, Options1),
     http_read_json(Request, Dict, Options1).
-
-:- endif.
 
 %!  reply_json(+JSONTerm) is det.
 %!  reply_json(+JSONTerm, +Options) is det.
@@ -324,22 +305,18 @@ http_read_json_dict(Request, Dict, Options) :-
 %       to use the new dict representation.  If omitted and Term
 %       is a dict, =dict= is assumed.  SWI-Prolog Version 7.
 
-:- if(current_predicate(is_dict/1)).
 reply_json(Dict) :-
     is_dict(Dict),
     !,
     reply_json_dict(Dict).
-:- endif.
 reply_json(Term) :-
     format('Content-type: application/json; charset=UTF-8~n~n'),
     json_write(current_output, Term).
 
-:- if(current_predicate(is_dict/1)).
 reply_json(Dict, Options) :-
     is_dict(Dict),
     !,
     reply_json_dict(Dict, Options).
-:- endif.
 reply_json(Term, Options) :-
     reply_json2(Term, Options).
 
@@ -352,7 +329,6 @@ reply_json(Term, Options) :-
 %   of   objects   correctly   and     provides   consistency   with
 %   http_read_json_dict/2 and friends.
 
-:- if(current_predicate(is_dict/1)).
 reply_json_dict(Dict) :-
     format('Content-type: application/json; charset=UTF-8~n~n'),
     json_write_dict(current_output, Dict).
@@ -360,8 +336,6 @@ reply_json_dict(Dict) :-
 reply_json_dict(Dict, Options) :-
     merge_options([json_object(dict)], Options, Options1),
     reply_json2(Dict, Options1).
-:- endif.
-
 
 reply_json2(Term, Options) :-
     select_option(content_type(Type), Options, Rest0, 'application/json'),
