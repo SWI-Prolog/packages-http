@@ -1227,7 +1227,13 @@ reply_header(chunked_data, HdrExtra, Code) -->
     ;   transfer_encoding(chunked)
     ),
     "\r\n".
-% non-200 replies
+% non-200 replies without a body (e.g., 1xxx, 204, 304)
+reply_header(status(Status), HdrExtra, Code) -->
+    vstatus(Status, Code),
+    header_fields(HdrExtra, Clen),
+    { Clen = 0 },
+    "\r\n".
+% non-200 replies with a body
 reply_header(Data, HdrExtra, Code) -->
     { status_reply_headers(Data, Tokens, ReplyHeaders),
       http_join_headers(ReplyHeaders, HdrExtra, Headers),
@@ -1239,19 +1245,6 @@ reply_header(Data, HdrExtra, Code) -->
     content_length(html(Tokens), CLen),
     content_type(text/html, utf8),
     "\r\n".
-reply_header(authorise(Method, Tokens), HdrExtra, Code) -->
-    vstatus(authorise, Code),
-    date(now),
-    authenticate(Method),
-    header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
-    "\r\n".
-reply_header(status(Status), HdrExtra, Code) --> % Empty messages: 1xx, 204 and 304
-    vstatus(Status, Code),
-    header_fields(HdrExtra, Clen),
-    { Clen = 0 },
-    "\r\n".
 
 status_reply_headers(created(Location, Tokens), Tokens,
                      [ location(Location) ]).
@@ -1261,6 +1254,8 @@ status_reply_headers(moved_temporary(To, Tokens), Tokens,
                      [ location(To) ]).
 status_reply_headers(see_other(To, Tokens), Tokens,
                      [ location(To) ]).
+status_reply_headers(authorise(Method, Tokens), Tokens,
+                     [ www_authenticate(Method) ]).
 status_reply_headers(not_found(_URL, Tokens), Tokens, []).
 status_reply_headers(forbidden(_URL, Tokens), Tokens, []).
 status_reply_headers(method_not_allowed(_Method, _URL, Tokens), Tokens, []).
@@ -1468,28 +1463,6 @@ status_comment(gateway_timeout) -->
 status_comment(http_version_not_supported) -->
     "HTTP Version Not Supported".
 
-authenticate(negotiate(Data)) -->
-    "WWW-Authenticate: Negotiate ",
-    { base64(Data, DataBase64),
-      atom_codes(DataBase64, Codes)
-    },
-    string(Codes), "\r\n".
-authenticate(negotiate) -->
-    "WWW-Authenticate: Negotiate\r\n".
-
-authenticate(basic) -->
-    !,
-    "WWW-Authenticate: Basic\r\n".
-authenticate(basic(Realm)) -->
-    "WWW-Authenticate: Basic Realm=\"", atom(Realm), "\"\r\n".
-
-authenticate(digest) -->
-    !,
-    "WWW-Authenticate: Digest\r\n".
-authenticate(digest(Details)) -->
-    "WWW-Authenticate: Digest ", atom(Details), "\r\n".
-
-
 date(Time) -->
     "Date: ",
     (   { Time == now }
@@ -1645,7 +1618,7 @@ header_field(Name, Value) -->
 header_field(Name, Value) -->
     field_name(Name),
     ": ",
-    field_value(Value),
+    field_value(Name, Value),
     "\r\n".
 
 %!  read_field_value(-Codes)//
@@ -1791,15 +1764,42 @@ parse_header_value(content_disposition, ValueChars, Disposition) :-
 parse_header_value(content_type, ValueChars, Type) :-
     phrase(parse_content_type(Type), ValueChars).
 
-field_value(set_cookie(Name, Value, Options)) -->
+%!  field_value(+Name, +Value)//
+
+field_value(_, set_cookie(Name, Value, Options)) -->
     !,
     atom(Name), "=", atom(Value),
     value_options(Options, cookie).
-field_value(disposition(Disposition, Options)) -->
+field_value(_, disposition(Disposition, Options)) -->
     !,
     atom(Disposition), value_options(Options, disposition).
-field_value(Atomic) -->
+field_value(www_authenticate, Auth) -->
+    auth_field_value(Auth).
+field_value(_, Atomic) -->
     atom(Atomic).
+
+%!  auth_field_value(+AuthValue)//
+%
+%   Emit the authentication requirements (WWW-Authenticate field).
+
+auth_field_value(negotiate(Data)) -->
+    "Negotiate ",
+    { base64(Data, DataBase64),
+      atom_codes(DataBase64, Codes)
+    },
+    string(Codes), "\r\n".
+auth_field_value(negotiate) -->
+    "Negotiate\r\n".
+auth_field_value(basic) -->
+    !,
+    "Basic\r\n".
+auth_field_value(basic(Realm)) -->
+    "Basic Realm=\"", atom(Realm), "\"\r\n".
+auth_field_value(digest) -->
+    !,
+    "Digest\r\n".
+auth_field_value(digest(Details)) -->
+    "Digest ", atom(Details), "\r\n".
 
 %!  value_options(+List, +Field)//
 %
@@ -2123,6 +2123,9 @@ field_name(Name) -->
 field_name(mime_version) -->
     !,
     "MIME-Version".
+field_name(www_authenticate) -->
+    !,
+    "WWW-Authenticate".
 field_name(Name) -->
     { atom_codes(Name, Chars) },
     wr_field_chars(Chars).
