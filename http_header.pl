@@ -444,8 +444,8 @@ status_reply(resource_error(Why), Out, Options) :-
     status_reply(service_unavailable(Why), Out, Options).
 % replies with content
 status_reply(Status, Out, Options) :-
-    status_code(Status, Code),
-    status_page_hook(Status, Code, HTML, Options),
+    status_has_content(Status),
+    status_page_hook(Status, HTML, Options),
     Status =.. List,
     append(List, [HTML], ExList),
     ExStatus =.. ExList,
@@ -453,27 +453,23 @@ status_reply(Status, Out, Options) :-
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
 
-%!  status_code(+StatusTerm, -HTTPCode)
+%!  status_has_content(+StatusTerm, -HTTPCode)
 %
 %   True when StatusTerm  is  a  status   that  usually  comes  with  an
-%   expanatory content message and HTTPCode is the HTTP numeric code.
-%
-%   @tbd: Merge with status_number_fact, which   also provides the code,
-%   but not whether or not there is  associated content. Possibly we can
-%   leave that to status_page_hook/4 though?
+%   expanatory content message.
 
-status_code(created(_Location),                201).
-status_code(moved(_To),                        301).
-status_code(moved_temporary(_To),              302).
-status_code(see_other(_To),                    303).
-status_code(bad_request(_ErrorTerm),           400).
-status_code(authorise(_Method),                401).
-status_code(forbidden(_URL),                   403).
-status_code(not_found(_URL),                   404).
-status_code(method_not_allowed(_Method, _URL), 405).
-status_code(not_acceptable(_Why),              406).
-status_code(server_error(_ErrorTerm),          500).
-status_code(service_unavailable(_Why),         503).
+status_has_content(created(_Location)).
+status_has_content(moved(_To)).
+status_has_content(moved_temporary(_To)).
+status_has_content(see_other(_To)).
+status_has_content(bad_request(_ErrorTerm)).
+status_has_content(authorise(_Method)).
+status_has_content(forbidden(_URL)).
+status_has_content(not_found(_URL)).
+status_has_content(method_not_allowed(_Method, _URL)).
+status_has_content(not_acceptable(_Why)).
+status_has_content(server_error(_ErrorTerm)).
+status_has_content(service_unavailable(_Why)).
 
 print_html_if_no_head(_, _, Options) :-
     Options.method == head,
@@ -481,7 +477,7 @@ print_html_if_no_head(_, _, Options) :-
 print_html_if_no_head(Out, HTML, _Options) :-
     print_html(Out, HTML).
 
-%!  status_page_hook(+Term, +Code, -HTMLTokens, +Options) is det.
+%!  status_page_hook(+Term, -HTMLTokens, +Options) is det.
 %
 %   Calls the following two hooks to generate an HTML page from a
 %   status reply.
@@ -490,18 +486,19 @@ print_html_if_no_head(Out, HTML, _Options) :-
 %     - http:status_page(+Code, +Context, -HTML)
 %
 %   @arg Term is the status term, e.g., not_found(URL)
-%   @arg Code is the HTTP status code, e.g., 404
 %   @see http:status_page/3
 
-status_page_hook(Term, Code, HTML, Options) :-
+status_page_hook(Term, HTML, Options) :-
     Context = Options.context,
+    functor(Term, Name, _),
+    status_number_fact(Name, Code),
     (   Options.code = Code,
         http:status_reply(Term, HTML, Options)
     ;   http:status_page(Term, Context, HTML)
     ;   http:status_page(Code, Context, HTML) % deprecated
     ),
     !.
-status_page_hook(created(Location), 201, HTML, _Options) :-
+status_page_hook(created(Location), HTML, _Options) :-
     phrase(page([ title('201 Created')
                 ],
                 [ h1('Created'),
@@ -511,7 +508,7 @@ status_page_hook(created(Location), 201, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(moved(To), 301, HTML, _Options) :-
+status_page_hook(moved(To), HTML, _Options) :-
     phrase(page([ title('301 Moved Permanently')
                 ],
                 [ h1('Moved Permanently'),
@@ -521,7 +518,7 @@ status_page_hook(moved(To), 301, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(moved_temporary(To), 302, HTML, _Options) :-
+status_page_hook(moved_temporary(To), HTML, _Options) :-
     phrase(page([ title('302 Moved Temporary')
                 ],
                 [ h1('Moved Temporary'),
@@ -531,7 +528,7 @@ status_page_hook(moved_temporary(To), 302, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(see_other(To), 303, HTML, _Options) :-
+status_page_hook(see_other(To), HTML, _Options) :-
     phrase(page([ title('303 See Other')
                  ],
                  [ h1('See Other'),
@@ -541,7 +538,7 @@ status_page_hook(see_other(To), 303, HTML, _Options) :-
                    \address
                  ]),
             HTML).
-status_page_hook(bad_request(ErrorTerm), 400, HTML, _Options) :-
+status_page_hook(bad_request(ErrorTerm), HTML, _Options) :-
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('400 Bad Request')
                 ],
@@ -550,7 +547,7 @@ status_page_hook(bad_request(ErrorTerm), 400, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(authorise(_Method), 401, HTML, _Options):-
+status_page_hook(authorise(_Method), HTML, _Options):-
     phrase(page([ title('401 Authorization Required')
                 ],
                 [ h1('Authorization Required'),
@@ -564,7 +561,7 @@ status_page_hook(authorise(_Method), 401, HTML, _Options):-
                   \address
                 ]),
            HTML).
-status_page_hook(forbidden(URL), 403, HTML, _Options) :-
+status_page_hook(forbidden(URL), HTML, _Options) :-
     phrase(page([ title('403 Forbidden')
                 ],
                 [ h1('Forbidden'),
@@ -574,7 +571,7 @@ status_page_hook(forbidden(URL), 403, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(not_found(URL), 404, HTML, _Options) :-
+status_page_hook(not_found(URL), HTML, _Options) :-
     phrase(page([ title('404 Not Found')
                 ],
                 [ h1('Not Found'),
@@ -584,7 +581,7 @@ status_page_hook(not_found(URL), 404, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, _Options) :-
+status_page_hook(method_not_allowed(UMethod,URL), HTML, _Options) :-
     phrase(page([ title('405 Method not allowed')
                 ],
                 [ h1('Method not allowed'),
@@ -594,7 +591,7 @@ status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(not_acceptable(WhyHTML), 406, HTML, _Options) :-
+status_page_hook(not_acceptable(WhyHTML), HTML, _Options) :-
     phrase(page([ title('406 Not Acceptable')
                 ],
                 [ h1('Not Acceptable'),
@@ -602,7 +599,7 @@ status_page_hook(not_acceptable(WhyHTML), 406, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(server_error(ErrorTerm), 500, HTML, _Options) :-
+status_page_hook(server_error(ErrorTerm), HTML, _Options) :-
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('500 Internal server error')
                 ],
@@ -611,7 +608,7 @@ status_page_hook(server_error(ErrorTerm), 500, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(service_unavailable(Why), 503, HTML, _Options) :-
+status_page_hook(service_unavailable(Why), HTML, _Options) :-
     phrase(page([ title('503 Service Unavailable')
                 ],
                 [ h1('Service Unavailable'),
