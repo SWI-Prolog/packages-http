@@ -81,6 +81,7 @@
 :- multifile
     http:status_page/3,             % +Status, +Context, -HTML
     http:status_reply/3,            % +Status, -Reply, +Options
+    http:serialize_reply/2,         % +Reply, -Body
     http:post_data_hook/3,          % +Data, +Out, +HdrExtra
     http:mime_type_encoding/2.      % +MimeType, -Encoding
 
@@ -374,16 +375,13 @@ http_status_reply(Status, Out, HdrExtra, Context, Code) :-
 http_status_reply(Status, Out, HdrExtra, Context, Request, Code) :-
     option(method(Method), Request, get),
     parsed_accept(Request, Accept),
-    setup_call_cleanup(
-        set_stream(Out, encoding(utf8)),
-        status_reply_flush(Status, Out,
-                           _{ context: Context,
-                              method:  Method,
-                              code:    Code,
-                              accept:  Accept,
-                              header:  HdrExtra
-                            }),
-        set_stream(Out, encoding(octet))).
+    status_reply_flush(Status, Out,
+                       _{ context: Context,
+                          method:  Method,
+                          code:    Code,
+                          accept:  Accept,
+                          header:  HdrExtra
+                        }).
 
 parsed_accept(Request, Accept) :-
     memberchk(accept(Accept0), Request),
@@ -446,7 +444,7 @@ status_reply(resource_error(Why), Out, Options) :-
 status_reply(Status, Out, Options) :-
     status_has_content(Status),
     status_page_hook(Status, Reply, Options),
-    reply_body(Reply, Body),
+    serialize_body(Reply, Body),
     Status =.. List,
     append(List, [Body], ExList),
     ExStatus =.. ExList,
@@ -472,26 +470,58 @@ status_has_content(not_acceptable(_Why)).
 status_has_content(server_error(_ErrorTerm)).
 status_has_content(service_unavailable(_Why)).
 
-%!  reply_body(+Reply, -Body) is det.
+%!  serialize_body(+Reply, -Body) is det.
+%
+%   Serialize the reply as returned by status_page_hook/3 into a term:
+%
+%     - body(Type, Encoding, Content)
+%     In this term, Type is the media type, Encoding is the
+%     required wire encoding and Content a string representing the
+%     content.
 
-reply_body(html_tokens(Tokens), body(text/html, Len, Content)) :-
+serialize_body(Reply, Body) :-
+    http:serialize_reply(Reply, Body),
+    !.
+serialize_body(html_tokens(Tokens), body(text/html, utf8, Content)) :-
     !,
-    with_output_to(string(Content), print_html(Tokens)),
-    length_of(codes(Content, utf8), Len).
-reply_body(Reply, _) :-
+    with_output_to(string(Content), print_html(Tokens)).
+serialize_body(Reply, Reply) :-
+    Reply = body(_,_,_),
+    !.
+serialize_body(Reply, _) :-
     domain_error(http_reply_body, Reply).
 
 reply_status_body(_, _, Options) :-
     Options.method == head,
     !.
-reply_status_body(Out, body(_Type, _Length, Content), _Options) :-
-    format(Out, '~s', [Content]).
+reply_status_body(Out, body(_Type, Encoding, Content), _Options) :-
+    (   Encoding == octet
+    ->  format(Out, '~s', [Content])
+    ;   setup_call_cleanup(
+            set_stream(Out, encoding(Encoding)),
+            format(Out, '~s', [Content]),
+            set_stream(Out, encoding(octet)))
+    ).
+
+%!  http:serialize_reply(+Reply, -Body) is semidet.
+%
+%   Multifile hook to serialize the result of http:status_reply/3
+%   into a term
+%
+%     - body(Type, Encoding, Content)
+%     In this term, Type is the media type, Encoding is the
+%     required wire encoding and Content a string representing the
+%     content.
 
 %!  status_page_hook(+Term, -Reply, +Options) is det.
 %
 %   Calls the following two hooks to generate an HTML page from a
 %   status reply.
 %
+%     - http:status_reply(+Term, -Reply, +Options)
+%       Provide non-HTML description of the (non-200) reply.
+%       The term Reply is handed to serialize_body/2, calling
+%       the hook http:serialize_reply/2.
 %     - http:status_page(+Term, +Context, -HTML)
 %     - http:status_page(+Code, +Context, -HTML)
 %
@@ -1248,7 +1278,7 @@ reply_header(status(Status), HdrExtra, Code) -->
 % non-200 replies with a body
 reply_header(Data, HdrExtra, Code) -->
     { status_reply_headers(Data,
-                           body(Type, Length, _Content),
+                           body(Type, Encoding, Content),
                            ReplyHeaders),
       http_join_headers(ReplyHeaders, HdrExtra, Headers),
       functor(Data, CodeName, _)
@@ -1256,8 +1286,8 @@ reply_header(Data, HdrExtra, Code) -->
     vstatus(CodeName, Code, Headers),
     date(now),
     header_fields(Headers, CLen),
-    content_length(Length, CLen),
-    content_type(Type),
+    content_length(codes(Content, Encoding), CLen),
+    content_type(Type, Encoding),
     "\r\n".
 
 status_reply_headers(created(Location, Body), Body,
