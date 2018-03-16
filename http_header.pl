@@ -435,7 +435,7 @@ status_reply(not_modified, Out, Options) :-
     !,
     phrase(reply_header(status(not_modified), Options), Header),
     format(Out, '~s', [Header]).
-% aliases (compatibiltiy)
+% aliases (compatibility)
 status_reply(busy, Out, Options) :-
     status_reply(service_unavailable(busy), Out, Options).
 status_reply(unavailable(Why), Out, Options) :-
@@ -1227,7 +1227,7 @@ reply_header(chunked_data, HdrExtra, Code) -->
     ;   transfer_encoding(chunked)
     ),
     "\r\n".
-% non-200 replies without a body (e.g., 1xxx, 204, 304)
+% non-200 replies without a body (e.g., 1xx, 204, 304)
 reply_header(status(Status), HdrExtra, Code) -->
     vstatus(Status, Code),
     header_fields(HdrExtra, Clen),
