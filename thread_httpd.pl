@@ -63,6 +63,7 @@
                        workers(positive_integer),
                        timeout(number),
                        keep_alive_timeout(number),
+                       silent(boolean),
                        ssl(list(any)),  % if http/http_ssl_plugin is loaded
                        pass_to(system:thread_create/3, 3)
                      ]).
@@ -156,6 +157,10 @@ self-signed SSL certificate.
 %     If you need to control resource usage look at the `spawn`
 %     option of http_handler/3 and library(thread_pool).
 %
+%     * silent(Bool)
+%     If `true` (default `false`), do not print an informational
+%     message that the server was started.
+%
 %   A  typical  initialization  for  an    HTTP   server  that  uses
 %   http_dispatch/1 to relay requests to predicates is:
 %
@@ -178,8 +183,11 @@ http_server(Goal, M:Options0) :-
     make_socket(Port, M:Options0, Options),
     create_workers(Options),
     create_server(Goal, Port, Options),
-    print_message(informational,
-                  httpd_started_server(Port)).
+    (   option(silent(true), Options0)
+    ->  true
+    ;   print_message(informational,
+                      httpd_started_server(Port))
+    ).
 http_server(_Goal, _Options) :-
     existence_error(option, port).
 
