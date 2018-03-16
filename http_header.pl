@@ -445,13 +445,14 @@ status_reply(resource_error(Why), Out, Options) :-
 % replies with content
 status_reply(Status, Out, Options) :-
     status_has_content(Status),
-    status_page_hook(Status, HTML, Options),
+    status_page_hook(Status, Reply, Options),
+    reply_body(Reply, Body),
     Status =.. List,
-    append(List, [HTML], ExList),
+    append(List, [Body], ExList),
     ExStatus =.. ExList,
     phrase(reply_header(ExStatus, Options), Header),
     format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
+    reply_status_body(Out, Body, Options).
 
 %!  status_has_content(+StatusTerm, -HTTPCode)
 %
@@ -471,13 +472,22 @@ status_has_content(not_acceptable(_Why)).
 status_has_content(server_error(_ErrorTerm)).
 status_has_content(service_unavailable(_Why)).
 
-print_html_if_no_head(_, _, Options) :-
+%!  reply_body(+Reply, -Body) is det.
+
+reply_body(html_tokens(Tokens), body(text/html, Len, Content)) :-
+    !,
+    with_output_to(string(Content), print_html(Tokens)),
+    length_of(codes(Content, utf8), Len).
+reply_body(Reply, _) :-
+    domain_error(http_reply_body, Reply).
+
+reply_status_body(_, _, Options) :-
     Options.method == head,
     !.
-print_html_if_no_head(Out, HTML, _Options) :-
-    print_html(Out, HTML).
+reply_status_body(Out, body(_Type, _Length, Content), _Options) :-
+    format(Out, '~s', [Content]).
 
-%!  status_page_hook(+Term, -HTMLTokens, +Options) is det.
+%!  status_page_hook(+Term, -Reply, +Options) is det.
 %
 %   Calls the following two hooks to generate an HTML page from a
 %   status reply.
@@ -488,17 +498,19 @@ print_html_if_no_head(Out, HTML, _Options) :-
 %   @arg Term is the status term, e.g., not_found(URL)
 %   @see http:status_page/3
 
-status_page_hook(Term, HTML, Options) :-
+status_page_hook(Term, Reply, Options) :-
     Context = Options.context,
     functor(Term, Name, _),
     status_number_fact(Name, Code),
     (   Options.code = Code,
-        http:status_reply(Term, HTML, Options)
-    ;   http:status_page(Term, Context, HTML)
-    ;   http:status_page(Code, Context, HTML) % deprecated
+        http:status_reply(Term, Reply, Options)
+    ;   http:status_page(Term, Context, HTML),
+        Reply = html_tokens(HTML)
+    ;   http:status_page(Code, Context, HTML), % deprecated
+        Reply = html_tokens(HTML)
     ),
     !.
-status_page_hook(created(Location), HTML, _Options) :-
+status_page_hook(created(Location), html_tokens(HTML), _Options) :-
     phrase(page([ title('201 Created')
                 ],
                 [ h1('Created'),
@@ -508,7 +520,7 @@ status_page_hook(created(Location), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(moved(To), HTML, _Options) :-
+status_page_hook(moved(To), html_tokens(HTML), _Options) :-
     phrase(page([ title('301 Moved Permanently')
                 ],
                 [ h1('Moved Permanently'),
@@ -518,7 +530,7 @@ status_page_hook(moved(To), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(moved_temporary(To), HTML, _Options) :-
+status_page_hook(moved_temporary(To), html_tokens(HTML), _Options) :-
     phrase(page([ title('302 Moved Temporary')
                 ],
                 [ h1('Moved Temporary'),
@@ -528,7 +540,7 @@ status_page_hook(moved_temporary(To), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(see_other(To), HTML, _Options) :-
+status_page_hook(see_other(To), html_tokens(HTML), _Options) :-
     phrase(page([ title('303 See Other')
                  ],
                  [ h1('See Other'),
@@ -538,7 +550,7 @@ status_page_hook(see_other(To), HTML, _Options) :-
                    \address
                  ]),
             HTML).
-status_page_hook(bad_request(ErrorTerm), HTML, _Options) :-
+status_page_hook(bad_request(ErrorTerm), html_tokens(HTML), _Options) :-
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('400 Bad Request')
                 ],
@@ -547,7 +559,7 @@ status_page_hook(bad_request(ErrorTerm), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(authorise(_Method), HTML, _Options):-
+status_page_hook(authorise(_Method), html_tokens(HTML), _Options):-
     phrase(page([ title('401 Authorization Required')
                 ],
                 [ h1('Authorization Required'),
@@ -561,7 +573,7 @@ status_page_hook(authorise(_Method), HTML, _Options):-
                   \address
                 ]),
            HTML).
-status_page_hook(forbidden(URL), HTML, _Options) :-
+status_page_hook(forbidden(URL), html_tokens(HTML), _Options) :-
     phrase(page([ title('403 Forbidden')
                 ],
                 [ h1('Forbidden'),
@@ -571,7 +583,7 @@ status_page_hook(forbidden(URL), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(not_found(URL), HTML, _Options) :-
+status_page_hook(not_found(URL), html_tokens(HTML), _Options) :-
     phrase(page([ title('404 Not Found')
                 ],
                 [ h1('Not Found'),
@@ -581,7 +593,7 @@ status_page_hook(not_found(URL), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(method_not_allowed(UMethod,URL), HTML, _Options) :-
+status_page_hook(method_not_allowed(UMethod,URL), html_tokens(HTML), _Options) :-
     phrase(page([ title('405 Method not allowed')
                 ],
                 [ h1('Method not allowed'),
@@ -591,7 +603,7 @@ status_page_hook(method_not_allowed(UMethod,URL), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(not_acceptable(WhyHTML), HTML, _Options) :-
+status_page_hook(not_acceptable(WhyHTML), html_tokens(HTML), _Options) :-
     phrase(page([ title('406 Not Acceptable')
                 ],
                 [ h1('Not Acceptable'),
@@ -599,7 +611,7 @@ status_page_hook(not_acceptable(WhyHTML), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(server_error(ErrorTerm), HTML, _Options) :-
+status_page_hook(server_error(ErrorTerm), html_tokens(HTML), _Options) :-
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('500 Internal server error')
                 ],
@@ -608,7 +620,7 @@ status_page_hook(server_error(ErrorTerm), HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(service_unavailable(Why), HTML, _Options) :-
+status_page_hook(service_unavailable(Why), html_tokens(HTML), _Options) :-
     phrase(page([ title('503 Service Unavailable')
                 ],
                 [ h1('Service Unavailable'),
@@ -1235,34 +1247,36 @@ reply_header(status(Status), HdrExtra, Code) -->
     "\r\n".
 % non-200 replies with a body
 reply_header(Data, HdrExtra, Code) -->
-    { status_reply_headers(Data, Tokens, ReplyHeaders),
+    { status_reply_headers(Data,
+                           body(Type, Length, _Content),
+                           ReplyHeaders),
       http_join_headers(ReplyHeaders, HdrExtra, Headers),
       functor(Data, CodeName, _)
     },
     vstatus(CodeName, Code, Headers),
     date(now),
     header_fields(Headers, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
+    content_length(Length, CLen),
+    content_type(Type),
     "\r\n".
 
-status_reply_headers(created(Location, Tokens), Tokens,
+status_reply_headers(created(Location, Body), Body,
                      [ location(Location) ]).
-status_reply_headers(moved(To, Tokens), Tokens,
+status_reply_headers(moved(To, Body), Body,
                      [ location(To) ]).
-status_reply_headers(moved_temporary(To, Tokens), Tokens,
+status_reply_headers(moved_temporary(To, Body), Body,
                      [ location(To) ]).
-status_reply_headers(see_other(To, Tokens), Tokens,
+status_reply_headers(see_other(To, Body), Body,
                      [ location(To) ]).
-status_reply_headers(authorise(Method, Tokens), Tokens,
+status_reply_headers(authorise(Method, Body), Body,
                      [ www_authenticate(Method) ]).
-status_reply_headers(not_found(_URL, Tokens), Tokens, []).
-status_reply_headers(forbidden(_URL, Tokens), Tokens, []).
-status_reply_headers(method_not_allowed(_Method, _URL, Tokens), Tokens, []).
-status_reply_headers(server_error(_Error, Tokens), Tokens, []).
-status_reply_headers(service_unavailable(_Why, Tokens), Tokens, []).
-status_reply_headers(not_acceptable(_Why, Tokens), Tokens, []).
-status_reply_headers(bad_request(_Error, Tokens), Tokens, []).
+status_reply_headers(not_found(_URL, Body), Body, []).
+status_reply_headers(forbidden(_URL, Body), Body, []).
+status_reply_headers(method_not_allowed(_Method, _URL, Body), Body, []).
+status_reply_headers(server_error(_Error, Body), Body, []).
+status_reply_headers(service_unavailable(_Why, Body), Body, []).
+status_reply_headers(not_acceptable(_Why, Body), Body, []).
+status_reply_headers(bad_request(_Error, Body), Body, []).
 
 
 %!  vstatus(+Status, -Code)// is det.
@@ -1538,7 +1552,10 @@ length_of(file(File), Len) :-
 length_of(memory_file(Handle), Len) :-
     !,
     size_memory_file(Handle, Len, octet).
-length_of(html(Tokens), Len) :-
+length_of(html_tokens(Tokens), Len) :-
+    !,
+    html_print_length(Tokens, Len).
+length_of(html(Tokens), Len) :-     % deprecated
     !,
     html_print_length(Tokens, Len).
 length_of(bytes(Bytes), Len) :-
