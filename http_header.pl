@@ -437,7 +437,11 @@ status_reply(not_modified, Out, Options) :-
     format(Out, '~s', [Header]).
 % aliases (compatibiltiy)
 status_reply(busy, Out, Options) :-
-    status_reply(unavailable(busy), Out, Options).
+    status_reply(service_unavailable(busy), Out, Options).
+status_reply(unavailable(Why), Out, Options) :-
+    status_reply(service_unavailable(Why), Out, Options).
+status_reply(resource_error(Why), Out, Options) :-
+    status_reply(service_unavailable(Why), Out, Options).
 % replies with content
 status_reply(Status, Out, Options) :-
     status_code(Status, Code),
@@ -469,8 +473,7 @@ status_code(not_found(_URL),                   404).
 status_code(method_not_allowed(_Method, _URL), 405).
 status_code(not_acceptable(_Why),              406).
 status_code(server_error(_ErrorTerm),          500).
-status_code(unavailable(_Why),                 503).
-status_code(resource_error(_ErrorTerm),        503).
+status_code(service_unavailable(_Why),         503).
 
 print_html_if_no_head(_, _, Options) :-
     Options.method == head,
@@ -608,34 +611,23 @@ status_page_hook(server_error(ErrorTerm), 500, HTML, _Options) :-
                   \address
                 ]),
            HTML).
-status_page_hook(resource_error(ErrorTerm), 503, HTML, _Options) :-
-    '$messages':translate_message(ErrorTerm, Lines, []),
-    phrase(page([ title('503 Service Unavailable')
-                ],
-                [ h1('Insufficient resources'),
-                  p(\html_message_lines(Lines)),
-                  \address
-                ]),
-           HTML).
-status_page_hook(unavailable(busy), 503, HTML, _Options) :-
-    !,
-    phrase(page([ title('503 Service Unavailable')
-                ],
-                [ h1('Busy'),
-                  p(['The server is temporarily out of resources, ',
-                     'please try again later']),
-                  \address
-                ]),
-           HTML).
-status_page_hook(unavailable(WhyHTML), 503, HTML, _Options) :-
+status_page_hook(service_unavailable(Why), 503, HTML, _Options) :-
     phrase(page([ title('503 Service Unavailable')
                 ],
                 [ h1('Service Unavailable'),
-                  WhyHTML,
+                  \unavailable(Why),
                   \address
                 ]),
            HTML).
 
+unavailable(busy) -->
+    html(p(['The server is temporarily out of resources, ',
+            'please try again later'])).
+unavailable(error(Formal,Context)) -->
+    { '$messages':translate_message(error(Formal,Context), Lines, []) },
+    html_message_lines(Lines).
+unavailable(HTML) -->
+    html(HTML).
 
 html_message_lines([]) -->
     [].
@@ -1160,7 +1152,7 @@ http_reply_header(Out, What, HdrExtra) :-
 %     * not_found(+URL, +HTMLTokens)
 %     * server_error(+Error, +Tokens)
 %     * resource_error(+Error, +Tokens)
-%     * unavailable(+Why, +Tokens)
+%     * service_unavailable(+Why, +Tokens)
 %
 %   @see http_status_reply/4 formulates the not-200-ok HTTP replies.
 
@@ -1238,63 +1230,15 @@ reply_header(chunked_data, HdrExtra, Code) -->
     ;   transfer_encoding(chunked)
     ),
     "\r\n".
-reply_header(moved(To, Tokens), HdrExtra, Code) -->
-    vstatus(moved, Code, HdrExtra),
+% non-200 replies
+reply_header(Data, HdrExtra, Code) -->
+    { status_reply_headers(Data, Tokens, ReplyHeaders),
+      http_join_headers(ReplyHeaders, HdrExtra, Headers),
+      functor(Data, CodeName, _)
+    },
+    vstatus(CodeName, Code, Headers),
     date(now),
-    header_field('Location', To),
-    header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
-    "\r\n".
-reply_header(created(Location, Tokens), HdrExtra, Code) -->
-    vstatus(created, Code, HdrExtra),
-    date(now),
-    header_field('Location', Location),
-    header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
-    "\r\n".
-reply_header(moved_temporary(To, Tokens), HdrExtra, Code) -->
-    vstatus(moved_temporary, Code, HdrExtra),
-    date(now),
-    header_field('Location', To),
-    header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
-    "\r\n".
-reply_header(see_other(To, Tokens), HdrExtra, Code) -->
-    vstatus(see_other, Code, HdrExtra),
-    date(now),
-    header_field('Location', To),
-    header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html, utf8),
-    "\r\n".
-reply_header(not_found(_URL, Tokens), HdrExtra, Code) -->
-    reply_header(status(not_found, Tokens), HdrExtra, Code).
-reply_header(forbidden(_URL, Tokens), HdrExtra, Code) -->
-    reply_header(status(forbidden, Tokens), HdrExtra, Code).
-reply_header(method_not_allowed(_Method, _URL, Tokens), HdrExtra, Code) -->
-    reply_header(status(method_not_allowed, Tokens), HdrExtra, Code).
-reply_header(server_error(_Error, Tokens), HdrExtra, Code) -->
-    reply_header(status(server_error, Tokens), HdrExtra, Code).
-reply_header(unavailable(_Why, Tokens), HdrExtra, Code) -->
-    reply_header(status(service_unavailable, Tokens), HdrExtra, Code).
-reply_header(not_acceptable(_Why, Tokens), HdrExtra, Code) -->
-    reply_header(status(not_acceptable, Tokens), HdrExtra, Code).
-reply_header(bad_request(_Error, Tokens), HdrExtra, Code) -->
-    reply_header(status(bad_request, Tokens), HdrExtra, Code).
-reply_header(resource_error(_Error, Tokens), HdrExtra, Code) -->
-    reply_header(status(service_unavailable, Tokens), HdrExtra, Code).
-reply_header(status(Status), HdrExtra, Code) --> % Empty messages: 1xx, 204 and 304
-    vstatus(Status, Code),
-    header_fields(HdrExtra, Clen),
-    { Clen = 0 },
-    "\r\n".
-reply_header(status(Status, Tokens), HdrExtra, Code) -->
-    vstatus(Status, Code),
-    date(now),
-    header_fields(HdrExtra, CLen),
+    header_fields(Headers, CLen),
     content_length(html(Tokens), CLen),
     content_type(text/html, utf8),
     "\r\n".
@@ -1306,6 +1250,28 @@ reply_header(authorise(Method, Tokens), HdrExtra, Code) -->
     content_length(html(Tokens), CLen),
     content_type(text/html, utf8),
     "\r\n".
+reply_header(status(Status), HdrExtra, Code) --> % Empty messages: 1xx, 204 and 304
+    vstatus(Status, Code),
+    header_fields(HdrExtra, Clen),
+    { Clen = 0 },
+    "\r\n".
+
+status_reply_headers(created(Location, Tokens), Tokens,
+                     [ location(Location) ]).
+status_reply_headers(moved(To, Tokens), Tokens,
+                     [ location(To) ]).
+status_reply_headers(moved_temporary(To, Tokens), Tokens,
+                     [ location(To) ]).
+status_reply_headers(see_other(To, Tokens), Tokens,
+                     [ location(To) ]).
+status_reply_headers(not_found(_URL, Tokens), Tokens, []).
+status_reply_headers(forbidden(_URL, Tokens), Tokens, []).
+status_reply_headers(method_not_allowed(_Method, _URL, Tokens), Tokens, []).
+status_reply_headers(server_error(_Error, Tokens), Tokens, []).
+status_reply_headers(service_unavailable(_Why, Tokens), Tokens, []).
+status_reply_headers(not_acceptable(_Why, Tokens), Tokens, []).
+status_reply_headers(bad_request(_Error, Tokens), Tokens, []).
+
 
 %!  vstatus(+Status, -Code)// is det.
 %!  vstatus(+Status, -Code, +HdrExtra)// is det.
