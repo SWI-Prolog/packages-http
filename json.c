@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2016, University of Amsterdam
+    Copyright (c)  2007-2018, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,115 @@
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
 #include <string.h>
+
+
+		 /*******************************
+		 *	       READ		*
+		 *******************************/
+
+#define FAST_BUFFER 256
+
+typedef struct text
+{ char *t;
+  char *o;
+  char *e;
+  size_t allocated;
+  char buf[FAST_BUFFER];
+} text;
+
+
+static void
+init_text(text *t)
+{ t->t = t->o = t->buf;
+  t->e = t->o + FAST_BUFFER;
+}
+
+static void
+free_text(text *t)
+{ if ( t->t != t->buf )
+    free(t->t);
+}
+
+static int
+put_byte(text *t, int c)
+{ if ( t->o < t->e )
+  { *t->o++ = c;
+  } else
+  { size_t cnt = t->o - t->t;
+
+    if ( t->t == t->buf )
+    { t->allocated = FAST_BUFFER*2;
+      if ( !(t->t = malloc(t->allocated)) )
+	return -1;
+    } else {
+      char *n;
+      t->allocated *= 2;
+      if ( (n = realloc(t->t, t->allocated)) )
+	t->t = n;
+      else
+	return -1;
+    }
+    t->o = t->t + cnt;
+    t->e = t->t + t->allocated;
+    *t->o++ = c;
+  }
+
+  return 0;
+}
+
+
+
+static foreign_t
+json_read_number(term_t stream, term_t c0, term_t number, term_t next)
+{ IOSTREAM *in;
+  text t;
+  int rc = FALSE;
+  int c;
+  term_t tmp;
+
+  if ( !PL_get_stream(stream, &in, SIO_INPUT) ||
+       !PL_get_char_ex(c0, &c, FALSE) )
+    return FALSE;
+
+  init_text(&t);
+  put_byte(&t, c);
+
+  for(;;)
+  { c = Sgetcode(in);
+
+    if ( (c >= '0' && c <= '9') ||
+	 c == '.' || c == '-' || c == 'e' || c == 'E' )
+    { if ( put_byte(&t, c) != 0 )
+      { rc = PL_resource_error("memory");
+	break;
+      }
+
+      continue;
+    }
+    if ( put_byte(&t, 0) != 0 )
+    { rc = PL_resource_error("memory");
+      break;
+    }
+
+    rc = ( (tmp = PL_new_term_ref()) &&
+	   PL_chars_to_term(t.t, tmp) &&
+	   PL_unify(tmp, number) );
+
+    break;
+  }
+  free_text(&t);
+
+  PL_release_stream(in);
+
+  return rc && PL_unify_integer(next, c);
+}
+
+
+
+
+		 /*******************************
+		 *	      WRITE		*
+		 *******************************/
 
 #define TRYPUTC(c, s) if ( Sputcode(c, s) < 0 ) { return -1; }
 
@@ -166,6 +275,7 @@ out:
 
 install_t
 install_json()
-{ PL_register_foreign("json_write_string", 2, json_write_string, 0);
+{ PL_register_foreign("json_read_number",  4, json_read_number,  0);
+  PL_register_foreign("json_write_string", 2, json_write_string, 0);
   PL_register_foreign("json_write_indent", 3, json_write_indent, 0);
 }

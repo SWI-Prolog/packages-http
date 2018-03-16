@@ -283,13 +283,11 @@ json_term(0'", Stream, String, Next, Options) :-
     get_code(Stream, Next).
 json_term(0'-, Stream, Number, Next, _Options) :-
     !,
-    json_number_codes(Stream, Codes, Next),
-    number_codes(Number, [0'-|Codes]).
+    json_read_number(Stream, 0'-, Number, Next).
 json_term(D, Stream, Number, Next, _Options) :-
     between(0'0, 0'9, D),
     !,
-    json_number_codes(Stream, Codes, Next),
-    number_codes(Number, [D|Codes]).
+    json_read_number(Stream, D, Number, Next).
 json_term(C, Stream, Constant, Next, Options) :-
     get_code(Stream, C1),
     json_identifier_codes(C1, Stream, Codes, Next),
@@ -374,24 +372,6 @@ escape(0'u, Stream, C) :-
     code_type(C3, xdigit(D3)),
     code_type(C4, xdigit(D4)),
     C is D1<<12+D2<<8+D3<<4+D4.
-
-json_number_codes(Stream, Codes, Next) :-
-    get_code(Stream, C1),
-    json_number_codes(C1, Stream, Codes, Next).
-
-json_number_codes(C1, Stream, [C1|Codes], Next) :-
-    number_code(C1),
-    !,
-    get_code(Stream, C2),
-    json_number_codes(C2, Stream, Codes, Next).
-json_number_codes(C, _, [], C).
-
-term_expansion(number_code(all),
-               Clauses) :-
-    string_codes("0123456789.-+eE", Codes),
-    findall(number_code(C), member(C, Codes), Clauses).
-
-number_code(all).
 
 json_identifier_codes(C1, Stream, [C1|T], Next) :-
     between(0'a, 0'z, C1),
