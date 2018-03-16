@@ -345,3 +345,58 @@ reply_json2(Term, Options) :-
     ),
     format('Content-type: ~w~n~n', [Type]),
     json_write_to(current_output, Term, Rest).
+
+
+		 /*******************************
+		 *       STATUS HANDLING	*
+		 *******************************/
+
+:- multifile
+    http:status_reply/3,
+    http:serialize_reply/2.
+
+http:serialize_reply(json(Term), body(application/json, utf8, Content)) :-
+    with_output_to(string(Content),
+                   json_write_dict(current_output, Term, [])).
+
+http:status_reply(Term, json(Reply), Options) :-
+    prefer_json(Options.get(accept)),
+    json_status_reply(Term, Lines, Extra),
+    phrase(txt_message_lines(Lines), Codes),
+    string_codes(Message, Codes),
+    Reply = _{code:Options.code, message:Message}.put(Extra).
+
+txt_message_lines([]) -->
+    [].
+txt_message_lines([nl|T]) -->
+    !,
+    "\n",
+    txt_message_lines(T).
+txt_message_lines([flush]) -->
+    !.
+txt_message_lines([FmtArgs|T]) -->
+    dcg_format(FmtArgs),
+    txt_message_lines(T).
+
+dcg_format(Fmt-Args, List, Tail) :-
+    !,
+    format(codes(List,Tail), Fmt, Args).
+dcg_format(Fmt, List, Tail) :-
+    format(codes(List,Tail), Fmt, []).
+
+%!  prefer_json(+Accept)
+%
+%   True when the accept encoding prefers JSON.
+
+prefer_json(Accept) :-
+    memberchk(media(application/json, _, JSONP,  []), Accept),
+    (   member(media(text/html, _, HTMLP,  []), Accept)
+    ->  JSONP > HTMLP
+    ;   true
+    ).
+
+%!  json_status_reply(+Term, -MsgLines, -ExtraJSON) is semidet.
+
+json_status_reply(not_found(Location),
+                  [ 'Path not found: ~w'-[Location] ],
+                  _{location:Location}).
