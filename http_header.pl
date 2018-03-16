@@ -410,6 +410,7 @@ status_reply_flush(Status, Out, Options) :-
 %     - code
 %     - accept
 
+% Replies without content
 status_reply(no_content, Out, Options) :-
     !,
     phrase(reply_header(status(no_content), Options), Header),
@@ -424,107 +425,52 @@ status_reply(switching_protocols(_Goal,SwitchOptions), Out, Options) :-
     phrase(reply_header(status(switching_protocols),
                         Options.put(header,HdrExtra)), Header),
     format(Out, '~s', [Header]).
-status_reply(created(Location), Out, Options) :-
-    !,
-    status_page_hook(created(Location), 201, HTML, Options),
-    phrase(reply_header(created(Location, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(moved(To), Out, Options) :-
-    !,
-    status_page_hook(moved(To), 301, HTML, Options),
-    phrase(reply_header(moved(To, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(moved_temporary(To), Out, Options) :-
-    !,
-    status_page_hook(moved_temporary(To), 302, HTML, Options),
-    phrase(reply_header(moved_temporary(To, HTML),
-                        Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(see_other(To),Out, Options) :-
-    !,
-    status_page_hook(see_other(To), 303, HTML, Options),
-    phrase(reply_header(see_other(To, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(bad_request(ErrorTerm), Out, Options) :-
-    !,
-    status_page_hook(bad_request(ErrorTerm), 400, HTML, Options),
-    phrase(reply_header(status(bad_request, HTML),
-                        Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(not_found(URL), Out, Options) :-
-    !,
-    status_page_hook(not_found(URL), 404, HTML, Options),
-    phrase(reply_header(status(not_found, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(method_not_allowed(Method, URL), Out, Options) :-
-    !,
-    upcase_atom(Method, UMethod),
-    status_page_hook(method_not_allowed(UMethod,URL), 405, HTML, Options),
-    phrase(reply_header(status(method_not_allowed, HTML),
-                        Options), Header),
-    format(Out, '~s', [Header]),
-    if_no_head(print_html(Out, HTML), Options).
-status_reply(forbidden(URL), Out, Options) :-
-    !,
-    status_page_hook(forbidden(URL), 403, HTML, Options),
-    phrase(reply_header(status(forbidden, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
 status_reply(authorise(basic, ''), Out, Options) :-
     !,
     status_reply(authorise(basic), Out, Options).
 status_reply(authorise(basic, Realm), Out, Options) :-
     !,
     status_reply(authorise(basic(Realm)), Out, Options).
-status_reply(authorise(Method), Out, Options) :-
-    !,
-    status_page_hook(authorise(Method), 401, HTML, Options),
-    phrase(reply_header(authorise(Method, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
 status_reply(not_modified, Out, Options) :-
     !,
     phrase(reply_header(status(not_modified), Options), Header),
     format(Out, '~s', [Header]).
-status_reply(server_error(ErrorTerm), Out, Options) :-
-    !,
-    in_or_exclude_backtrace(ErrorTerm, ErrorTerm1),
-    status_page_hook(server_error(ErrorTerm1), 500, HTML, Options),
-    phrase(reply_header(status(server_error, HTML),
-                        Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(not_acceptable(Why), Out, Options) :-
-    !,
-    status_page_hook(not_acceptable(Why), 406, HTML, Options),
-    phrase(reply_header(status(not_acceptable, HTML), Options), Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(unavailable(Why), Out, Options) :-
-    !,
-    status_page_hook(unavailable(Why), 503, HTML, Options),
-    phrase(reply_header(status(service_unavailable, HTML), Options),
-           Header),
-    format(Out, '~s', [Header]),
-    print_html_if_no_head(Out, HTML, Options).
-status_reply(resource_error(ErrorTerm), Out, Options) :-
-    !,
-    '$messages':translate_message(ErrorTerm, Lines, []),
-    status_reply(unavailable(p(\html_message_lines(Lines))),
-                 Out, Options).
+% aliases (compatibiltiy)
 status_reply(busy, Out, Options) :-
-    !,
-    status_page_hook(unavailable(busy), 503, HTML, Options),
-    phrase(reply_header(status(service_unavailable, HTML), Options),
-           Header),
+    status_reply(unavailable(busy), Out, Options).
+% replies with content
+status_reply(Status, Out, Options) :-
+    status_code(Status, Code),
+    status_page_hook(Status, Code, HTML, Options),
+    Status =.. List,
+    append(List, [HTML], ExList),
+    ExStatus =.. ExList,
+    phrase(reply_header(ExStatus, Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
+
+%!  status_code(+StatusTerm, -HTTPCode)
+%
+%   True when StatusTerm  is  a  status   that  usually  comes  with  an
+%   expanatory content message and HTTPCode is the HTTP numeric code.
+%
+%   @tbd: Merge with status_number_fact, which   also provides the code,
+%   but not whether or not there is  associated content. Possibly we can
+%   leave that to status_page_hook/4 though?
+
+status_code(created(_Location),                201).
+status_code(moved(_To),                        301).
+status_code(moved_temporary(_To),              302).
+status_code(see_other(_To),                    303).
+status_code(bad_request(_ErrorTerm),           400).
+status_code(authorise(_Method),                401).
+status_code(forbidden(_URL),                   403).
+status_code(not_found(_URL),                   404).
+status_code(method_not_allowed(_Method, _URL), 405).
+status_code(not_acceptable(_Why),              406).
+status_code(server_error(_ErrorTerm),          500).
+status_code(unavailable(_Why),                 503).
+status_code(resource_error(_ErrorTerm),        503).
 
 print_html_if_no_head(_, _, Options) :-
     Options.method == head,
@@ -1194,8 +1140,8 @@ http_reply_header(Out, What, HdrExtra) :-
 %   not-200-ok HTTP status reply. The   following status replies are
 %   defined.
 %
-%     * moved(+URL, +HTMLTokens)
 %     * created(+URL, +HTMLTokens)
+%     * moved(+URL, +HTMLTokens)
 %     * moved_temporary(+URL, +HTMLTokens)
 %     * see_other(+URL, +HTMLTokens)
 %     * status(+Status)
@@ -1303,14 +1249,16 @@ reply_header(moved_temporary(To, Tokens), HdrExtra, Code) -->
     content_length(html(Tokens), CLen),
     content_type(text/html, utf8),
     "\r\n".
-reply_header(see_other(To,Tokens),HdrExtra, Code) -->
+reply_header(see_other(To, Tokens), HdrExtra, Code) -->
     vstatus(see_other, Code, HdrExtra),
     date(now),
-    header_field('Location',To),
+    header_field('Location', To),
     header_fields(HdrExtra, CLen),
     content_length(html(Tokens), CLen),
     content_type(text/html, utf8),
     "\r\n".
+reply_header(not_found(_URL, Tokens), HdrExtra, Code) -->
+    reply_header(status(not_found, Tokens), HdrExtra, Code).
 reply_header(status(Status), HdrExtra, Code) --> % Empty messages: 1xx, 204 and 304
     vstatus(Status, Code),
     header_fields(HdrExtra, Clen),
@@ -1388,11 +1336,11 @@ status_number(Status, Code) -->
 %   "
 % @see http://tools.ietf.org/html/rfc7231#section-6
 
-status_number(Status, Code):-
+status_number(Status, Code) :-
     nonvar(Status),
     !,
     status_number_fact(Status, Code).
-status_number(Status, Code):-
+status_number(Status, Code) :-
     nonvar(Code),
     !,
     (   between(100, 599, Code)
