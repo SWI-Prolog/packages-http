@@ -386,14 +386,12 @@ json_number_codes(C1, Stream, [C1|Codes], Next) :-
     json_number_codes(C2, Stream, Codes, Next).
 json_number_codes(C, _, [], C).
 
-number_code(C) :-
-    between(0'0, 0'9, C),
-    !.
-number_code(0'.).
-number_code(0'-).
-number_code(0'+).
-number_code(0'e).
-number_code(0'E).
+term_expansion(number_code(all),
+               Clauses) :-
+    string_codes("0123456789.-+eE", Codes),
+    findall(number_code(C), member(C, Codes), Clauses).
+
+number_code(all).
 
 json_identifier_codes(C1, Stream, [C1|T], Next) :-
     between(0'a, 0'z, C1),
