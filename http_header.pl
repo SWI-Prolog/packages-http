@@ -426,61 +426,29 @@ status_reply(switching_protocols(_Goal,SwitchOptions), Out, Options) :-
     format(Out, '~s', [Header]).
 status_reply(created(Location), Out, Options) :-
     !,
-    phrase(page([ title('201 Created')
-                ],
-                [ h1('Created'),
-                  p(['The document was created ',
-                     a(href(Location), ' Here')
-                    ]),
-                  \address
-                ]),
-           HTML),
+    status_page_hook(created(Location), 201, HTML, Options),
     phrase(reply_header(created(Location, HTML), Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
 status_reply(moved(To), Out, Options) :-
     !,
-    phrase(page([ title('301 Moved Permanently')
-                ],
-                [ h1('Moved Permanently'),
-                  p(['The document has moved ',
-                     a(href(To), ' Here')
-                    ]),
-                  \address
-                ]),
-           HTML),
+    status_page_hook(moved(To), 301, HTML, Options),
     phrase(reply_header(moved(To, HTML), Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
 status_reply(moved_temporary(To), Out, Options) :-
     !,
-    phrase(page([ title('302 Moved Temporary')
-                ],
-                [ h1('Moved Temporary'),
-                  p(['The document is currently ',
-                     a(href(To), ' Here')
-                    ]),
-                  \address
-                ]),
-           HTML),
+    status_page_hook(moved_temporary(To), 302, HTML, Options),
     phrase(reply_header(moved_temporary(To, HTML),
                         Options), Header),
     format(Out, '~s', [Header]),
     print_html_if_no_head(Out, HTML, Options).
 status_reply(see_other(To),Out, Options) :-
     !,
-    phrase(page([ title('303 See Other')
-                 ],
-                 [ h1('See Other'),
-                   p(['See other document ',
-                      a(href(To), ' Here')
-                     ]),
-                   \address
-                 ]),
-            HTML),
-     phrase(reply_header(see_other(To, HTML), Options), Header),
-     format(Out, '~s', [Header]),
-     print_html_if_no_head(Out, HTML, Options).
+    status_page_hook(see_other(To), 303, HTML, Options),
+    phrase(reply_header(see_other(To, HTML), Options), Header),
+    format(Out, '~s', [Header]),
+    print_html_if_no_head(Out, HTML, Options).
 status_reply(bad_request(ErrorTerm), Out, Options) :-
     !,
     status_page_hook(bad_request(ErrorTerm), 400, HTML, Options),
@@ -584,6 +552,46 @@ status_page_hook(Term, Code, HTML, Options) :-
     ;   http:status_page(Code, Context, HTML) % deprecated
     ),
     !.
+status_page_hook(created(Location), 201, HTML, _Options) :-
+    phrase(page([ title('201 Created')
+                ],
+                [ h1('Created'),
+                  p(['The document was created ',
+                     a(href(Location), ' Here')
+                    ]),
+                  \address
+                ]),
+           HTML).
+status_page_hook(moved(To), 301, HTML, _Options) :-
+    phrase(page([ title('301 Moved Permanently')
+                ],
+                [ h1('Moved Permanently'),
+                  p(['The document has moved ',
+                     a(href(To), ' Here')
+                    ]),
+                  \address
+                ]),
+           HTML).
+status_page_hook(moved_temporary(To), 302, HTML, _Options) :-
+    phrase(page([ title('302 Moved Temporary')
+                ],
+                [ h1('Moved Temporary'),
+                  p(['The document is currently ',
+                     a(href(To), ' Here')
+                    ]),
+                  \address
+                ]),
+           HTML).
+status_page_hook(see_other(To), 303, HTML, _Options) :-
+    phrase(page([ title('303 See Other')
+                 ],
+                 [ h1('See Other'),
+                   p(['See other document ',
+                      a(href(To), ' Here')
+                     ]),
+                   \address
+                 ]),
+            HTML).
 status_page_hook(bad_request(ErrorTerm), 400, HTML, _Options) :-
     '$messages':translate_message(ErrorTerm, Lines, []),
     phrase(page([ title('400 Bad Request')
@@ -2624,6 +2632,10 @@ mkfield(Name, Value, [Att|Tail], Tail) :-
 %   allows for emitting custom error pages   for  the following HTTP
 %   page types:
 %
+%     - 201 - created(Location)
+%     - 301 - moved(To)
+%     - 302 - moved_temporary(To)
+%     - 303 - see_other(To)
 %     - 400 - bad_request(ErrorTerm)
 %     - 401 - authorise(AuthMethod)
 %     - 403 - forbidden(URL)
