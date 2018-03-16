@@ -399,32 +399,10 @@ json_constant(null, Constant, Options) :-
 
 ws(Stream, Next) :-
     get_code(Stream, C0),
-    ws(C0, Stream, Next).
+    json_skip_ws(Stream, C0, Next).
 
-ws(C0, Stream, C) :-
-    ws(C0),
-    !,
-    get_code(Stream, C1),
-    ws(C1, Stream, C).
-ws(0'/, Stream, C) :-
-    !,
-    get_code(Stream, Cmt1),
-    !,
-    expect(Cmt1, 0'/, Stream),
-    skip(Stream, 0'\n),
-    get_code(Stream, C0),
-    ws(C0, Stream, C).
-ws(C, _, C).
-
-ws(0' ).
-ws(0'\t).
-ws(0'\n).
-ws(0'\r).
-
-expect(C, C, _) :- !.
-expect(_, 0'/, Stream) :-
-    !,
-    syntax_error(illegal_comment, Stream).
+ws(C0, Stream, Next) :-
+    json_skip_ws(Stream, C0, Next).
 
 syntax_error(Message, Stream) :-
     stream_error_context(Stream, Context),

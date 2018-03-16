@@ -139,7 +139,33 @@ json_read_number(term_t stream, term_t c0, term_t number, term_t next)
   return rc && PL_unify_integer(next, c);
 }
 
+static int
+is_ws(int c)
+{ return ( c == ' ' || c == '\t' || c == '\n' || c == '\r' );
+}
 
+static foreign_t
+json_skip_ws(term_t stream, term_t c0, term_t next)
+{ int c;
+
+  if ( !PL_get_char_ex(c0, &c, FALSE) )
+    return FALSE;
+
+  if ( is_ws(c) )
+  { IOSTREAM *in;
+
+    if ( !PL_get_stream(stream, &in, SIO_INPUT) )
+      return FALSE;
+
+    do
+    { c = Sgetcode(in);
+    } while ( is_ws(c) );
+
+    PL_release_stream(in);
+  }
+
+  return PL_unify_integer(next, c);
+}
 
 
 		 /*******************************
@@ -276,6 +302,7 @@ out:
 install_t
 install_json()
 { PL_register_foreign("json_read_number",  4, json_read_number,  0);
+  PL_register_foreign("json_skip_ws",      3, json_skip_ws,      0);
   PL_register_foreign("json_write_string", 2, json_write_string, 0);
   PL_register_foreign("json_write_indent", 3, json_write_indent, 0);
 }

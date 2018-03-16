@@ -89,7 +89,7 @@ test(empty, X == json([])) :-
 test(empty, X == json([])) :-
     atom_json_term('  {  } ', X, []).
 test(empty, X == json([])) :-
-    atom_json_term('  {\n//comment\n} ', X, []).
+    atom_json_term('  { } ', X, []).
 
 
 :- end_tests(json_read).
