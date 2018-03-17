@@ -98,6 +98,9 @@ and composing HTTP headers. Its functionality  is normally hidden by the
 other parts of the HTTP server and client libraries.
 */
 
+:- discontiguous
+    term_expansion/2.
+
 
                  /*******************************
                  *          READ REQUEST        *
@@ -2070,8 +2073,6 @@ token_chars([H|T]) -->
     token_chars(T).
 token_chars([]) --> [].
 
-token_char(C) --> [C], { token_char(C) }.
-
 token_char(C) :-
     \+ ctl(C),
     \+ separator_code(C).
@@ -2099,6 +2100,14 @@ separator_code(0'}).
 separator_code(0'\s).
 separator_code(0'\t).
 
+term_expansion(token_char(x) --> [x], Clauses) :-
+    findall((token_char(C)-->[C]),
+            (   between(0, 255, C),
+                token_char(C)
+            ),
+            Clauses).
+
+token_char(x) --> [x].
 
 %!  quoted_string(-Text)// is semidet.
 %
