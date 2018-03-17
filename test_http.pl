@@ -13,6 +13,7 @@
 
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/html_write)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_header)).
@@ -89,6 +90,14 @@ test(connection, Close == close) :-
         ),
         http_stop_server(Port, [])).
 
+test(ok_html_1, Code == 200) :-
+     request('/ok/html_1', Code, Type, Content, []),
+     assertion(html_content(Type, Content,
+                           "world")).
+test(ok_html_unicode, Code == 200) :-
+     request('/ok/html_unicode', Code, Type, Content, []),
+     assertion(html_content(Type, Content,
+                           "world")).
 test(not_found, Code == 404) :-
     request('/not-found', Code, Type, Content, []),
     assertion(html_content(Type, Content,
@@ -153,14 +162,21 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
           setup_call_cleanup(
               http_open(URL, Stream,
                         [ status_code(Code),
-                          header(content_type, Type)
+                          header(content_type, Type),
+                          header(content_length, Len)
                         | ExtraHdrs
                         ]),
-              read_string(Stream, _, Content),
+              read_string(Stream, CLen, Content),
               close(Stream))
         ),
-        http_stop_server(Port, [])).
+        http_stop_server(Port, [])),
+    (   Len == ''
+    ->  assertion(CLen == 0)
+    ;   assertion(CLen == Len)
+    ).
 
+:- http_handler('/ok/html_1', ok_html_1, []).
+:- http_handler('/ok/html_unicode', ok_html_unicode, []).
 :- http_handler('/reply-source', reply_source, []).
 :- http_handler('/forbidden', forbidden, []).
 :- http_handler('/method_not_allowed', method_not_allowed,
@@ -175,6 +191,19 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
 :- http_handler('/resource-error', resource_error_handler, []).
 :- http_handler('/bad-request', bad_request_handler, []).
 :- http_handler('/created', created, []).
+
+ok_html_1(_Request) :-
+    reply_html_page(
+        title('Test'),
+        h1('Hello world')).
+
+ok_html_unicode(_Request) :-
+    numlist(1000, 1050, Text),
+    reply_html_page(
+        title('Test'),
+        [ h1('Hello world'),
+          p([], '~s'-[Text])
+        ]).
 
 reply_source(Request) :-
     module_property(test_http, file(File)),
