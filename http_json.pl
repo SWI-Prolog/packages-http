@@ -41,7 +41,9 @@
             http_read_json/2,           % +Request, -JSON
             http_read_json/3,           % +Request, -JSON, +Options
             http_read_json_dict/2,      % +Request, -Dict
-            http_read_json_dict/3       % +Request, -Dict, +Options
+            http_read_json_dict/3,      % +Request, -Dict, +Options
+
+            is_json_content_type/1      % +HeaderValue
           ]).
 :- use_module(http_client).
 :- use_module(http_header).
@@ -152,7 +154,7 @@ terms.
 
 http_client:http_convert_data(In, Fields, Data, Options) :-
     memberchk(content_type(Type), Fields),
-    is_json_type(Type),
+    is_json_content_type(Type),
     !,
     (   memberchk(content_length(Bytes), Fields)
     ->  setup_call_cleanup(
@@ -166,7 +168,12 @@ http_client:http_convert_data(In, Fields, Data, Options) :-
     ).
 
 
-is_json_type(String) :-
+%!  is_json_content_type(+ContentType) is semidet.
+%
+%   True  if  ContentType  is  a  header  value  (either  parsed  or  as
+%   atom/string) that denotes a JSON value.
+
+is_json_content_type(String) :-
     http_parse_header_value(content_type, String,
                             media(Type, _Attributes)),
     json_type(Type),
@@ -256,8 +263,8 @@ json_write_to(Out, Term, Options) :-
 %
 %   @error  domain_error(mimetype, Found) if the mimetype is
 %           not known (see json_type/1).
-%   @error  domain_error(method, Method) if the request is not
-%           a =POST= or =PUT= request.
+%   @error  domain_error(method, Method) if the request method is not
+%           a =POST=, =PUT= or =PATCH=.
 
 http_read_json(Request, JSON) :-
     http_read_json(Request, JSON, []).
@@ -277,7 +284,7 @@ request_to_json(Request, JSON, Options) :-
     ->  true
     ;   domain_error(method, Method)
     ),
-    (   is_json_type(Type)
+    (   is_json_content_type(Type)
     ->  true
     ;   domain_error(mimetype, Type)
     ),
