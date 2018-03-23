@@ -98,6 +98,10 @@ test(ok_html_unicode, Code == 200) :-
      request('/ok/html_unicode', Code, Type, Content, []),
      assertion(html_content(Type, Content,
                            "world")).
+test(ok_bytes_prolog, Code == 200) :-
+     request('/ok/bytes/prolog', Code, Type, Content, []),
+     assertion(prolog_content(Type, Content,
+                              hello(world))).
 test(not_found, Code == 404) :-
     request('/not-found', Code, Type, Content, []),
     assertion(html_content(Type, Content,
@@ -177,6 +181,7 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
 
 :- http_handler('/ok/html_1', ok_html_1, []).
 :- http_handler('/ok/html_unicode', ok_html_unicode, []).
+:- http_handler('/ok/bytes/prolog', ok_bytes_prolog, []).
 :- http_handler('/reply-source', reply_source, []).
 :- http_handler('/forbidden', forbidden, []).
 :- http_handler('/method_not_allowed', method_not_allowed,
@@ -204,6 +209,10 @@ ok_html_unicode(_Request) :-
         [ h1('Hello world'),
           p([], '~s'-[Text])
         ]).
+
+ok_bytes_prolog(_Request) :-
+    string_codes("hello(world)", Bytes),
+    throw(http_reply(bytes('application/x-prolog', Bytes))).
 
 reply_source(Request) :-
     module_property(test_http, file(File)),
@@ -269,7 +278,11 @@ to_string(A, S) :-
 to_string(Codes, S) :-
     string_codes(S, Codes).
 
-
+prolog_content(Type, Content, Match) :-
+    http_parse_header_value(content_type, Type,
+                            media(application/'x-prolog', _Attributes)),
+    term_string(Term, Content),
+    Term =@= Match.
 
 %!  chunked_data(-String) is det.
 %

@@ -255,7 +255,7 @@ http_reply_data_(html(HTML), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(html(HTML), HdrExtra, Code), Header),
     format(Out, '~s', [Header]),
-    if_no_head(Method, print_html(Out, HTML)).
+    if_no_head(print_html(Out, HTML), Method).
 http_reply_data_(file(Type, File), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(file(Type, File), HdrExtra, Code), Header),
@@ -276,7 +276,7 @@ http_reply_data_(bytes(Type, Bytes), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(bytes(Type, Bytes), HdrExtra, Code), Header),
     format(Out, '~s', [Header]),
-    if_no_head(Method, format(Out, '~s', [Bytes])).
+    if_no_head(format(Out, '~s', [Bytes]), Method).
 http_reply_data_(stream(In, Len), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(cgi_data(Len), HdrExtra, Code), Header),
@@ -290,8 +290,7 @@ http_reply_data_(cgi_stream(In, Len), Out, HdrExtra, Method, Code) :-
     phrase(reply_header(cgi_data(Size), Hdr2, Code), Header),
     copy_stream(Out, In, Header, Method, 0, end).
 
-if_no_head(_, Options) :-
-    Options.method == head,
+if_no_head(_, head) :-
     !.
 if_no_head(Goal, _) :-
     call(Goal).
