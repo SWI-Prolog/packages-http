@@ -158,6 +158,10 @@ test(created, Code == 201) :-
     assertion(Location == '/brave-new-world'),
     assertion(html_content(Type, Content,
                            "brave-new-world")).
+test(fail, Code == 500) :-
+    request('/fail', Code, Type, Content, []),
+    assertion(html_content(Type, Content,
+                           "goal unexpectedly failed")).
 
 request(Path, Code, Type, Content, ExtraHdrs) :-
     setup_call_cleanup(
@@ -196,6 +200,7 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
 :- http_handler('/resource-error', resource_error_handler, []).
 :- http_handler('/bad-request', bad_request_handler, []).
 :- http_handler('/created', created, []).
+:- http_handler('/fail', fail, []).
 
 ok_html_1(_Request) :-
     reply_html_page(
@@ -250,6 +255,9 @@ bad_request_handler(Request) :-
 created(Request) :-
     http_read_json_dict(Request, _Dict),
     throw(http_reply(created('/brave-new-world'))).
+
+fail(_Request) :-
+    fail.
 
 :- end_tests(http_server).
 
