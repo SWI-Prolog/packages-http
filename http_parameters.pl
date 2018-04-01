@@ -116,6 +116,17 @@ an HTTP request. The typical usage is e.g.,
 %                         description('Sex of the person')
 %                       ]).
 %       ==
+%
+%   @bug If both request parameters  (?name=value&...)   and  a POST are
+%   present the parameters are extracted   from  the request parameters.
+%   Still, as it is valid to have   request parameters in a POST request
+%   this predicate should not process POST   requests.  We will keep the
+%   current behaviour as the it is not common for a request to have both
+%   request   parameters   and    a    POST     data    of    the   type
+%   =|application/x-www-form-urlencoded|=.
+%
+%   In the unlikely event this  poses  a   problem  the  request  may be
+%   specified as [method(get)|Request].
 
 http_parameters(Request, Params) :-
     http_parameters(Request, Params, []).
@@ -133,20 +144,21 @@ http_parameters(Request, Params, Options) :-
 is_meta(attribute_declarations).
 
 
+http_parms(Request, Params, DeclGoal, Search) :-
+    memberchk(search(Search), Request),
+    !,
+    fill_parameters(Params, Search, DeclGoal).
 http_parms(Request, Params, DeclGoal, Data) :-
-    memberchk(method(post), Request),
+    memberchk(method(Method), Request),
+    Method == post,
     memberchk(content_type(Content), Request),
     form_data_content_type(Content),
     !,
     debug(post_request, 'POST Request: ~p', [Request]),
     posted_form(Request, Data),
     fill_parameters(Params, Data, DeclGoal).
-http_parms(Request, Params, DeclGoal, Search) :-
-    (   memberchk(search(Search), Request)
-    ->  true
-    ;   Search = []
-    ),
-    fill_parameters(Params, Search, DeclGoal).
+http_parms(_Request, Params, DeclGoal, []) :-
+    fill_parameters(Params, [], DeclGoal).
 
 :- multifile
     form_data_content_type/1.
