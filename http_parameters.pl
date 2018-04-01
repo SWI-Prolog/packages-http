@@ -274,7 +274,9 @@ no_decl_goal(_,_) :- fail.
 http_convert_parameter([], _, Value, Value).
 http_convert_parameter([H|T], Field, Value0, Value) :-
     (   check_type_no_error(H, Value0, Value1)
-    ->  http_convert_parameter(T, Field, Value1, Value)
+    ->  catch(http_convert_parameter(T, Field, Value1, Value),
+              error(Formal, _),
+              throw(error(Formal, context(_, http_parameter(Field)))))
     ;   throw(error(type_error(H, Value0),
                     context(_, http_parameter(Field))))
     ).
