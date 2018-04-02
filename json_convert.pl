@@ -618,6 +618,17 @@ match_fields([Name=JSON|TP], [f(OptName, Type, Def, Prolog)|TF], Body,
     ),
     Q1 is Q0-1,
     match_fields([Name=JSON|TP], TF, Body, M, Q1, Q).
+match_fields([], [f(OptName, Type, Def, Prolog)|TF], Body,
+             M, Q0, Q) :-
+    !,
+    (   nullable(Type)
+    ->  true
+    ;   no_default(NoDef),
+        Def \== NoDef
+    ->  Prolog = Def
+    ),
+    Q1 is Q0-1,
+    match_fields([], TF, Body, M, Q1, Q).
 match_fields([Name=_|TP], [F|TF], Body, M, Q0, Q) :-
     arg(1, F, Next),
     Name @< Next,
