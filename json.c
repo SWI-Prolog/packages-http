@@ -148,7 +148,7 @@ static foreign_t
 json_skip_ws(term_t stream, term_t c0, term_t next)
 { int c;
 
-  if ( !PL_get_char_ex(c0, &c, FALSE) )
+  if ( !PL_get_char_ex(c0, &c, TRUE) )
     return FALSE;
 
   if ( is_ws(c) )
