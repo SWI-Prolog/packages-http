@@ -268,5 +268,6 @@ set_default_charset :-
     current_prolog_flag(encoding, utf8),
     !,
     set_prolog_flag(default_charset, 'UTF-8').
+set_default_charset.
 
 :- initialization(set_default_charset).
