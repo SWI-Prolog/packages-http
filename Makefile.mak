@@ -40,7 +40,7 @@ install::
 		if not exist "$(LIBDIR)\web\css\$(NULL)" $(MKDIR) "$(LIBDIR)\web\css"
 		@echo Copying $(LIBPL)
 		@for %f in ($(LIBPL)) do @copy %f "$(LIBDIR)"
-		copy README "$(LIBDIR)\README.TXT"
+		copy README.md "$(LIBDIR)"
 		copy web\icons\*.* "$(LIBDIR)\web\icons"
 		copy web\css\*.* "$(LIBDIR)\web\css"
 		copy http_stream.dll "$(BINDIR)"
@@ -69,7 +69,7 @@ install-examples::
 xpce-install::
 
 uninstall::
-		cd $(LIBDIR) & del $(LIBPL) README.TXT
+		cd $(LIBDIR) & del $(LIBPL) README.md
 		del "$(BINDIR)\http_stream.dll"
 		$(MAKEINDEX)
 

@@ -42,7 +42,7 @@ install:	$(LIBPL) $(SOLIBS)
 		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/css
 		mkdir -p $(DESTDIR)$(PKGPLLIBDIR)/web/js
 		$(INSTALL_DATA) $(LIBPL) $(DESTDIR)$(PKGPLLIBDIR)
-		$(INSTALL_DATA) README $(DESTDIR)$(PKGPLLIBDIR)/README$(TXTEXT)
+		$(INSTALL_DATA) README.md $(DESTDIR)$(PKGPLLIBDIR)
 		$(INSTALL_DATA) web/icons/*.png $(DESTDIR)$(PKGPLLIBDIR)/web/icons
 		$(INSTALL_DATA) web/css/*.css $(DESTDIR)$(PKGPLLIBDIR)/web/css
 		for f in $(JS); do \
