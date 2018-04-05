@@ -241,12 +241,12 @@ file_content_type(File, MediaType, ContentType) :-
     ->  true
     ;   file_mime_type(File, MediaType)
     ),
-    (   text_mimetype(MediaType)
-    ->  (   mime:charset(File, MediaType, Charset0)
+    (   text_mimetype(MediaType),
+        (   mime:charset(File, MediaType, Charset0)
         ->  Charset = Charset0
         ;   default_charset(Charset)
-        ),
-        format(atom(ContentType), '~w; charset=~w', [MediaType, Charset])
+        )
+    ->  format(atom(ContentType), '~w; charset=~w', [MediaType, Charset])
     ;   format(atom(ContentType), '~w', [MediaType])
     ).
 
