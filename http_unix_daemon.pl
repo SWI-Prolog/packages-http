@@ -98,7 +98,7 @@ code.  This is often a sequence of use_module/1 directives.
   ==
 
 The   program   entry   point   is     http_daemon/0,   declared   using
-initialization/2. This main be overruled using   a new declaration after
+initialization/2. This may be overruled using   a  new declaration after
 loading  this  library.  The  new  entry    point  will  typically  call
 http_daemon/1 to start the server in a preconfigured way.
 
