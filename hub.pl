@@ -92,8 +92,8 @@ demand and die if no more work needs to be done.
 :- dynamic
     hub/2,                          % Hub, Queues ...
     websocket/5.                    % Hub, Socket, Queue, Lock, Id
-    
-:- volatile hub/2, websocket/5.    
+
+:- volatile hub/2, websocket/5.
 
 %!  hub_create(+Name, -Hub, +Options) is det.
 %
@@ -199,8 +199,11 @@ wait_for_sockets(Hub, Max) :-
       (   List \== []
       ->  create_new_waiter_if_needed(Hub),
           sort(List, Set),
-          length(Set, Len),
-          debug(hub(wait), 'Waiting for ~d queues', [Len]),
+          (   debugging(hub(wait))
+          ->  length(Set, Len),
+              debug(hub(wait), 'Waiting for ~d queues', [Len])
+          ;   true
+          ),
           wait_for_set(Set, Left, ReadySet, Max),
           (   ReadySet \== []
           ->  debug(hub(ready), 'Data on ~p', [ReadySet]),
