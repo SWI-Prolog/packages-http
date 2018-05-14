@@ -419,6 +419,8 @@ server_option(password(_)).
 server_option(cipherlist(_)).
 server_option(workers(_)).
 server_option(redirect(_)).
+server_option(timeout(_)).
+server_option(keep_alive_timeout(_)).
 
 make_server(http(Address0), Options0, server(http, Address, Options)) :-
     make_address(Address0, 80, Address, Options0, Options).
@@ -906,7 +908,10 @@ prolog:message(http_daemon(help)) -->
       '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
       '  --gtrace=bool      Start (graphical) debugger'-[], nl,
       '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
-      '  --workers=count    Number of HTTP worker threads'-[], nl, nl,
+      '  --timeout=sec      Time to wait for client to complete request'-[], nl,
+      '  --keep_alive_timeout=sec'-[], nl,
+      '                     Time to wait for a new request'-[], nl,
+      nl,
       'Boolean options may be written without value (true) or as --no-name (false)'-[], nl,
       'Address is a port number or host:port, e.g., 8080 or localhost:8080'-[], nl,
       'Multiple servers can be started by repeating --http and --https'-[], nl,
