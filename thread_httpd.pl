@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2016, University of Amsterdam
+    Copyright (c)  2002-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -140,7 +141,7 @@ self-signed SSL certificate.
 %     a higher number.
 %
 %     * timeout(+Seconds)
-%     Max time of inactivity trying to read the request after a
+%     Maximum time of inactivity trying to read the request after a
 %     connection has been opened.  Default is 60 seconds.  See
 %     set_stream/1 using the _timeout_ option.
 %
@@ -148,14 +149,11 @@ self-signed SSL certificate.
 %     Time to keep `Keep alive' connections alive.  Default is
 %     2 seconds.
 %
-%     * local(+Kbytes)
-%     * global(+Kbytes)
-%     * trail(+Kbytes)
-%     Stack sizes to use for the workers.  The default is inherited
-%     from the `main` thread. As of version 5.9 stacks are no longer
-%     _pre-allocated_ and the given sizes only act as a limit.
-%     If you need to control resource usage look at the `spawn`
-%     option of http_handler/3 and library(thread_pool).
+%     * stack_limit(+Bytes)
+%     Stack limit to use for the workers.  The default is inherited
+%     from the `main` thread.
+%     If you need to control resource usage you may consider the
+%     `spawn` option of http_handler/3 and library(thread_pool).
 %
 %     * silent(Bool)
 %     If `true` (default `false`), do not print an informational
