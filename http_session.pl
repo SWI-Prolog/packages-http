@@ -51,7 +51,13 @@
             http_session_assert/1,      % +Data
             http_session_retract/1,     % ?Data
             http_session_retractall/1,  % +Data
-            http_session_data/1         % ?Data
+            http_session_data/1,        % ?Data
+
+            http_session_asserta/2,     % +Data, +SessionId
+            http_session_assert/2,      % +Data, +SessionId
+            http_session_retract/2,     % ?Data, +SessionId
+            http_session_retractall/2,  % +Data, +SessionId
+            http_session_data/2         % ?Data, +SessionId
           ]).
 :- use_module(http_wrapper).
 :- use_module(http_stream).
@@ -510,6 +516,38 @@ http_session_retractall(Data) :-
 http_session_data(Data) :-
     http_session_id(SessionId),
     session_data(SessionId, Data).
+
+%!  http_session_asserta(+Data, +SessionID) is det.
+%!  http_session_assert(+Data, +SessionID) is det.
+%!  http_session_retract(?Data, +SessionID) is nondet.
+%!  http_session_retractall(@Data, +SessionID) is det.
+%!  http_session_data(?Data, +SessionID) is det.
+%
+%   Versions of assert/1, retract/1 and retractall/1 that associate data
+%   with an explicit HTTP session.
+%
+%   @see http_current_session/2.
+
+http_session_asserta(Data, SessionId) :-
+    must_be(atom, SessionId),
+    asserta(session_data(SessionId, Data)).
+
+http_session_assert(Data, SessionId) :-
+    must_be(atom, SessionId),
+    assert(session_data(SessionId, Data)).
+
+http_session_retract(Data, SessionId) :-
+    must_be(atom, SessionId),
+    retract(session_data(SessionId, Data)).
+
+http_session_retractall(Data, SessionId) :-
+    must_be(atom, SessionId),
+    retractall(session_data(SessionId, Data)).
+
+http_session_data(Data, SessionId) :-
+    must_be(atom, SessionId),
+    session_data(SessionId, Data).
+
 
 
                  /*******************************
