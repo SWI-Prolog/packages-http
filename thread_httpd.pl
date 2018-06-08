@@ -675,12 +675,12 @@ check_keep_alive_connection(In, TMO, Peer, In, Out) :-
 
 done_worker :-
     thread_self(Self),
+    thread_detach(Self),
     retract(queue_worker(Queue, Self)),
     thread_property(Self, status(Status)),
     !,
     (   catch(recreate_worker(Status, Queue), _, fail)
-    ->  thread_detach(Self),
-        print_message(informational,
+    ->  print_message(informational,
                       httpd_restarted_worker(Self))
     ;   done_status_message_level(Status, Level),
         print_message(Level,
