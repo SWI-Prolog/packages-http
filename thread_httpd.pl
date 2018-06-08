@@ -399,8 +399,8 @@ accept_server3(Goal, Options) :-
     memberchk(queue(Queue), Options),
     tcp_accept(Socket, Client, Peer),
     debug(http(connection), 'New HTTP connection from ~p', [Peer]),
-    http_enough_workers(Queue, accept, Peer),
-    thread_send_message(Queue, tcp_client(Client, Goal, Peer)).
+    thread_send_message(Queue, tcp_client(Client, Goal, Peer)),
+    http_enough_workers(Queue, accept, Peer).
 
 accept_rethrow_error(http_stop).
 accept_rethrow_error('$aborted').
@@ -459,7 +459,9 @@ http_enough_workers(Queue, Why, Peer) :-
         catch(http:schedule_workers(_{port:Port,
                                       reason:Why,
                                       peer:Peer,
-                                      waiting:Size}),
+                                      waiting:Size,
+                                      queue:Queue
+                                     }),
               Error,
               print_message(error, Error))
     ->  true
@@ -485,6 +487,8 @@ enough(1, keep_alive).                  % I will be ready myself
 %     Identify the other end of the connection
 %     - waiting:Size
 %     Number of messages waiting in the queue.
+%     - queue:Queue
+%     Message queue used to dispatch accepted messages.
 %
 %   Note that, when called with `reason:accept`,   we  are called in
 %   the time critical main accept loop.   An  implementation of this
