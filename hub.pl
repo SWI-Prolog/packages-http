@@ -332,12 +332,16 @@ read_message(Hub) :-
     catch(ws_receive(WS, Message), Error, true),
     (   var(Error),
         websocket(HubName, WS, _, _, Id)
-    ->  (   _{opcode:close, data:end_of_file} :< Message
-        ->  eof(WS)
+    ->  (   Message.get(opcode) == close
+        ->  close_client(WS, Message)
         ;   Event = Message.put(_{client:Id, hub:HubName}),
             debug(hub(event), 'Event: ~p', [Event]),
             thread_send_message(Queues.event, Event),
-            thread_send_message(Queues.wait, WS),
+            (   Message.get(opcode) == close
+            ->  catch(ws_close(WS, 1000, ""), CloseError,
+                      print_message(warning, CloseError))
+            ;   thread_send_message(Queues.wait, WS)
+            ),
             (   message_queue_property(Queues.ready, size(0))
             ->  !,
                 wait_for_sockets(Hub)
@@ -370,13 +374,27 @@ io_read_error(WebSocket, Error) :-
     hub(HubName, Hub),
     thread_send_message(Hub.queues.event,
                         hub{left:Id,
-                                 hub:HubName,
-                                 reason:read,
-                                 error:Error}).
+                            hub:HubName,
+                            reason:read,
+                            error:Error}).
 io_read_error(_, _).                      % already considered gone
 
-eof(WebSocket) :-
+close_client(WebSocket, Message) :-
+    Message.get(data) == end_of_file,
+    !,
     io_read_error(WebSocket, end_of_file).
+close_client(WebSocket, Message) :-
+    retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
+    !,
+    catch(ws_close(WebSocket, 1000, "Bye"), E,
+          print_message(warning, E)),
+    hub(HubName, Hub),
+    thread_send_message(Hub.queues.event,
+                        hub{left:Id,
+                            hub:HubName,
+                            reason:close,
+                            data:Message.data
+                           }).
 
 %!  io_write_error(+WebSocket, +Message, +Error)
 %
