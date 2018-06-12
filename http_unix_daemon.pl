@@ -159,8 +159,9 @@ events:
 % is that loading library(pce) starts the event dispatching thread. This
 % should be handled lazily.
 
-:- set_prolog_flag(xpce_threaded, false).
-:- set_prolog_flag(message_ide,   false). % cause xpce to trap messages
+:- set_prolog_flag(xpce_threaded,   false).
+:- set_prolog_flag(message_ide,     false). % cause xpce to trap messages
+:- set_prolog_flag(message_context, [thread,time('%F %T.%3f')]).
 :- dynamic interactive/0.
 
 %!  http_daemon
