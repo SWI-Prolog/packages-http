@@ -408,8 +408,7 @@ io_write_error(WebSocket, Message, Error) :-
           [WebSocket, Error]),
     retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
     !,
-    catch(ws_close(WebSocket, 1011, Error), E,
-          print_message(warning, E)),
+    catch(ws_close(WebSocket, 1011, Error), _, true),
     (   websocket(_, _, _, _, Id)
     ->  true
     ;   hub(HubName, Hub),
