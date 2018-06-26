@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2017, University of Amsterdam
+    Copyright (c)  2007-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -55,6 +56,7 @@
 :- use_module(library(settings)).
 :- use_module(library(uri)).
 :- use_module(library(apply)).
+:- use_module(library(aggregate)).
 :- use_module(library(http/mimetype)).
 :- use_module(library(http/http_path)).
 :- use_module(library(http/http_header)).
@@ -1030,14 +1032,18 @@ path_tree(Tree) :-
     nb_setval(http_dispatch_tree, G-Tree).
 
 path_tree_nocache(Tree) :-
-    findall(Prefix, prefix_handler(Prefix, _, _), Prefixes0),
+    findall(Prefix, prefix_handler(Prefix, _, _, _), Prefixes0),
     sort(Prefixes0, Prefixes),
     prefix_tree(Prefixes, [], PTree),
     prefix_options(PTree, [], OPTree),
     add_paths_tree(OPTree, Tree).
 
-prefix_handler(Prefix, Action, Options) :-
+prefix_handler(Prefix, Action, Options, Priority) :-
     handler(Spec, Action, true, Options),
+    (   memberchk(priority(Priority), Options)
+    ->  true
+    ;   Priority = 0
+    ),
     Error = error(existence_error(http_alias,_),_),
     catch(http_absolute_location(Spec, Prefix, []), Error,
           (   print_message(warning, Error),
@@ -1071,7 +1077,9 @@ insert_prefix(Prefix, Tree, [Prefix-[]|Tree]).
 prefix_options([], _, []).
 prefix_options([P-C|T0], DefOptions,
                [node(prefix(P), Action, Options, Children)|T]) :-
-    once(prefix_handler(P, Action, Options0)),
+    aggregate_all(max(Priority, Action-Options0),
+                  prefix_handler(P, Action, Options0, Priority),
+                  max(_, Action-Options0)),
     merge_options(Options0, DefOptions, Options),
     delete(Options, id(_), InheritOpts),
     prefix_options(C, InheritOpts, Children),
