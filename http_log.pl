@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2017, University of Amsterdam
+    Copyright (c)  2008-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -81,15 +82,29 @@ specifications (e.g. =|/topsecret?password=secret|=).
 :- listen(logrotate,
           http_log_close(logrotate)).
 
+http_message(Message) :-
+    log_message(Message),
+    http_log_stream(Stream),
+    catch(http_message(Message, Stream), E,
+          log_error(E)).
 
-http_message(request_start(Id, Request)) :-
-    !,
-    http_log_stream(Stream),
+log_message(request_start(_Id, _Request)).
+log_message(request_finished(_Id, _Code, _Status, _CPU, _Bytes)).
+
+http_message(request_start(Id, Request), Stream) :-
     log_started(Request, Id, Stream).
-http_message(request_finished(Id, Code, Status, CPU, Bytes)) :-
-    !,
-    http_log_stream(Stream),
+http_message(request_finished(Id, Code, Status, CPU, Bytes), Stream) :-
     log_completed(Code, Status, Bytes, Id, CPU, Stream).
+
+%!  log_error(+Error)
+%
+%   There was an error writing the log   file. Close it. The system will
+%   try to reopen anyway, recovering from the  error. Note that the most
+%   common case for this is probably running out of disc space.
+
+log_error(E) :-
+    print_message(warning, E),
+    http_log_close(error).
 
 
                  /*******************************
@@ -107,7 +122,8 @@ http_message(request_finished(Id, Code, Status, CPU, Bytes)) :-
 %   set to the empty atom (''), this predicate fails.
 %
 %   If  a  file  error  is   encountered,    this   is   reported  using
-%   print_message/2, after which this predicate silently fails.
+%   print_message/2, after which this predicate  silently fails. Opening
+%   is retried every minute when a new message arrives.
 %
 %   Before opening the log  file,   the  message  http_log_open(Term) is
 %   broadcasted.  This  message  allows  for   creating  the  directory,
@@ -133,9 +149,16 @@ http_log_stream(Stream) :-
     Stream = Stream0.
 
 open_log(_File, Stream) :-
-    log_stream(Stream, _Opened),
-    !,
-    Stream \== [].
+    log_stream(Stream, Opened),
+    (   Stream == []
+    ->  (   get_time(Now),
+            Now - Opened > 60
+        ->  retractall(log_stream(_,_)),
+            fail
+        ;   !, fail
+        )
+    ;   true
+    ), !.
 open_log(File, Stream) :-
     catch(open(File, append, Stream,
                [ close_on_abort(false),
@@ -179,8 +202,9 @@ close_log(Reason) :-
     !,
     (   is_stream(Stream)
     ->  get_time(Time),
-        format(Stream, 'server(~q, ~0f).~n', [ Reason, Time ]),
-        close(Stream)
+        catch(( format(Stream, 'server(~q, ~0f).~n', [ Reason, Time ]),
+                close(Stream)
+              ), E, print_message(warning, E))
     ;   true
     ).
 close_log(_).
