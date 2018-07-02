@@ -53,6 +53,8 @@
            'File in which to log HTTP requests').
 :- setting(http:log_post_data, integer, 0,
            'Log POST data up to N bytes long').
+:- setting(http:on_log_error, any, retry,
+           'Action if logging fails').
 
 /** <module> HTTP Logging module
 
@@ -98,13 +100,41 @@ http_message(request_finished(Id, Code, Status, CPU, Bytes), Stream) :-
 
 %!  log_error(+Error)
 %
-%   There was an error writing the log   file. Close it. The system will
-%   try to reopen anyway, recovering from the  error. Note that the most
-%   common case for this is probably running out of disc space.
+%   There was an error writing the  log   file.  The  message is printed
+%   using print_message/2 and  execution  continues   according  to  the
+%   setting `http:on_log_error`, which is one of:
+%
+%     - retry
+%     Close the log file. The system will try to reopen it on the
+%     next log event, recovering from the error. Note that the
+%     most common case for this is probably running out of disc space.
+%     - exit
+%     - exit(Code)
+%     Stop the server using halt(Code). The `exit` variant is equivalent
+%     to exit(1).
+%
+%   The best choice depends on  your   priorities.  Using  `retry` gives
+%   priority to keep the server running.  Using `exit` guarantees proper
+%   log files and  thus  the  ability   to  examine  these  for security
+%   reasons. An attacker may try to flood the disc, causing a successful
+%   DoS attack if `exit` is used  and   the  ability to interact without
+%   being logged if `retry` is used.
 
 log_error(E) :-
     print_message(warning, E),
+    log_error_continue.
+
+log_error_continue :-
+    setting(http:on_log_error, Action),
+    log_error_continue(Action).
+
+log_error_continue(retry) :-
     http_log_close(error).
+log_error_continue(exit) :-
+    log_error_continue(exit(1)).
+log_error_continue(exit(Code)) :-
+    halt(Code).
+
 
 
                  /*******************************
@@ -174,9 +204,19 @@ open_log(File, Stream) :-
 
 open_error(E) :-
     print_message(error, E),
+    log_open_error_continue.
+
+log_open_error_continue :-
+    setting(http:on_log_error, Action),
+    log_open_error_continue(Action).
+
+log_open_error_continue(retry) :-
+    !,
     get_time(Now),
     assert(log_stream([], Now)),
     fail.
+log_open_error_continue(Action) :-
+    log_error_continue(Action).
 
 
 %!  http_log_close(+Reason) is det.
