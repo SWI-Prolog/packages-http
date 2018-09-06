@@ -30,6 +30,7 @@ prepend(HTTP_EXAMPLE_FILES examples/ ${HTTP_EXAMPLE_FILES})
 
 swipl_plugin(
     http
+    PL_LIB_SUBDIR http
     PL_LIBS ${HTTP_PL_FILES})
 
 swipl_plugin(
@@ -40,10 +41,12 @@ swipl_plugin(
 swipl_plugin(
     json
     C_SOURCES json.c
+    PL_LIB_SUBDIR http
     PL_LIBS json.pl json_convert.pl http_json.pl)
 swipl_plugin(
     websocket
     C_SOURCES websocket.c
+    PL_LIB_SUBDIR http
     PL_LIBS websocket.pl hub.pl)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
