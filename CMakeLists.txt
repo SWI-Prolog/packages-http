@@ -7,6 +7,7 @@ AC_CHECK_HEADERS(fcntl.h poll.h sys/ioctl.h sys/select.h unistd.h)
 AC_CHECK_FUNCS(el_cursor el_wset poll)
 
 configure_file(config.h.cmake config.h)
+configure_file(jquery.pl.in jquery.pl)
 
 set(HTTP_PL_FILES
     html_write.pl http_client.pl http_header.pl
@@ -18,7 +19,14 @@ set(HTTP_PL_FILES
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     http_openid.pl js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl http_unix_daemon.pl yadis.pl ax.pl html_quasiquotations.pl
-    http_load.pl http_multipart_plugin.pl jquery.pl http_digest.pl)
+    http_load.pl http_multipart_plugin.pl http_digest.pl)
+
+set(HTTP_EXAMPLE_FILES
+    README.md
+    demo_body.pl demo_client.pl demo_threads.pl
+    demo_xpce.pl calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
+    demo_daemon.pl upstart-script.conf systemd-script.service)
+prepend(HTTP_EXAMPLE_FILES examples/ ${HTTP_EXAMPLE_FILES})
 
 swipl_plugin(
     http
@@ -38,11 +46,10 @@ swipl_plugin(
     C_SOURCES websocket.c
     PL_LIBS websocket.pl hub.pl)
 
-swipl_examples(
-    README.md
-    demo_body.pl demo_client.pl demo_threads.pl
-    demo_xpce.pl calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
-    demo_daemon.pl upstart-script.conf systemd-script.service)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
+	DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
+
+swipl_examples(${HTTP_EXAMPLE_FILES})
 
 test_libs(cgi_stream http json multipart proxy websocket
 	  PACKAGES clib sgml plunit
