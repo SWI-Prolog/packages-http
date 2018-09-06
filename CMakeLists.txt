@@ -52,5 +52,5 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
 swipl_examples(${HTTP_EXAMPLE_FILES})
 
 test_libs(cgi_stream http json multipart proxy websocket
-	  PACKAGES clib sgml plunit
+	  PACKAGES clib sgml plunit ssl
 	  PARENT_LIB)
