@@ -3,8 +3,25 @@ project(swipl-http)
 
 include("../cmake/PrologPackage.cmake")
 
-AC_CHECK_HEADERS(fcntl.h poll.h sys/ioctl.h sys/select.h unistd.h)
-AC_CHECK_FUNCS(el_cursor el_wset poll)
+if(NOT DEFINED JQUERYDIR)
+  message("-- Searching for jQuery")
+  set(JQUERYFILE jquery.min.js)
+  find_path(JQUERYDIR
+	    ${JQUERYFILE}
+	    PATHS /usr/share/javascript/jquery
+	    NO_DEFAULT_PATH)
+
+  if(EXISTS ${JQUERYDIR}/${JQUERYFILE})
+    message("-- Using system jQuery from ${JQUERYDIR}/${JQUERYFILE}")
+  else()
+    message("-- No system jquery.js; using our own")
+    set(JQUERYDIR web/js)
+    set(JQUERYFILE jquery-1.11.3.min.js)
+  endif()
+
+  set(JQUERYDIR  ${JQUERYDIR}  CACHE INTERNAL "Directory for jquery.js")
+  set(JQUERYFILE ${JQUERYFILE} CACHE INTERNAL "File for jquery.js")
+endif()
 
 configure_file(config.h.cmake config.h)
 configure_file(jquery.pl.in jquery.pl)
@@ -51,6 +68,10 @@ swipl_plugin(
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
 	DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
+if(NOT IS_ABSOLUTE ${JQUERYDIR})
+  install(FILES ${JQUERYDIR}/${JQUERYFILE}
+	  DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
+endif()
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
 
