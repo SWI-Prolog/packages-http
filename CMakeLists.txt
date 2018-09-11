@@ -36,7 +36,7 @@ set(HTTP_PL_FILES
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     http_openid.pl js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl http_unix_daemon.pl yadis.pl ax.pl html_quasiquotations.pl
-    http_load.pl http_multipart_plugin.pl http_digest.pl)
+    http_load.pl http_multipart_plugin.pl http_digest.pl README.md)
 
 set(HTTP_EXAMPLE_FILES
     README.md
@@ -50,6 +50,10 @@ set(PWP_FILES
     context.pwp index.pwp pwp1.pwp pwp2.pwp pwp3.pwp pwp4.pwp
     pwp5.pwp pwp6.pwp pwp7.pwp pwp8.pwp pwpdb.pl)
 prepend(PWP_FILES examples/pwp/ ${PWP_FILES})
+
+set(ICONS back.png compressed.png c.png folder.png generic.png
+    layout.png openid-logo-square.png openid-logo-tiny.png)
+prepend(ICONS web/icons/ ${ICONS})
 
 swipl_plugin(
     http
@@ -71,6 +75,14 @@ swipl_plugin(
     C_SOURCES websocket.c
     PL_LIB_SUBDIR http
     PL_LIBS websocket.pl hub.pl)
+swipl_plugin(
+    http_css
+    PL_LIB_SUBDIR http/web/css
+    PL_LIBS web/css/dirindex.css web/css/openid.css)
+swipl_plugin(
+    http_icons
+    PL_LIB_SUBDIR http/web/icons
+    PL_LIBS ${ICONS})
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
 	DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
