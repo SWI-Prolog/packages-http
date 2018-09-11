@@ -42,8 +42,14 @@ set(HTTP_EXAMPLE_FILES
     README.md
     demo_body.pl demo_client.pl demo_threads.pl
     demo_xpce.pl calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
-    demo_daemon.pl upstart-script.conf systemd-script.service)
+    demo_daemon.pl upstart-script.conf systemd-script.service
+    linux-init-script demo_inetd)
 prepend(HTTP_EXAMPLE_FILES examples/ ${HTTP_EXAMPLE_FILES})
+
+set(PWP_FILES
+    context.pwp index.pwp pwp1.pwp pwp2.pwp pwp3.pwp pwp4.pwp
+    pwp5.pwp pwp6.pwp pwp7.pwp pwp8.pwp pwpdb.pl)
+prepend(PWP_FILES examples/pwp/ ${PWP_FILES})
 
 swipl_plugin(
     http
@@ -74,6 +80,8 @@ if(NOT IS_ABSOLUTE ${JQUERYDIR})
 endif()
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
+swipl_examples(${PWP_FILES}
+	       SUBDIR pwp)
 
 test_libs(cgi_stream http json multipart proxy websocket
 	  PACKAGES clib sgml plunit ssl zlib
