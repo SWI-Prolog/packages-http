@@ -98,3 +98,20 @@ swipl_examples(${PWP_FILES}
 test_libs(cgi_stream http json multipart proxy websocket
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
+
+pkg_doc(http
+	LIBSUBDIR
+	    http
+	SOURCES
+	    post.txt json.txt figs/httpserver.eps
+	SECTION
+	    websocket.pl hub.pl
+	SUBSECTION
+	    http_log.pl http_path.pl html_head.pl http_session.pl
+	    http_dispatch.pl http_dirindex.pl http_pwp.pl
+	    http_open.pl http_host.pl http_openid.pl js_write.pl
+	    http_files.pl http_cors.pl mimepack.pl
+	    http_authenticate.pl http_client.pl
+	    http_header.pl http_digest.pl
+	SUBSUBSECTION
+	    http_unix_daemon.pl)
