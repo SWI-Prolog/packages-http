@@ -5,13 +5,15 @@ include("../cmake/PrologPackage.cmake")
 
 if(NOT DEFINED JQUERYDIR)
   message("-- Searching for jQuery")
-  set(JQUERYFILE jquery.min.js)
-  find_path(JQUERYDIR
-	    ${JQUERYFILE}
-	    PATHS /usr/share/javascript/jquery
-	    NO_DEFAULT_PATH)
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(JQUERYFILE jquery.min.js)
+    find_path(JQUERYDIR
+	      ${JQUERYFILE}
+	      PATHS /usr/share/javascript/jquery
+	      NO_DEFAULT_PATH)
+  endif()
 
-  if(EXISTS ${JQUERYDIR}/${JQUERYFILE})
+  if(JQUERYDIR AND EXISTS ${JQUERYDIR}/${JQUERYFILE})
     message("-- Using system jQuery from ${JQUERYDIR}/${JQUERYFILE}")
   else()
     message("-- No system jquery.js; using our own")
