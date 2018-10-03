@@ -89,8 +89,8 @@ swipl_plugin(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
 	DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
 if(NOT IS_ABSOLUTE ${JQUERYDIR})
-  install(FILES ${JQUERYDIR}/${JQUERYFILE}
-	  DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
+  install_src(FILES ${JQUERYDIR}/${JQUERYFILE}
+	      DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
 endif()
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
