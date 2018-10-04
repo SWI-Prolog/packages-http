@@ -31,6 +31,11 @@ test_proxy :-
     run_tests([ proxy
               ]).
 
+test_input(Name, Path) :-
+    source_file(test_proxy, MyFile),
+    file_directory_name(MyFile, MyDir),
+    atomic_list_concat([MyDir, Name], /, Path).
+
 :- dynamic
     port/2.                                 % Role, Port
 
@@ -352,11 +357,13 @@ start_servers :-
                 [ port(HTTP_port),
                   workers(2)
                 ]),
+    test_input('../ssl/etc/server/server-cert.pem', ServerCert),
+    test_input('../ssl/etc/server/server-key.pem', ServerKey),
     http_server(http_endpoint,
                 [ port(HTTPS_port),
                   workers(2),
-                  ssl([ certificate_file('../ssl/etc/server/server-cert.pem'),
-                        key_file('../ssl/etc/server/server-key.pem'),
+                  ssl([ certificate_file(ServerCert),
+                        key_file(ServerKey),
                         password("apenoot1")
                       ])
                 ]),
