@@ -105,7 +105,7 @@ pkg_doc(http
 	LIBSUBDIR
 	    http
 	SOURCES
-	    post.txt json.txt figs/httpserver.eps
+	    post.txt json.txt figs/httpserver.pdf figs/httpserver.png
 	SECTION
 	    websocket.pl hub.pl
 	SUBSECTION
