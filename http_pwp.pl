@@ -140,7 +140,10 @@ pwp_handler(QOptions, Request) :-
     ;   Term = Spec
     ),
     http_safe_file(Term, Options),
-    absolute_file_name(Term, Path, [access(read)]),
+    (   absolute_file_name(Term, Path, [access(read), file_type(directory)])
+    ->  true
+    ;   absolute_file_name(Term, Path, [access(read)])
+    ),
     (   exists_directory(Path)
     ->  ensure_slash(Path, Dir),
         (   (   member(index(Index), Options)
