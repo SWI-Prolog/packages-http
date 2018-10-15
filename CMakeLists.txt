@@ -64,7 +64,7 @@ swipl_plugin(
 
 swipl_plugin(
     http_stream
-    C_SOURCES http_stream.c
+    C_SOURCES http_stream.c THREADED
     PL_LIB_SUBDIR http
     PL_LIBS http_stream.pl)
 swipl_plugin(
