@@ -45,7 +45,9 @@
 :- use_module(library(error)).
 :- use_module(library(apply)).
 :- use_module(library(gensym)).
+:- if(exists_source(library(uuid))).
 :- use_module(library(uuid)).
+:- endif.
 :- use_module(library(ordsets)).
 :- use_module(library(http/websocket)).
 
@@ -185,6 +187,13 @@ hub_add(HubName, WebSocket, Id) :-
                         hub{joined:Id}),
     debug(hub(gate), 'Joined ~w: ~w', [HubName, Id]),
     create_wait_thread(Hub).
+
+:- if(\+current_predicate(uuid/1)).
+% FIXME: Proper pure Prolog random UUID implementation
+uuid(UUID) :-
+    A is random(1<<63),
+    format(atom(UUID), '~d', [A]).
+:- endif.
 
 create_wait_thread(Hub) :-
     hub_thread(wait_for_sockets(Hub), Hub, hub_wait_).

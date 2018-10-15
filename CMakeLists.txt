@@ -28,6 +28,11 @@ endif()
 configure_file(config.h.cmake config.h)
 configure_file(jquery.pl.in jquery.pl)
 
+set(HTTP_PLATFORM_FILES)
+if(UNIX)
+  set(HTTP_PLATFORM_FILES http_unix_daemon.pl)
+endif()
+
 set(HTTP_PL_FILES
     html_write.pl http_client.pl http_header.pl
     http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl
@@ -37,8 +42,9 @@ set(HTTP_PL_FILES
     http_path.pl http_hook.pl html_head.pl http_exception.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     http_openid.pl js_write.pl js_grammar.pl http_cookie.pl http_files.pl
-    http_cors.pl http_unix_daemon.pl yadis.pl ax.pl html_quasiquotations.pl
-    http_load.pl http_multipart_plugin.pl http_digest.pl README.md)
+    http_cors.pl yadis.pl ax.pl html_quasiquotations.pl
+    http_load.pl http_multipart_plugin.pl http_digest.pl README.md
+    ${HTTP_PLATFORM_FILES})
 
 set(HTTP_EXAMPLE_FILES
     README.md
@@ -58,7 +64,7 @@ set(ICONS back.png compressed.png c.png folder.png generic.png
 prepend(ICONS web/icons/ ${ICONS})
 
 swipl_plugin(
-    http
+    http_libs
     PL_LIB_SUBDIR http
     PL_LIBS ${HTTP_PL_FILES})
 
@@ -94,6 +100,9 @@ if(NOT IS_ABSOLUTE ${JQUERYDIR})
 	      DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
 endif()
 
+add_custom_target(http)
+add_dependencies(http http_libs http_stream json websocket http_css http_icons)
+
 swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
 	       SUBDIR pwp)
@@ -117,4 +126,4 @@ pkg_doc(http
 	    http_authenticate.pl http_client.pl
 	    http_header.pl http_digest.pl
 	SUBSUBSECTION
-	    http_unix_daemon.pl)
+	    ${HTTP_PLATFORM_FILES})

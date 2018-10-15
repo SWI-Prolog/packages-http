@@ -836,7 +836,7 @@ image thumbnails.
 \end{code}
 \end{description}
 
-\input{httpunixdaemon.tex}
+\InputIfFileExists{httpunixdaemon.tex}{}{}
 
 \subsubsection{From (Unix) inetd}
 \label{sec:http-inetd}
