@@ -113,7 +113,7 @@ json_read_number(term_t stream, term_t c0, term_t number, term_t next)
   { c = Sgetcode(in);
 
     if ( (c >= '0' && c <= '9') ||
-	 c == '.' || c == '-' || c == 'e' || c == 'E' )
+	 c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E' )
     { if ( put_byte(&t, c) != 0 )
       { rc = PL_resource_error("memory");
 	break;
