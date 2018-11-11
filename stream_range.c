@@ -156,6 +156,7 @@ range_close(void *handle)
 
     if ( !call3 )
       call3 = PL_predicate("call", 3, "system");
+
     if ( (fid=PL_open_foreign_frame()) &&
 	 (av=PL_new_term_refs(3)) &&
 	 PL_recorded(ctx->onclose, av+0) &&
@@ -163,22 +164,26 @@ range_close(void *handle)
 	 PL_put_int64(av+2, (int64_t)left)
        )
     { term_t ex;
+      IOSTREAM *parent = ctx->stream;
 
+      free_range_context(ctx);
       if ( PL_call_predicate(ctx->context, PL_Q_PASS_EXCEPTION, call3, av) )
       { rc = 0;
       } else if ( (ex=PL_exception(0)) )
-      { Sset_exception(ctx->stream, ex);
+      { Sset_exception(parent, ex);
 	rc = -1;
       } else
-      { Sseterr(ctx->stream, SIO_FERR, "onclose hook failed");
+      { Sseterr(parent, SIO_FERR, "onclose hook failed");
 	rc = -1;
       }
+    } else
+    { free_range_context(ctx);
     }
     if ( fid )
       PL_close_foreign_frame(fid);
+  } else
+  { free_range_context(ctx);
   }
-
-  free_range_context(ctx);
 
   return rc;
 }
