@@ -1419,22 +1419,31 @@ keep_alive(Connection) :-
 
 :- public keep_alive/4.
 
+keep_alive(StreamPair, Host, _In, 0) :-
+    !,
+    debug(http(connection), 'Adding connection to ~p to pool', [Host]),
+    add_to_pool(Host, StreamPair).
 keep_alive(StreamPair, Host, In, Left) :-
+    Left < 100,
+    debug(http(connection), 'Reading ~D left bytes', [Left]),
     read_incomplete(In, Left),
     add_to_pool(Host, StreamPair),
     !.
 keep_alive(StreamPair, _, _, _) :-
-    close(StreamPair, [force(true)]).
+    debug(http(connection),
+          'Closing connection due to excessive unprocessed input', []),
+    (   debugging(http(connection))
+    ->  catch(close(StreamPair), E,
+              print_message(warning, E))
+    ;   close(StreamPair, [force(true)])
+    ).
 
 %!  read_incomplete(+In, +Left) is semidet.
 %
 %   If we have not all input from  a Keep-alive connection, read the
 %   remainder if it is short. Else, we fail and close the stream.
 
-read_incomplete(_, 0) :- !.
 read_incomplete(In, Left) :-
-    Left < 100,
-    !,
     catch(setup_call_cleanup(
               open_null_stream(Null),
               copy_stream_data(In, Null, Left),
