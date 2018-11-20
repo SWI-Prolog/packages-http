@@ -80,7 +80,6 @@
 :- use_module(library(uri)).
 :- use_module(library(debug)).
 :- use_module(html_quasiquotations).
-:- use_module(library(http/http_dispatch), [http_location_by_id/2]).
 
 :- set_prolog_flag(generate_debug_info, false).
 
@@ -1579,7 +1578,8 @@ location_id(ID, classify) :-
     var(ID),
     !.
 location_id(ID, Class) :-
-    (   catch(http_dispatch:http_location_by_id(ID, Location), _, fail)
+    (   current_predicate(http_dispatch:http_location_by_id/2),
+        catch(http_dispatch:http_location_by_id(ID, Location), _, fail)
     ->  Class = http_location_for_id(Location)
     ;   Class = http_no_location_for_id(ID)
     ).
