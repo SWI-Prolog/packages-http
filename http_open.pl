@@ -669,12 +669,16 @@ add_method(Options0, Options) :-
     Options = [method(post)|Options0].
 add_method(Options0, [method(get)|Options0]).
 
+successful_code(Code) :-
+    Code >= 200,
+    Code < 300.
 
 %!  do_open(+HTTPVersion, +HTTPStatusCode, +HTTPStatusComment, +Header,
 %!          +Options, +Parts, +Host, +In, -FinalIn) is det.
 %
-%   Handle the HTTP status. If 200, we   are ok. If a redirect, redo
-%   the open, returning a new stream. Else issue an error.
+%   Handle the HTTP status once available. If 200-299, we are ok. If a
+%   redirect, redo the open, returning a new stream. Else issue an
+%   error.
 %
 %   @error  existence_error(url, URL)
 
@@ -717,7 +721,7 @@ do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
     (   option(status_code(Code), Options),
         Lines \== []
     ->  true
-    ;   Code == 200
+    ;    successful_code(Code)
     ),
     !,
     parts_uri(Parts, URI),
