@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2016, University of Amsterdam
+    Copyright (c)  2002-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -285,7 +286,7 @@ user_agent('SWI-Prolog').
 %     * status_code(-Code)
 %     If this option is  present  and   Code  unifies  with the HTTP
 %     status code, do *not* translate errors (4xx, 5xx) into an
-%     exception. Instead, http_open/3 behaves as if 200 (success) is
+%     exception. Instead, http_open/3 behaves as if 2xx (success) is
 %     returned, providing the application to read the error document
 %     from the returned stream.
 %
@@ -361,9 +362,15 @@ user_agent('SWI-Prolog').
 %                         ])
 %               ==
 %
-%       @error existence_error(url, Id)
-%       @see ssl_context/3 for SSL related options if
-%       library(http/http_ssl_plugin) is loaded.
+%   @throws error(existence_error(url, Id),Context) is raised if the
+%   HTTP result code is not in the range 200..299. Context has the
+%   shape context(Message, status(Code, TextCode)), where `Code` is the
+%   numeric HTTP code and `TextCode` is the textual description thereof
+%   provided by the server. `Message` may provide additional details or
+%   may be unbound.
+%
+%   @see ssl_context/3 for SSL related options if
+%   library(http/http_ssl_plugin) is loaded.
 
 :- multifile
     socket:proxy_for_url/3.           % +URL, +Host, -ProxyList
@@ -669,12 +676,12 @@ add_method(Options0, Options) :-
     Options = [method(post)|Options0].
 add_method(Options0, [method(get)|Options0]).
 
-
 %!  do_open(+HTTPVersion, +HTTPStatusCode, +HTTPStatusComment, +Header,
 %!          +Options, +Parts, +Host, +In, -FinalIn) is det.
 %
-%   Handle the HTTP status. If 200, we   are ok. If a redirect, redo
-%   the open, returning a new stream. Else issue an error.
+%   Handle the HTTP status once available. If   200-299, we are ok. If a
+%   redirect, redo the open,  returning  a   new  stream.  Else issue an
+%   error.
 %
 %   @error  existence_error(url, URL)
 
@@ -717,7 +724,7 @@ do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
     (   option(status_code(Code), Options),
         Lines \== []
     ->  true
-    ;   Code == 200
+    ;   successful_code(Code)
     ),
     !,
     parts_uri(Parts, URI),
@@ -745,6 +752,9 @@ do_open(_Version, Code, Comment, _,  _, Parts, _, _, _) :-
     ),
     throw(error(Formal, context(_, status(Code, Comment)))).
 
+
+successful_code(Code) :-
+    between(200, 299, Code).
 
 %!  redirect_limit_exceeded(+Options:list(compound), -Max:nonneg) is semidet.
 %
