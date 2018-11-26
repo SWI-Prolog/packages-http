@@ -60,6 +60,7 @@
 
 :- predicate_options(http_server/2, 2,
                      [ port(any),
+                       entry_page(atom),
                        tcp_socket(any),
                        workers(positive_integer),
                        timeout(number),
@@ -130,6 +131,10 @@ self-signed SSL certificate.
 %     Host:Port. The port may be a variable, causing the system
 %     to select a free port.  See tcp_bind/2.
 %
+%     * entry_page(+URI)
+%     Affects the message printed while the server is started.
+%     Interpreted as a URI relative to the server root.
+%
 %     * tcp_socket(+Socket)
 %     If provided, use this socket instead of the creating one and
 %     binding it to an address.  The socket must be bound to an
@@ -184,7 +189,7 @@ http_server(Goal, M:Options0) :-
     (   option(silent(true), Options0)
     ->  true
     ;   print_message(informational,
-                      httpd_started_server(Port))
+                      httpd_started_server(Port, Options0))
     ).
 http_server(_Goal, _Options) :-
     existence_error(option, port).
@@ -903,9 +908,9 @@ create_pool(Pool) :-
 :- multifile
     prolog:message/3.
 
-prolog:message(httpd_started_server(Port)) -->
+prolog:message(httpd_started_server(Port, Options)) -->
     [ 'Started server at '-[] ],
-    http_root(Port).
+    http_root(Port, Options).
 prolog:message(httpd_stopped_worker(Self, Status)) -->
     [ 'Stopped worker ~p: ~p'-[Self, Status] ].
 prolog:message(httpd_restarted_worker(Self)) -->
@@ -917,17 +922,28 @@ prolog:message(httpd(created_pool(Pool))) -->
       'pool that fits the usage-profile.'
     ].
 
-http_root(Host:Port) -->
+http_root(Address, Options) -->
+    { landing_page(Address, URI, Options) },
+    [ '~w'-[URI] ].
+
+landing_page(Host:Port, URI, Options) :-
+    must_be(atom, Host),
+    http_server_property(Port, scheme(Scheme)),
+    (   default_port(Scheme, Port)
+    ->  format(atom(Base), '~w://~w', [Scheme, Host])
+    ;   format(atom(Base), '~w://~w:~w', [Scheme, Host, Port])
+    ),
+    entry_page(Base, URI, Options).
+landing_page(Port, URI, Options) :-
+    landing_page(localhost:Port, URI, Options).
+
+default_port(http, 80).
+default_port(https, 443).
+
+entry_page(Base, URI, Options) :-
+    option(entry_page(Entry), Options),
     !,
-    http_scheme(Port),
-    { http_absolute_location(root(.), URI, []) },
-    [ '~w:~w~w'-[Host, Port, URI] ].
-http_root(Port) -->
-    http_scheme(Port),
-    { http_absolute_location(root(.), URI, []) },
-    [ 'localhost:~w~w'-[Port, URI] ].
-
-http_scheme(Port) -->
-    { http_server_property(Port, scheme(Scheme)) },
-    [ '~w://'-[Scheme] ].
-
+    uri_resolve(Entry, Base, URI).
+entry_page(Base, URI, _) :-
+    http_absolute_location(root(.), Entry, []),
+    uri_resolve(Entry, Base, URI).
