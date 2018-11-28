@@ -43,11 +43,15 @@
 :- asserta(user:file_search_path(library, '../clib')).
 :- asserta(user:file_search_path(library, '../sgml')).
 
+:- prolog_load_context(directory, D),
+   asserta(user:file_search_path(library, D)),
+   atom_concat(D, '/..', DD),
+   asserta(user:file_search_path(library, DD)).
 :- use_module(library(plunit)).
 :- use_module(library(debug)).
-:- use_module(http_stream).
-:- use_module(http_header).
-:- use_module(http_client).
+:- use_module(library(http/http_stream)).
+:- use_module(library(http/http_header)).
+:- use_module(library(http/http_client)).
 
 /** <module> Test CGI stream object
 
