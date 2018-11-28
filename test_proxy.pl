@@ -11,6 +11,10 @@
 :- asserta(user:file_search_path(library, '../sgml')).
 :- asserta(user:file_search_path(library, '../ssl')).
 
+:- prolog_load_context(directory, D),
+   asserta(user:file_search_path(library, D)),
+   atom_concat(D, '/..', DD),
+   asserta(user:file_search_path(library, DD)).
 :- use_module(library(http/http_header)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_proxy)).
@@ -24,7 +28,7 @@
 :- use_module(library(debug)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(ssl)).
-:- use_module('../ssl/http_ssl_plugin').
+:- use_module(library(http/http_ssl_plugin)).
 
 test_proxy :-
     assign_ports,
