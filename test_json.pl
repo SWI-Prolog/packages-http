@@ -44,7 +44,7 @@
 :- asserta(user:file_search_path(library, '..')).
 
 :- use_module(library(plunit)).
-:- use_module(json).
+:- use_module(library(http/json)).
 
 test_json :-
     run_tests([ json_read,
@@ -101,7 +101,7 @@ test(empty, X == json([])) :-
 
 :- begin_tests(json_convert).
 
-:- use_module(json_convert).
+:- use_module(library(http/json_convert)).
 
 :- json_object
     point(x:integer, y:integer),
@@ -132,9 +132,9 @@ test(json2pt, X == tpoint(25,50)) :-
                  *             HTTP             *
                  *******************************/
 
-:- use_module(http_json).
-:- use_module(http_client).
-:- use_module(thread_httpd).
+:- use_module(library(http/http_json)).
+:- use_module(library(http/http_client)).
+:- use_module(library(http/thread_httpd)).
 
 :- dynamic
     port/1.

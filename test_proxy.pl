@@ -24,7 +24,7 @@
 :- use_module(library(debug)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(ssl)).
-:- use_module('../ssl/http_ssl_plugin').
+:- use_module(library(http/http_ssl_plugin)).
 
 test_proxy :-
     assign_ports,

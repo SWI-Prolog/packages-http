@@ -45,9 +45,9 @@
 
 :- use_module(library(plunit)).
 :- use_module(library(debug)).
-:- use_module(http_stream).
-:- use_module(http_header).
-:- use_module(http_client).
+:- use_module(library(http/http_stream)).
+:- use_module(library(http/http_header)).
+:- use_module(library(http/http_client)).
 
 /** <module> Test CGI stream object
 
