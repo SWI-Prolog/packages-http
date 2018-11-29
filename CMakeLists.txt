@@ -115,7 +115,8 @@ pkg_doc(http
 	LIBSUBDIR
 	    http
 	SOURCES
-	    post.txt json.txt figs/httpserver.pdf figs/httpserver.png
+	    json.md figs/httpserver.pdf figs/httpserver.png
+	SOURCE post.md --lib=http/html_write
 	SECTION
 	    websocket.pl hub.pl
 	SUBSECTION
