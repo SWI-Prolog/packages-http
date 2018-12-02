@@ -109,8 +109,12 @@ swipl_examples(${PWP_FILES}
 
 test_libs(cgi_stream http json multipart proxy websocket
 	  PACKAGES clib sgml plunit ssl zlib
-     PARENT_LIB
-     TEST_FILES_REGEX "demo_body\\.pl$")
+	  PARENT_LIB)
+
+if(INSTALL_TESTS)
+  install(FILES examples/demo_body.pl
+	  DESTINATION ${INSTALL_TESTS_DIR}/packages/http/examples)
+endif()
 
 pkg_doc(http
 	LIBSUBDIR
