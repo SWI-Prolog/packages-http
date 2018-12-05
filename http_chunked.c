@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2015, University of Amsterdam
+    Copyright (c)  2007-2018, University of Amsterdam
                               VU University Amsterdam
+			      CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -181,9 +182,15 @@ chunked_control(void *handle, int op, void *data)
     case SIO_SETENCODING:
       return 0;				/* allow switching encoding */
     default:
-      if ( ctx->stream->functions->control )
-	return (*ctx->stream->functions->control)(ctx->stream->handle, op, data);
+    { IOSTREAM *s;
+      IOFUNCTIONS *sf;
+
+      if ( (s=ctx->stream) &&
+	   (sf=s->functions) &&
+	   s->magic == SIO_MAGIC )
+	return (*sf->control)(s->handle, op, data);
       return -1;
+    }
   }
 }
 
