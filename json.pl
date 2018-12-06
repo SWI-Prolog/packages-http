@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2016, University of Amsterdam
+    Copyright (c)  2007-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -69,6 +70,7 @@
 :- use_module(library(memfile)).
 :- use_module(library(error)).
 :- use_module(library(option)).
+:- use_module(library(debug)).
 
 :- use_foreign_library(foreign(json)).
 
@@ -90,6 +92,7 @@
                      ]).
 :- predicate_options(json_read_dict/3, 3,
                      [ tag(atom),
+                       default_tag(atom),
                        pass_to(json_read/3, 3)
                      ]).
 :- predicate_options(json_write_dict/3, 3,
@@ -129,14 +132,16 @@ supported in SWI-Prolog version 7 and later):
 terms.
 */
 
-:- record json_options(null:ground = @(null),
-                   true:ground = @(true),
-                   false:ground = @(false),
-                   value_string_as:oneof([atom,string]) = atom,
-                   tag:atom = '').
+:- record json_options(
+              null:ground = @(null),
+              true:ground = @(true),
+              false:ground = @(false),
+              value_string_as:oneof([atom,string]) = atom,
+              tag:atom = '',
+              default_tag:atom).
 
 default_json_dict_options(
-    json_options(null, true, false, string, '')).
+    json_options(null, true, false, string, '', _)).
 
 
                  /*******************************
@@ -881,16 +886,19 @@ is_json_pair(Options, Name=Value) :-
 %       attribute to the dict _tag_. No mapping is performed if Name
 %       is the empty atom ('', default). See json_read_dict/2 and
 %       json_write_dict/2.
+%     * default_tag(+Tag)
+%       Provide the default tag if the above `tag` option does not
+%       apply.
 %     * null(+NullTerm)
-%     Default the atom `null`.
+%       Default the atom `null`.
 %     * true(+TrueTerm)
-%     Default the atom `true`.
+%       Default the atom `true`.
 %     * false(+FalseTerm)
-%     Default the atom `false`
+%       Default the atom `false`
 %     * value_string_as(+Type)
-%     Prolog type used for strings used as value.  Default
-%     is =string=.  The alternative is =atom=, producing a
-%     packed string object.
+%       Prolog type used for strings used as value.  Default
+%       is `string`.  The alternative is `atom`, producing a
+%       packed string object.
 
 json_read_dict(Stream, Dict) :-
     json_read_dict(Stream, Dict, []).
@@ -910,7 +918,12 @@ term_to_dict(json(Pairs), Dict, Options) :-
         select(TagName = Tag0, Pairs, NVPairs),
         to_atom(Tag0, Tag)
     ->  json_dict_pairs(NVPairs, DictPairs, Options)
-    ;   json_dict_pairs(Pairs, DictPairs, Options)
+    ;   json_options_default_tag(Options, DefTag),
+        (   var(DefTag)
+        ->  true
+        ;   Tag = DefTag
+        ),
+        json_dict_pairs(Pairs, DictPairs, Options)
     ),
     dict_create(Dict, Tag, DictPairs).
 term_to_dict(Value0, Value, _Options) :-
