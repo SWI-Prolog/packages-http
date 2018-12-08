@@ -131,6 +131,7 @@ pkg_doc(http
 	    http_files.pl http_cors.pl mimepack.pl
 	    http_authenticate.pl http_client.pl
 	    http_header.pl http_digest.pl
+	IMAGES httpserver.png
 	SUBSUBSECTION
 	    ${HTTP_PLATFORM_FILES}
         DEPENDS ssl)
