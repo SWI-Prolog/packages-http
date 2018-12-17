@@ -1474,7 +1474,7 @@ html_colours(\List, built_in-[built_in-Colours]) :-
     is_list(List),
     !,
     list_colours(List, Colours).
-html_colours(\_, built_in-[dcg]) :- !.
+html_colours(\_, html_call-[dcg]) :- !.
 html_colours(_:Term, built_in-[classify,Colours]) :-
     !,
     html_colours(Term, Colours).
