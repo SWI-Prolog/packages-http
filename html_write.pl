@@ -54,7 +54,7 @@
             xhtml_ns//2,                % +Id, +Value
             html_root_attribute//2,     % +Name, +Value
 
-            html/4,                     % <![html[quasi quotations]]>
+            html/4,                     % {|html||quasi quotations|}
 
                                         % Useful primitives for expanding
             html_begin//1,              % +EnvName[(Attribute...)]
