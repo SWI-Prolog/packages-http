@@ -1483,6 +1483,10 @@ html_colours(List, list-ListColours) :-
     List = [_|_],
     !,
     list_colours(List, ListColours).
+html_colours(Format-Args, functor-[FormatColor,ArgsColors]) :-
+    !,
+    format_colours(Format, FormatColor),
+    format_arg_colours(Args, Format, ArgsColors).
 html_colours(Term, TermColours) :-
     compound(Term),
     compound_name_arguments(Term, Name, Args),
@@ -1585,6 +1589,12 @@ location_id(ID, Class) :-
     ).
 location_id(_, classify).
 
+format_colours(Format, format_string) :- atom(Format), !.
+format_colours(Format, format_string) :- string(Format), !.
+format_colours(_Format, type_error(text)).
+
+format_arg_colours(Args, _Format, classify) :- is_list(Args), !.
+format_arg_colours(_, _, type_error(list)).
 
 :- op(990, xfx, :=).                    % allow compiling without XPCE
 :- op(200, fy, @).
@@ -1593,6 +1603,7 @@ prolog_colour:style(html(_),                    [colour(magenta4), bold(true)]).
 prolog_colour:style(entity(_),                  [colour(magenta4)]).
 prolog_colour:style(html_attribute(_),          [colour(magenta4)]).
 prolog_colour:style(html_xmlns(_),              [colour(magenta4)]).
+prolog_colour:style(format_string(_),           [colour(magenta4)]).
 prolog_colour:style(sgml_attr_function,         [colour(blue)]).
 prolog_colour:style(http_location_for_id(_),    [bold(true)]).
 prolog_colour:style(http_no_location_for_id(_), [colour(red), bold(true)]).
