@@ -1470,7 +1470,7 @@ prolog_colour:goal_colours(html_meta(_),
 html_colours(Var, classify) :-
     var(Var),
     !.
-html_colours(\List, built_in-[built_in-Colours]) :-
+html_colours(\List, html_raw-[list-Colours]) :-
     is_list(List),
     !,
     list_colours(List, Colours).
