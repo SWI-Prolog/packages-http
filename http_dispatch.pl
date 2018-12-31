@@ -263,27 +263,29 @@ current_generation(G) :-
 current_generation(0).
 
 
-%!  compile_handler(+Path, :Pred, +Options) is det.
+%!  compile_handler(+Path, :Pred, +Options, -Clause) is det.
 %
-%   Compile a handler specification. For now we this is a no-op, but
-%   in the feature can make this more efficiently, especially in the
-%   presence of one or multiple prefix declarations. We can also use
-%   this to detect conflicts.
+%   Compile a handler specification.
 
 compile_handler(Path, Pred, Options0,
                 http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
     check_path(Path, Path1, PathOptions),
     (   memberchk(segment_pattern(_), PathOptions)
-    ->  IsPrefix = true
+    ->  IsPrefix = true,
+        Options1 = Options0
     ;   select(prefix, Options0, Options1)
     ->  IsPrefix = true
     ;   IsPrefix = false,
         Options1 = Options0
     ),
+    partition(ground, Options1, Options2, QueryOptions),
     Pred = M:_,
-    maplist(qualify_option(M), Options1, Options2),
-    combine_methods(Options2, Options3),
-    append(PathOptions, Options3, Options).
+    maplist(qualify_option(M), Options2, Options3),
+    combine_methods(Options3, Options4),
+    (   QueryOptions == []
+    ->  append(PathOptions, Options4, Options)
+    ;   append(PathOptions, ['$extract'(QueryOptions)|Options4], Options)
+    ).
 
 qualify_option(M, condition(Pred), condition(M:Pred)) :-
     Pred \= _:_, !.
@@ -421,11 +423,23 @@ path_to_list(Value) -->
 
 http_dispatch(Request) :-
     memberchk(path(Path), Request),
-    find_handler(Path, Pred, Options),
+    find_handler(Path, Closure, Options),
     supports_method(Request, Options),
     authentication(Options, Request, Fields),
     append(Fields, Request, AuthRequest),
-    action(Pred, AuthRequest, Options).
+    extract_from_request(AuthRequest, Options),
+    action(Closure, AuthRequest, Options).
+
+extract_from_request(Request, Options) :-
+    memberchk('$extract'(Fields), Options),
+    !,
+    extract_fields(Fields, Request).
+extract_from_request(_, _).
+
+extract_fields([], _).
+extract_fields([H|T], Request) :-
+    memberchk(H, Request),
+    extract_fields(T, Request).
 
 
 %!  http_current_handler(+Location, :Closure) is semidet.
@@ -687,8 +701,8 @@ find_handler([node(prefix(Prefix), PAction, POptions, Children)|_],
         find_handler(Children, Path, Action, Options)
     ->  true
     ;   member(segment_pattern(Pattern, PatAction, PatOptions), POptions),
-        copy_term(Pattern+PatAction, Pattern2+Action),
-        match_segments(After, Path, Pattern2, PatOptions, Options)
+        copy_term(t(Pattern,PatAction,PatOptions), t(Pattern2,Action,Options)),
+        match_segments(After, Path, Pattern2)
     ->  true
     ;   PAction \== nop
     ->  Action = PAction,
@@ -704,10 +718,10 @@ path_info(After, Path, Options,
           [path_info(PathInfo),prefix(true)|Options]) :-
     sub_atom(Path, _, After, 0, PathInfo).
 
-match_segments(After, Path, [Var], Options, Options) :-
+match_segments(After, Path, [Var]) :-
     !,
     sub_atom(Path, _, After, 0, Var).
-match_segments(After, Path, Pattern, Options, Options) :-
+match_segments(After, Path, Pattern) :-
     sub_atom(Path, _, After, 0, PathInfo),
     split_string(PathInfo, "/", "", Segments),
     match_segment_pattern(Pattern, Segments).
@@ -1128,9 +1142,12 @@ prefix_options([Prefix-C|T0], DefOptions,
     last(Same, h(_, Options0, _-_)),
     merge_options(Options0, DefOptions, Options),
     append(SegmentPatterns, Options, PrefixOptions),
-    delete(Options, id(_), InheritOpts),
+    exclude(no_inherit, Options, InheritOpts),
     prefix_options(C, InheritOpts, Children),
     prefix_options(T0, DefOptions, T).
+
+no_inherit(id(_)).
+no_inherit('$extract'(_)).
 
 same_priority_handlers([H|T0], P, [H|T]) :-
     H = h(_,_,P0-_),
