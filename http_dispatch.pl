@@ -272,15 +272,18 @@ current_generation(0).
 
 compile_handler(Path, Pred, Options0,
                 http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
-    check_path(Path, Path1),
-    (   select(prefix, Options0, Options1)
+    check_path(Path, Path1, PathOptions),
+    (   memberchk(segment_pattern(_), PathOptions)
+    ->  IsPrefix = true
+    ;   select(prefix, Options0, Options1)
     ->  IsPrefix = true
     ;   IsPrefix = false,
         Options1 = Options0
     ),
     Pred = M:_,
     maplist(qualify_option(M), Options1, Options2),
-    combine_methods(Options2, Options).
+    combine_methods(Options2, Options3),
+    append(PathOptions, Options3, Options).
 
 qualify_option(M, condition(Pred), condition(M:Pred)) :-
     Pred \= _:_, !.
@@ -338,64 +341,78 @@ method(options).
 method(trace).
 
 
-%!  check_path(+PathSpecIn, -PathSpecOut) is det.
+%!  check_path(+PathSpecIn, -PathSpecOut, -Options) is det.
 %
 %   Validate the given path specification.  We want one of
 %
-%           * AbsoluteLocation
-%           * Alias(Relative)
+%     - AbsoluteLocation
+%     - Alias(Relative)
 %
-%   Similar  to  absolute_file_name/3,  Relative  can    be  a  term
-%   _|Component/Component/...|_
+%   Similar  to  absolute_file_name/3,   Relative   can    be   a   term
+%   ``Component/Component/...``. Relative may be a `/` separated list of
+%   path segments, some of which may   be  variables. A variable patches
+%   any segment and its binding can be passed  to the handler. If such a
+%   pattern     is     found      Options       is      unified     with
+%   `[segment_pattern(SegmentList)]`.
 %
 %   @error  domain_error, type_error
 %   @see    http_absolute_location/3
 
-check_path(Path, Path) :-
+check_path(Path, Path, []) :-
     atom(Path),
     !,
     (   sub_atom(Path, 0, _, _, /)
     ->  true
     ;   domain_error(absolute_http_location, Path)
     ).
-check_path(Alias, AliasOut) :-
+check_path(Alias, AliasOut, Options) :-
     compound(Alias),
     Alias =.. [Name, Relative],
     !,
-    to_atom(Relative, Local),
+    local_path(Relative, Local, Options),
     (   sub_atom(Local, 0, _, _, /)
     ->  domain_error(relative_location, Relative)
     ;   AliasOut =.. [Name, Local]
     ).
-check_path(PathSpec, _) :-
+check_path(PathSpec, _, _) :-
     type_error(path_or_alias, PathSpec).
 
-to_atom(Atom, Atom) :-
+local_path(Atom, Atom, []) :-
     atom(Atom),
     !.
-to_atom(Path, Atom) :-
+local_path(Path, Atom, Options) :-
     phrase(path_to_list(Path), Components),
     !,
-    atomic_list_concat(Components, '/', Atom).
-to_atom(Path, _) :-
+    (   maplist(atom, Components)
+    ->  atomic_list_concat(Components, '/', Atom),
+        Options = []
+    ;   append(Pre, [Var|Rest], Components),
+        var(Var)
+    ->  append(Pre, [''], PreSep),
+        atomic_list_concat(PreSep, '/', Atom),
+        Options = [segment_pattern([Var|Rest])]
+    ).
+local_path(Path, _, _) :-
     ground(Path),
     !,
     type_error(relative_location, Path).
-to_atom(Path, _) :-
+local_path(Path, _, _) :-
     instantiation_error(Path).
 
 path_to_list(Var) -->
-    { var(Var),
-      !,
-      fail
-    }.
+    { var(Var) },
+    !,
+    [Var].
 path_to_list(A/B) -->
+    !,
     path_to_list(A),
     path_to_list(B).
 path_to_list(Atom) -->
     { atom(Atom) },
+    !,
     [Atom].
-
+path_to_list(Value) -->
+    { must_be(atom, Value) }.
 
 
 %!  http_dispatch(Request) is det.
@@ -669,7 +686,12 @@ find_handler([node(prefix(Prefix), PAction, POptions, Children)|_],
     (   option(hide_children(false), POptions, false),
         find_handler(Children, Path, Action, Options)
     ->  true
-    ;   Action = PAction,
+    ;   member(segment_pattern(Pattern, PatAction, PatOptions), POptions),
+        copy_term(Pattern+PatAction, Pattern2+Action),
+        match_segments(After, Path, Pattern2, PatOptions, Options)
+    ->  true
+    ;   PAction \== nop
+    ->  Action = PAction,
         path_info(After, Path, POptions, Options)
     ).
 find_handler([node(Path, Action, Options, _)|_], Path, Action, Options) :- !.
@@ -681,6 +703,23 @@ path_info(0, _, Options,
 path_info(After, Path, Options,
           [path_info(PathInfo),prefix(true)|Options]) :-
     sub_atom(Path, _, After, 0, PathInfo).
+
+match_segments(After, Path, [Var], Options, Options) :-
+    !,
+    sub_atom(Path, _, After, 0, Var).
+match_segments(After, Path, Pattern, Options, Options) :-
+    sub_atom(Path, _, After, 0, PathInfo),
+    split_string(PathInfo, "/", "", Segments),
+    match_segment_pattern(Pattern, Segments).
+
+match_segment_pattern([], []).
+match_segment_pattern([Var], Segments) :-
+    !,
+    atomic_list_concat(Segments, '/', Var).
+match_segment_pattern([H0|T0], [H|T]) :-
+    atom_string(H0, H),
+    match_segment_pattern(T0, T).
+
 
 eval_condition(Options) :-
     (   memberchk(condition(Cond), Options)
@@ -1038,11 +1077,15 @@ path_tree_nocache(Tree) :-
     prefix_options(PTree, [], OPTree),
     add_paths_tree(OPTree, Tree).
 
-prefix_handler(Prefix, Action, Options, Priority) :-
+prefix_handler(Prefix, Action, Options, Priority-PLen) :-
     handler(Spec, Action, true, Options),
     (   memberchk(priority(Priority), Options)
     ->  true
     ;   Priority = 0
+    ),
+    (   memberchk(segment_pattern(Pattern), Options)
+    ->  length(Pattern, PLen)
+    ;   PLen = 0
     ),
     Error = error(existence_error(http_alias,_),_),
     catch(http_absolute_location(Spec, Prefix, []), Error,
@@ -1075,15 +1118,33 @@ insert_prefix(Prefix, Tree, [Prefix-[]|Tree]).
 %   @tbd    What to do if there are more?
 
 prefix_options([], _, []).
-prefix_options([P-C|T0], DefOptions,
-               [node(prefix(P), Action, Options, Children)|T]) :-
-    aggregate_all(max(Priority, Action-Options0),
-                  prefix_handler(P, Action, Options0, Priority),
-                  max(_, Action-Options0)),
+prefix_options([Prefix-C|T0], DefOptions,
+               [node(prefix(Prefix), Action, PrefixOptions, Children)|T]) :-
+    findall(h(A,O,P), prefix_handler(Prefix,A,O,P), Handlers),
+    sort(3, >=, Handlers, Handlers1),
+    Handlers1 = [h(_,_,P0)|_],
+    same_priority_handlers(Handlers1, P0, Same),
+    option_patterns(Same, SegmentPatterns, Action),
+    last(Same, h(_, Options0, _-_)),
     merge_options(Options0, DefOptions, Options),
+    append(SegmentPatterns, Options, PrefixOptions),
     delete(Options, id(_), InheritOpts),
     prefix_options(C, InheritOpts, Children),
     prefix_options(T0, DefOptions, T).
+
+same_priority_handlers([H|T0], P, [H|T]) :-
+    H = h(_,_,P0-_),
+    P = P0-_,
+    !,
+    same_priority_handlers(T0, P, T).
+same_priority_handlers(_, _, []).
+
+option_patterns([], [], nop).
+option_patterns([h(A,_,_-0)|_], [], A) :-
+    !.
+option_patterns([h(A,O,_)|T0], [segment_pattern(P,A,O)|T], AF) :-
+    memberchk(segment_pattern(P), O),
+    option_patterns(T0, T, AF).
 
 
 %!  add_paths_tree(+OPTree, -Tree) is det.
