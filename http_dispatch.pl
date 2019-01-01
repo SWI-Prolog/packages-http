@@ -38,6 +38,7 @@
           [ http_dispatch/1,            % +Request
             http_handler/3,             % +Path, +Predicate, +Options
             http_delete_handler/1,      % +Path
+            http_request_expansion/2,   % :Goal, +Rank
             http_reply_file/3,          % +File, +Options, +Request
             http_redirect/3,            % +How, +Path, +Request
             http_404/2,                 % +Options, +Request
@@ -51,12 +52,12 @@
           ]).
 :- use_module(library(option)).
 :- use_module(library(lists)).
+:- use_module(library(pairs)).
 :- use_module(library(time)).
 :- use_module(library(error)).
 :- use_module(library(settings)).
 :- use_module(library(uri)).
 :- use_module(library(apply)).
-:- use_module(library(aggregate)).
 :- use_module(library(http/mimetype)).
 :- use_module(library(http/http_path)).
 :- use_module(library(http/http_header)).
@@ -195,6 +196,7 @@ write_index(Request) :-
     http_handler(+, :, +),
     http_current_handler(?, :),
     http_current_handler(?, :, ?),
+    http_request_expansion(3, +),
     http_switch_protocol(2, +).
 
 http_handler(Path, Pred, Options) :-
@@ -425,10 +427,9 @@ http_dispatch(Request) :-
     memberchk(path(Path), Request),
     find_handler(Path, Closure, Options),
     supports_method(Request, Options),
-    authentication(Options, Request, Fields),
-    append(Fields, Request, AuthRequest),
-    extract_from_request(AuthRequest, Options),
-    action(Closure, AuthRequest, Options).
+    expand_request(Request, Request1, Options),
+    extract_from_request(Request1, Options),
+    action(Closure, Request1, Options).
 
 extract_from_request(Request, Options) :-
     memberchk('$extract'(Fields), Options),
@@ -440,6 +441,60 @@ extract_fields([], _).
 extract_fields([H|T], Request) :-
     memberchk(H, Request),
     extract_fields(T, Request).
+
+
+%!  http_request_expansion(:Goal, +Rank:number)
+%
+%   Register Goal for expanding the HTTP request handler. Goal is called
+%   as below. If Goal fail the request   is passed to the next expansion
+%   unmodified.
+%
+%       call(Goal, Request0, Request, Options)
+%
+%   If multiple goals are  registered  they   expand  the  request  in a
+%   pipeline starting with the expansion hook with the lowest rank.
+%
+%   Besides rewriting the request, for example   by  validating the user
+%   identity based on HTTP authentication or  cookies and adding this to
+%   the request, the hook may raise HTTP exceptions to indicate a bad
+%   request, permission error, etc.  See http_status_reply/4.
+
+http_request_expansion(Goal, Rank) :-
+    throw(error(context_error(nodirective, http_request_expansion(Goal, Rank)), _)).
+
+:- multifile
+    request_expansion/2.
+
+system:term_expansion((:- http_request_expansion(Goal, Rank)),
+                      http_dispatch:request_expansion(M:Callable, Rank)) :-
+    must_be(number, Rank),
+    prolog_load_context(module, M0),
+    strip_module(M0:Goal, M, Callable),
+    must_be(callable, Callable).
+
+request_expanders(Closures) :-
+    findall(Rank-Closure, request_expansion(Closure, Rank), Pairs),
+    keysort(Pairs, Sorted),
+    pairs_values(Sorted, Closures).
+
+%!  expand_request(+Request0, -Request, +Options)
+%
+%   Expand an HTTP request.  Options  is   a  list  of  combined options
+%   provided with the handler registration (see http_handler/3).
+
+expand_request(Request0, Request, Options) :-
+    request_expanders(Closures),
+    expand_request(Closures, Request0, Request, Options).
+
+expand_request([], Request, Request, _).
+expand_request([H|T], Request0, Request, Options) :-
+    expand_request1(H, Request0, Request1, Options),
+    expand_request(T, Request1, Request, Options).
+
+expand_request1(Closure, Request0, Request, Options) :-
+    call(Closure, Request0, Request, Options),
+    !.
+expand_request1(_, Request, Request, _).
 
 
 %!  http_current_handler(+Location, :Closure) is semidet.
@@ -647,6 +702,9 @@ html_write:expand_attribute_value(location_by_id(ID)) -->
 %   http_authenticate.pl provides an implementation thereof.
 %
 %   @error  permission_error(access, http_location, Location)
+%   @deprecated This hook predates the extensible request
+%   expansion provided by http_request_expansion/2. New hooks should use
+%   http_request_expansion/2 instead of http:authenticate/3.
 
 :- multifile
     http:authenticate/3.
@@ -663,6 +721,11 @@ authentication([authentication(Type)|Options], Request, Fields) :-
 authentication([_|Options], Request, Fields) :-
     authentication(Options, Request, Fields).
 
+:- http_request_expansion(auth_expansion, 100).
+
+auth_expansion(Request0, Request, Options) :-
+    authentication(Options, Request0, Extra),
+    append(Extra, Request, Request0).
 
 %!  find_handler(+Path, -Action, -Options) is det.
 %
