@@ -11,17 +11,6 @@ body and the three documented server instantiations.
 	allows to specify options. tm/0 provides a graphical display
 	of the runing threads.  See source-file.
 
-	$ demo_xpce.pl :
-	Run XPCE-based event-driven server.  Requires XPCE.  Use
-	?- server(3000). to start the server at port 3000.
-
-	$ demo_inetd :
-	To install this, adjust the first line of this file to point
-	to the installed Prolog executable and add the following line
-	to /etc/inetd.conf (adjust as needed):
-
-	4001 stream tcp nowait nobody /usr/sbin/tcpd /usr/lib/pl-5.1.4/library/http/demo/demo_inetd
-
 ## Unix services demo:
 
 	$ demo_daemon.pl :
@@ -64,6 +53,15 @@ body and the three documented server instantiations.
 
 	$ demo_digest.pl :
 	Simple demo showing HTTP digest authentication at work.
+
+## Login and request rewriting
+
+	$ demo_login.pl :
+	Demonstrated using request rewriting and redefining status
+	pages to provide cookie based login with RBAC authorization.
+
+	$ demo_rest.pl :
+	Demonstrates path wildcarts for common REST api routing.
 
 ## Performance testing
 

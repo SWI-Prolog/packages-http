@@ -49,9 +49,9 @@ set(HTTP_PL_FILES
 set(HTTP_EXAMPLE_FILES
     README.md
     demo_body.pl demo_client.pl demo_threads.pl
-    demo_xpce.pl calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
+    calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
     demo_daemon.pl upstart-script.conf systemd-script.service
-    linux-init-script demo_inetd)
+    linux-init-script demo_login.pl demo_rest.pl)
 prepend(HTTP_EXAMPLE_FILES examples/ ${HTTP_EXAMPLE_FILES})
 
 set(PWP_FILES

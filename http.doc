@@ -77,6 +77,11 @@ contributed with bug-report and suggestions for improvements: Anjo
 Anjewierden, Bert Bredeweg, Wouter Jansweijer, Bob Wielinga, Jacco
 van Ossenbruggen, Michiel Hildebrandt, Matt Lilley and Keri Harris.
 
+Path wildcarts (see http_handler/3) have been modelled after the
+`arouter` package by Raivo Laanemets.  Request rewriting has been
+added after discussion with Raivo Laanemets and Anne Ogborn on the
+SWI-Prolog mailinglist.
+
 
 \section{The HTTP client libraries}
 \label{sec:http-clients}
