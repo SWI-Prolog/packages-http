@@ -236,11 +236,17 @@ pages such as \const{not_found}, \const{moved}, etc. The defined
 exceptions are:
 
 \begin{description}
+    \termitem{http_reply}{+Reply, +HdrExtra, +Context}
+Return a result page using http_reply/3.  See http_reply/3 for
+supported values for Reply and \secref{http-custom-error-page}
+for providing a custom error page.
+
     \termitem{http_reply}{+Reply, +HdrExtra}
-Return a result page using http_reply/3.  See http_reply/3 for details.
+Return a result page using http_reply/3. Equivalent to
+\term{http_reply}{Reply, HdrExtra, []}.
 
     \termitem{http_reply}{+Reply}
-Equivalent to \term{http_reply}{Reply, []}.
+Equivalent to \term{http_reply}{Reply, [], []}.
 
     \termitem{http}{not_modified}
 Equivalent to \term{http_reply}{not_modified, []}.  This exception is
@@ -283,26 +289,31 @@ arbitrary term relating to the page you want to generate. You must then
 also define a clause of the multifile predicate http:status_page_hook/3:
 
 \begin{description}
-    \predicate{http:status_page_hook}{3}{+StatusCode, +Key, -CustomHTML}
-StatusCode is the page status code (such as 401), Key is the third
-argument of the http_reply exception which was thrown, and CustomHTML is
-a list of HTML tokens. The default page for 401 is generated via this
-code:
+    \predicate{http:status_page_hook}{3}{+TermOrCode, +Context, -CustomHTML}
+TermOrCode is either the first argument of the \const{http_reply}
+exception or the HTTP status code, i.e., the hook is called twice. New
+code should using the \arg{Term}. Context is the third argument of the
+http_reply exception which was thrown, and CustomHTML is a list of HTML
+tokens. A page equivalent to the default page for 401 is generated
+by the example below.
 
 \begin{code}
-        phrase(page([ title('401 Authorization Required')
-		    ],
-		    [ h1('Authorization Required'),
-		      p(['This server could not verify that you ',
-			 'are authorized to access the document ',
-			 'requested.  Either you supplied the wrong ',
-			 'credentials (e.g., bad password), or your ',
-			 'browser doesn\'t understand how to supply ',
-			 'the credentials required.'
-			]),
-		      \address
-		    ]),
-	       CustomHTML).
+:- multifile http:status_page_hook/3.
+
+http:status_page_hook(authorise(Term), _Context, HTML) :-
+    phrase(page([ title('401 Authorization Required')
+                ],
+                [ h1('Authorization Required'),
+                  p(['This server could not verify that you ',
+                     'are authorized to access the document ',
+                     'requested.  Either you supplied the wrong ',
+                     'credentials (e.g., bad password), or your ',
+                     'browser doesn\'t understand how to supply ',
+                     'the credentials required.'
+                     ]),
+                  \address
+                ]),
+           HTML).
 \end{code}
 \end{description}
 
