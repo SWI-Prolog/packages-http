@@ -100,91 +100,107 @@ write_index(Request) :-
 
 %!  http_handler(+Path, :Closure, +Options) is det.
 %
-%   Register Closure as a handler for HTTP requests. Path is a
-%   specification as provided by http_path.pl.  If an HTTP
-%   request arrives at the server that matches Path, Closure
-%   is called with one extra argument: the parsed HTTP request.
-%   Options is a list containing the following options:
+%   Register Closure as a handler for HTTP   requests. Path is either an
+%   absolute path such as =|'/home.html'|=   or  a term Alias(Relative).
+%   Where Alias is associated with a concrete path using http:location/3
+%   and resolved using http_absolute_location/3.  `Relative`   can  be a
+%   single atom or a term `Segment1/Segment2/...`, where each element is
+%   either an atom or a variable. If a  segment is a variable it matches
+%   any segment and the binding may  be   passed  to the closure. If the
+%   last segment is a variable  it   may  match  multiple segments. This
+%   allows registering REST paths, for example:
 %
-%           * authentication(+Type)
-%           Demand authentication.  Authentication methods are
-%           pluggable.  The library http_authenticate.pl provides
-%           a plugin for user/password based =Basic= HTTP
-%           authentication.
+%      ```
+%      :- http_handler(root(user/User), user(Method, User),
+%                      [ method(Method),
+%                        methods([get,port,put])
+%                      ]).
 %
-%           * chunked
-%           Use =|Transfer-encoding: chunked|= if the client
-%           allows for it.
+%      user(get, User, Request) :-
+%          ...
+%      user(post, User, Request) :-
+%          ...
+%      ```
 %
-%           * condition(:Goal)
-%           If present, the handler is ignored if Goal does not succeed.
+%   If an HTTP request arrives at the  server that matches Path, Closure
+%   is called as below, where `Request` is the parsed HTTP request.
 %
-%           * content_type(+Term)
-%           Specifies the content-type of the reply.  This value is
-%           currently not used by this library.  It enhances the
-%           reflexive capabilities of this library through
-%           http_current_handler/3.
+%       call(Closure, Request)
 %
-%           * id(+Term)
-%           Identifier of the handler.  The default identifier is
-%           the predicate name.  Used by http_location_by_id/2.
+%   Options  is  a  list containing the following options:
 %
-%           * hide_children(+Bool)
-%           If =true= on a prefix-handler (see prefix), possible
-%           children are masked.  This can be used to (temporary)
-%           overrule part of the tree.
+%     - authentication(+Type)
+%       Demand authentication. Authentication methods are pluggable. The
+%       library http_authenticate.pl provides a plugin for user/password
+%       based =Basic= HTTP authentication.
 %
-%           * method(+Method)
-%           Declare that the handler processes Method.  This is
-%           equivalent to methods([Method]).  Using method(*)
-%           allows for all methods.
+%     - chunked
+%       Use =|Transfer-encoding: chunked|= if the client allows for it.
 %
-%           * methods(+ListOfMethods)
-%           Declare that the handler processes all of the given
-%           methods.  If this option appears multiple times, the
-%           methods are combined.
+%     - condition(:Goal)
+%       If present, the handler is ignored if Goal does not succeed.
 %
-%           * prefix
-%           Call Pred on any location that is a specialisation of
-%           Path.  If multiple handlers match, the one with the
-%           longest path is used.  Options defined with a prefix
-%           handler are the default options for paths that start
-%           with this prefix.  Note that the handler acts as a
-%           fallback handler for the tree below it:
+%     - content_type(+Term)
+%       Specifies the content-type of the reply. This value is currently
+%       not used by this library. It enhances the reflexive capabilities
+%       of this library through http_current_handler/3.
 %
-%             ==
-%             :- http_handler(/, http_404([index('index.html')]),
-%                             [spawn(my_pool),prefix]).
-%             ==
+%     - id(+Term)
+%       Identifier of the handler. The default identifier is the
+%       predicate name. Used by http_location_by_id/2.
 %
-%           * priority(+Integer)
-%           If two handlers handle the same path, the one with the
-%           highest priority is used.  If equal, the last registered
-%           is used.  Please be aware that the order of clauses in
-%           multifile predicates can change due to reloading files.
-%           The default priority is 0 (zero).
+%     - hide_children(+Bool)
+%       If =true= on a prefix-handler (see prefix), possible children
+%       are masked. This can be used to (temporary) overrule part of the
+%       tree.
 %
-%           * spawn(+SpawnOptions)
-%           Run the handler in a seperate thread.  If SpawnOptions
-%           is an atom, it is interpreted as a thread pool name
-%           (see create_thread_pool/3).  Otherwise the options
-%           are passed to http_spawn/2 and from there to
-%           thread_create/3.  These options are typically used to
-%           set the stack limits.
+%     - method(+Method)
+%       Declare that the handler processes Method. This is equivalent to
+%       methods([Method]). Using method(*) allows for all methods.
 %
-%           * time_limit(+Spec)
-%           One of =infinite=, =default= or a positive number
-%           (seconds).  If =default=, the value from the setting
-%           =http:time_limit= is taken. The default of this
-%           setting is 300 (5 minutes).  See setting/2.
+%     - methods(+ListOfMethods)
+%       Declare that the handler processes all of the given methods. If
+%       this option appears multiple times, the methods are combined.
 %
-%   Note that http_handler/3 is normally invoked  as a directive and
-%   processed using term-expansion.  Using   term-expansion  ensures
-%   proper update through make/0 when the specification is modified.
-%   We do not expand when the  cross-referencer is running to ensure
-%   proper handling of the meta-call.
+%     - prefix
+%       Call Pred on any location that is a specialisation of Path. If
+%       multiple handlers match, the one with the longest path is used.
+%       Options defined with a prefix handler are the default options
+%       for paths that start with this prefix. Note that the handler
+%       acts as a fallback handler for the tree below it:
+%
+%       ==
+%       :- http_handler(/, http_404([index('index.html')]),
+%                       [spawn(my_pool),prefix]).
+%       ==
+%
+%     - priority(+Integer)
+%       If two handlers handle the same path, the one with the highest
+%       priority is used. If equal, the last registered is used. Please
+%       be aware that the order of clauses in multifile predicates can
+%       change due to reloading files. The default priority is 0 (zero).
+%
+%     - spawn(+SpawnOptions)
+%       Run the handler in a seperate thread. If SpawnOptions is an
+%       atom, it is interpreted as a thread pool name (see
+%       create_thread_pool/3). Otherwise the options are passed to
+%       http_spawn/2 and from there to thread_create/3. These options
+%       are typically used to set the stack limits.
+%
+%     - time_limit(+Spec)
+%       One of =infinite=, =default= or a positive number (seconds). If
+%       =default=, the value from the setting =http:time_limit= is
+%       taken. The default of this setting is 300 (5 minutes). See
+%       setting/2.
+%
+%   Note that http_handler/3 is normally  invoked   as  a  directive and
+%   processed using term-expansion. Using  term-expansion ensures proper
+%   update through make/0 when the specification  is modified. We do not
+%   expand  when  the  cross-referencer  is  running  to  ensure  proper
+%   handling of the meta-call.
 %
 %   @error  existence_error(http_location, Location)
+%   @error  permission_error(http_method, Method, Location)
 %   @see    http_reply_file/3 and http_redirect/3 are generic
 %           handlers to serve files and achieve redirects.
 
@@ -421,7 +437,26 @@ path_to_list(Value) -->
 
 %!  http_dispatch(Request) is det.
 %
-%   Dispatch a Request using http_handler/3 registrations.
+%   Dispatch a Request using http_handler/3   registrations. It performs
+%   the following steps:
+%
+%     1. Find a matching handler based on the `path` member of Request.
+%        If multiple handlers match due to the `prefix` option or
+%        variables in path segments (see http_handler/3), the longest
+%        specification is used.  If multiple specifications of equal
+%        length match the one with the highest priority is used.
+%     2. Check that the handler matches the `method` member of the
+%        Request or throw permission_error(http_method, Method, Location)
+%     3. Expand the request using expansion hooks registered by
+%        http_request_expansion/3.  This may add fields to the request,
+%        such the authenticated user, parsed parameters, etc.  The
+%        hooks may also throw exceptions, notably using http_redirect/3
+%        or by throwing `http_reply(Term, ExtraHeader, Context)`
+%        exceptions.
+%     4. Extract possible fields from the Request using e.g.
+%        method(Method) as one of the options.
+%     5. Call the registered _closure_, optionally spawning the
+%        request to a new thread or enforcing a time limit.
 
 http_dispatch(Request) :-
     memberchk(path(Path), Request),
@@ -458,6 +493,9 @@ extract_fields([H|T], Request) :-
 %   identity based on HTTP authentication or  cookies and adding this to
 %   the request, the hook may raise HTTP exceptions to indicate a bad
 %   request, permission error, etc.  See http_status_reply/4.
+%
+%   Initially, auth_expansion/3 is registered with   rank  `100` to deal
+%   with the older http:authenticate/3 hook.
 
 http_request_expansion(Goal, Rank) :-
     throw(error(context_error(nodirective, http_request_expansion(Goal, Rank)), _)).
@@ -722,6 +760,13 @@ authentication([_|Options], Request, Fields) :-
     authentication(Options, Request, Fields).
 
 :- http_request_expansion(auth_expansion, 100).
+
+%!  auth_expansion(+Request0, -Request, +Options) is semidet.
+%
+%   Connect  the  HTTP  authentication  infrastructure    by   means  of
+%   http_request_expansion/2.
+%
+%   @see http:authenticate/3, http_digest.pl and http_authenticate.pl
 
 auth_expansion(Request0, Request, Options) :-
     authentication(Options, Request0, Extra),
