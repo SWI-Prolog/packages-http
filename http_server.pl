@@ -68,13 +68,21 @@
             html//1,                    % :Content
                                         % Extension support
             (html_meta)/1,              % +Spec
-            op(1150, fx, html_meta)
+            op(1150, fx, html_meta),
+            % from http_json
+            reply_json_dict/1,          % +JSON
+            reply_json_dict/2,          % +JSON, Options
+            http_read_json_dict/2,      % +Request, -Dict
+            http_read_json_dict/3,      % +Request, -Dict, +Options
+
+            is_json_content_type/1
           ]).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_wrapper)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/html_write)).
+:- use_module(library(http/http_json)).
 
 /** <module> HTTP server library
 
