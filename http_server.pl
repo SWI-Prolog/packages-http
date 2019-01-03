@@ -83,6 +83,7 @@
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_json)).
+:- use_module(library(http/http_dyn_workers)).
 
 /** <module> HTTP server library
 

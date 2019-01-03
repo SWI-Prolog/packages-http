@@ -117,18 +117,22 @@ libraries that are combined into \exam{library(http/http_server)}. These
 modules are:
 
 \begin{description}
-    \termitem{library}{http/thread_httpd}
+    \definition{\pllib{http/thread_httpd}}
 This library is responsible for accepting and managing
 connections.\footnote{In older versions there were two alternative
 libraries for managing connections based on XPCE and Unix inetd.}
 
-    \termitem{library}{http/http_wrapper}
+    \definition{\pllib{http/http_dyn_workers}}
+This library dynamically adds and removes workers based on the workload
+of the server.
+
+    \definition{\pllib{http/http_wrapper}}
 This library takes a connection, parses the HTTP request header and runs
 a goal that produces a CGI document based on the parsed request. It
 watches for exceptions and turns these into (error) status pages. The
 status page generation may be hooked to provide custom pages.
 
-    \termitem{library}{http/http_dispatch}
+    \definition{\pllib{http/http_dispatch}}
 This library associates the \jargon{path} of the HTTP request with a
 \jargon{handler} that services this particular path. It also manages
 timeouts and may pass the execution of a request to a dedicated thread
@@ -136,11 +140,11 @@ with specified resource limits using http_spawn/2.  The module supports
 plugable request rewrite handlers that may be used to implement
 identification, authorization, input argument processing, etc.
 
-    \termitem{library}{http/http_parameters}
+    \definition{\pllib{http/http_parameters}}
 This library parses HTTP request parameters, both dealing with GET
 and POST style parameter passing.
 
-    \termitem{library}{http/html_write}
+    \definition{\pllib{http/html_write}}
 This library translates a Prolog term into an HTML document using Prolog
 \jargon{grammar rules} (DCG). It provides a modular infrastructure to
 build pages that are guaranteed to be valid HTML.  The HTTP server
@@ -148,7 +152,7 @@ libraries provide several alternatives for generating HTML ranging
 from simple printing to \const{current_output} to XML-based templates
 (PWP).
 
-    \termitem{library}{http/html_json}
+    \definition{\pllib{http/http_json}}
 This library parses a POSTed HTTP document into a Prolog dict and
 formulates an HTTP JSON reply from a Prolog dict and is typically
 used to implement REST services.
@@ -315,6 +319,7 @@ handle_request(Request) :-
 \input{httpcors.tex}
 \input{httpauthenticate.tex}
 \input{httpdigest.tex}
+\input{httpdynworkers.tex}
 
 \subsection{Custom Error Pages}
 \label{sec:http-custom-error-page}

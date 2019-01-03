@@ -36,7 +36,7 @@ endif()
 set(HTTP_PL_FILES
     html_write.pl http_client.pl http_header.pl
     http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl
-    thread_httpd.pl http_wrapper.pl http_server.pl
+    thread_httpd.pl http_wrapper.pl http_server.pl http_dyn_workers.pl
     http_open.pl http_proxy.pl http_session.pl http_error.pl
     http_parameters.pl http_dispatch.pl http_authenticate.pl http_log.pl
     http_path.pl http_hook.pl html_head.pl http_exception.pl
@@ -51,7 +51,7 @@ set(HTTP_EXAMPLE_FILES
     demo_body.pl demo_client.pl demo_threads.pl
     calc.pl demo_files.pl demo_pwp.pl demo_openid.pl
     demo_daemon.pl upstart-script.conf systemd-script.service
-    linux-init-script demo_login.pl demo_rest.pl)
+    linux-init-script demo_login.pl demo_rest.pl demo_hello.pl)
 prepend(HTTP_EXAMPLE_FILES examples/ ${HTTP_EXAMPLE_FILES})
 
 set(PWP_FILES
@@ -130,7 +130,7 @@ pkg_doc(http
 	    http_open.pl http_host.pl http_openid.pl js_write.pl
 	    http_files.pl http_cors.pl mimepack.pl
 	    http_authenticate.pl http_client.pl
-	    http_header.pl http_digest.pl
+	    http_header.pl http_digest.pl http_dyn_workers.pl
 	IMAGES httpserver.png
 	SUBSUBSECTION
 	    ${HTTP_PLATFORM_FILES}
