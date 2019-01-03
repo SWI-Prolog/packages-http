@@ -107,73 +107,94 @@ the data based on the \texttt{Content-Type} of the reply.  This library
 supports a plugin infrastructure that can register hooks for converting
 additional document types.
 
-\paragraph{Status}
-
-Starting with version 7.3.11, \pllib{http/http_client} is based on
-\pllib{http/http_open}. Before that, \pllib{http/http_client} managed
-keep-alive connections. This functionality is now provided by
-http_open/3. The hooks for controlling keep-alive have been removed from
-\pllib{http/http_client}. The new implementation of keep-alive handling
-is part of \pllib{http/http_open}. Whether or not keep-alive is used can
-be controlled with the connection('Keep-alive') option or the
-http:open_options/2 hook.
-
 \input{httpopen.tex}
 \input{httpclient.tex}
 
 \section{The HTTP server libraries}		\label{sec:httpserver}
 
-The HTTP server library consists of two obligatory parts and one
-optional part. The first deals with connection management and has three
-different implementation depending on the desired type of server. The
-second implements a generic wrapper for decoding the HTTP request,
-calling user code to handle the request and encode the answer. The
-optional \file{http_dispatch} module can be used to assign HTTP
-\jargon{locations} (paths) to predicates. This design is summarised in
-\figref{httpserver}.
+The HTTP server infra structure consists of a number of small modular
+libraries that are combined into \exam{library(http/http_server)}. These
+modules are:
 
-\postscriptfig[width=0.8\linewidth]{httpserver}{Design of the HTTP
-server}
+\begin{description}
+    \termitem{library}{http/thread_httpd}
+This library is responsible for accepting and managing
+connections.\footnote{In older versions there were two alternative
+libraries for managing connections based on XPCE and Unix inetd.}
 
-In practice, library(http/thread_httpd) is the most versatile,
-performant and stable version of the server type implementations. A
-typical skeleton for building a server is given below, where
-\nopredref{server}{1} creates a number of Prolog \jargon{threads}
-that handle the HTTP requests.  The \nopredref{server}{1} predicate
-itself succeeds as soon as the server is initialized.
+    \termitem{library}{http/http_wrapper}
+This library takes a connection, parses the HTTP request header and runs
+a goal that produces a CGI document based on the parsed request. It
+watches for exceptions and turns these into (error) status pages. The
+status page generation may be hooked to provide custom pages.
+
+    \termitem{library}{http/http_dispatch}
+This library associates the \jargon{path} of the HTTP request with a
+\jargon{handler} that services this particular path. It also manages
+timeouts and may pass the execution of a request to a dedicated thread
+with specified resource limits using http_spawn/2.  The module supports
+plugable request rewrite handlers that may be used to implement
+identification, authorization, input argument processing, etc.
+
+    \termitem{library}{http/http_parameters}
+This library parses HTTP request parameters, both dealing with GET
+and POST style parameter passing.
+
+    \termitem{library}{http/html_write}
+This library translates a Prolog term into an HTML document using Prolog
+\jargon{grammar rules} (DCG). It provides a modular infrastructure to
+build pages that are guaranteed to be valid HTML.  The HTTP server
+libraries provide several alternatives for generating HTML ranging
+from simple printing to \const{current_output} to XML-based templates
+(PWP).
+
+    \termitem{library}{http/html_json}
+This library parses a POSTed HTTP document into a Prolog dict and
+formulates an HTTP JSON reply from a Prolog dict and is typically
+used to implement REST services.
+\end{description}
+
+Most server implementation simply load the \pllib{http/http_server}
+library, which loads the above modules and reexports all predicates
+except for those used for internal communication and older deprecated
+predicates. Specific use cases may load a subset of the individual
+libraries and may decide to replace one or more of them.
+
+A typical skeleton for building a server is given below. If this file is
+loaded as main file (using e.g., \exam{swipl server.pl}) it creates a
+simple server that listens on port 8080. If the root is accessed it
+redirects to the home page and shows \textbf{Hello world!}.
 
 \begin{code}
-:- use_module(library(http/thread_httpd)).
-:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_server)).
 
-server(Port) :-
-        http_server(http_dispatch,
-                    [ port(Port)
-                    ]).
+:- initialization
+    http_server([port(8080)]).
 
-:- http_handler(root(.), entry_page, []).
+:- http_handler(root(.),
+		http_redirect(moved, location_by_id(home_page)),
+		[]).
 :- http_handler(root(home), home_page, []).
-...
 
-entry_page(Request) :-
-	...	% writes reply as CGI document
+home_page(_Request) :-
+    reply_html_page(
+	title('Demo server'),
+	[ h1('Hello world!')
+	]).
 \end{code}
 
-The functional body of the user's code is independent from the selected
-server-type, making it easy to switch between the supported server
-types.
+\subsection{Creating an HTTP reply}			\label{sec:html-body}
 
-
-\subsection{The `Body'}				\label{sec:body}
-
-The server-body is the code that handles the request and formulates a
-reply. To facilitate all mentioned setups, the body is driven by
-http_wrapper/5. The goal is called with the parsed request (see
-\secref{request}) as argument and \const{current_output} set to a
-temporary buffer. Its task is closely related to the task of a CGI
-script; it must write a header declaring holding at least the
-\const{Content-type} field and a body. Here is a simple body writing the
-request as an HTML table.
+The \jargon{handler} (e.g., \nopredref{home_page}{1} above) is called
+with the parsed request (see \secref{request}) as argument and
+\const{current_output} set to a temporary buffer. Its task is closely
+related to the task of a CGI script; it must write a header declaring at
+least the \const{Content-type} field and a body. Below is a simple body
+writing the request as an HTML table.\footnote{Note that writing an HTML
+reply this way is deprecated. In fact, the code is subject to
+\jargon{injection attacks} as the HTTP request field values are
+literally injected in the output while HTML reserved characters should
+be properly escaped.}
 
 \begin{code}
 reply(Request) :-
@@ -223,9 +244,27 @@ http_redirect/3.
     \item[Status:~\arg{Status}]
 This header can be combined with \const{Location}, where \arg{Status}
 must be one of 301 (moved), 302 (moved temporary, default) or 303 (see
-other).
+other). Using the status field also allows for formulating replies such
+as 201 (created).
 \end{description}
 
+Note that the handler may send any type of document instead of HTML.
+After the header has been written, the \jargon{encoding} of the
+\const{current_output} stream encoding is established as follows:
+
+\begin{enumerate}
+    \item If the content type is \const{text/*} the stream is switched
+          to UTF-8 encoding.  If the content type does not provide
+	  attributes, \verb$; charset=UTF-8$ is added.
+    \item The content type contains \verb$UTF-8$ the stream is switched
+          to UTF-8 encoding.
+    \item http:mime_type_encoding/2 succeeds the returned encoding is
+          used.  The returned encoding must be valid for set_stream/2.
+    \item If the content type matches a list of known encodings, this
+          is used.  See mime_type_encoding/2 is \file{http_header}.
+	  The current list deals with JSON, Turtle and SPARQL.
+    \item Otherwise the stream uses octed (binary) encoding.
+\end{enumerate}
 
 
 \subsubsection{Returning special status codes}	\label{sec:httpspecials}
@@ -492,8 +531,8 @@ param(age,   [integer]).
 
 \subsection{Request format}			\label{sec:request}
 
-The body-code (see \secref{body}) is driven by a \arg{Request}.  This
-request is generated from http_read_request/2 defined in
+The body-code (see \secref{html-body}) is driven by a \arg{Request}.
+This request is generated from http_read_request/2 defined in
 \pllib{http/http_header}.
 
 
@@ -998,7 +1037,7 @@ URLs on the fly, which makes rewriting virtually impossible.
 
 The body is called by the module \pllib{http/http_wrapper.pl}. This
 module realises the communication between the I/O streams and the body
-described in \secref{body}. The interface is realised by
+described in \secref{html-body}. The interface is realised by
 http_wrapper/5:
 
 \begin{description}
