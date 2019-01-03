@@ -65,7 +65,7 @@ The decision to add a worker follows these rules:
 The policy depends on three settings:
 
   - http:max_workers
-    The manimum number of workers that will be created.  Default is
+    The maximum number of workers that will be created.  Default is
     100.
   - http:worker_idle_limit
     The number of seconds a dynamic worker waits for a new job.  If
