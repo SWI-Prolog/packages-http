@@ -30,7 +30,6 @@ configure
 config.h
 config.h.in
 config.status
-figs/httpserver.pdf
 http.tex
 post.tex
 json.tex
@@ -45,8 +44,6 @@ httpopen.tex
 httpclient.tex
 httppwp.tex
 http.html
-httpserver.gif
-httpserver.png
 http.pdf
 httpopen.tex
 httphost.tex
