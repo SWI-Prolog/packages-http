@@ -730,17 +730,18 @@ recreate_worker(exception(Error), Queue) :-
 recreate_on_error('$aborted').
 recreate_on_error(time_limit_exceeded).
 
-%       thread_httpd:message_level(+Exception, -Level)
+%!  thread_httpd:message_level(+Exception, -Level)
 %
-%       Determine the message stream used for  exceptions that may occur
-%       during server_loop/5. Being multifile, clauses   can be added by
-%       the   application   to   refine   error   handling.   See   also
-%       message_hook/3 for further programming error handling.
+%   Determine the message stream used  for   exceptions  that  may occur
+%   during server_loop/5. Being multifile, clauses can   be added by the
+%   application to refine error handling.   See  also message_hook/3 for
+%   further programming error handling.
 
 :- multifile
     message_level/2.
 
 message_level(error(io_error(read, _), _),      silent).
+message_level(error(socket_error(epipe,_), _),	silent).
 message_level(error(timeout_error(read, _), _), informational).
 message_level(keep_alive_timeout,               silent).
 

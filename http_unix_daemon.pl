@@ -559,7 +559,7 @@ bind_socket(Socket, Address) :-
     tcp_bind(Socket, Address),
     tcp_listen(Socket, 5).
 
-make_socket_error(error(socket_error(_), _), Address) :-
+make_socket_error(error(socket_error(_,_), _), Address) :-
     address_port(Address, Port),
     integer(Port),
     Port =< 1000,
