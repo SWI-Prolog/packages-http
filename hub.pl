@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2016, VU University Amsterdam
+    Copyright (c)  2014-2018, VU University Amsterdam
                               CWI Amsterdam
     All rights reserved.
 
@@ -347,8 +347,9 @@ read_message(Hub) :-
             debug(hub(event), 'Event: ~p', [Event]),
             thread_send_message(Queues.event, Event),
             (   Message.get(opcode) == close
-            ->  catch(ws_close(WS, 1000, ""), CloseError,
-                      print_message(warning, CloseError))
+            ->  CloseError = error(_,_),
+                catch(ws_close(WS, 1000, ""), CloseError,
+                      ws_warning(CloseError))
             ;   thread_send_message(Queues.wait, WS)
             ),
             (   message_queue_property(Queues.ready, size(0))
@@ -365,6 +366,13 @@ read_message(Hub) :-
     ).
 read_message(_).
 
+ws_warning(error(Formal, _)) :-
+    silent(Formal),
+    !.
+ws_warning(Error) :-
+    print_message(warning, Error).
+
+silent(socket_error(epipe, _)).
 
 %!  io_read_error(+WebSocket, +Error)
 %
@@ -378,8 +386,9 @@ io_read_error(WebSocket, Error) :-
           [WebSocket, Error]),
     retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
     !,
+    E = error(_,_),
     catch(ws_close(WebSocket, 1011, Error), E,
-          print_message(warning, E)),
+          ws_warning(E)),
     hub(HubName, Hub),
     thread_send_message(Hub.queues.event,
                         hub{left:Id,
@@ -395,8 +404,9 @@ close_client(WebSocket, Message) :-
 close_client(WebSocket, Message) :-
     retract(websocket(HubName, WebSocket, _Queue, _Lock, Id)),
     !,
+    E = error(_,_),
     catch(ws_close(WebSocket, 1000, "Bye"), E,
-          print_message(warning, E)),
+          ws_warning(E)),
     hub(HubName, Hub),
     thread_send_message(Hub.queues.event,
                         hub{left:Id,
