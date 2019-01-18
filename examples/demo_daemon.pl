@@ -8,10 +8,7 @@
 
 :- module(http_daemon, []).
 :- use_module(library(http/http_unix_daemon)).
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(http/html_write)).
-
-:- initialization http_daemon.
+:- use_module(library(http/http_server)).
 
 :- http_handler(/, hello, []).
 
@@ -22,9 +19,7 @@ not produce any output. It is detached from the controlling terminal and
 thus remains running if you logout.   You can use library(http/http_log)
 to enable logging of the HTTP requests.
 
-  ==
-  swipl -s demo_daemon.pl -- --port=5000
-  ==
+    swipl demo_daemon.pl --port=5000
 
 The second example runs this server on a priviledged user on the default
 port 80, avoiding the need for  a   proxy  server. In addition, it sends
@@ -32,13 +27,10 @@ errors, warnings and debug (see debug/3) messages to syslog deamon. Note
 that the =|-q|= suppresses informational messages such as loading Prolog
 files.
 
-  ==
-  sudo swipl -q -s demo_daemon.pl -- --syslog=swi-httpd --user=jan
-  ==
+    sudo swipl demo_daemon.pl -- --syslog=swi-demo --user=www-data
 
 @see library(http/http_unix_daemon) for more options to http_daemon/0.
 */
-
 
 
 hello(_Request) :-

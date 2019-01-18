@@ -12,8 +12,7 @@ Restart=on-failure
 StartLimitInterval=60
 StartLimitBurst=5
 WorkingDirectory=/home/swipl/src/demo
-ExecStart=/usr/bin/swipl daemon.pl --no-fork --port=80 --user=www-data \
-	  --pidfile=/var/run/demo.pid --workers=16 --syslog=demo
+ExecStart=/usr/bin/swipl daemon.pl --no-fork --port=80 --user=www-data
 
 [Install]
 WantedBy=multi-user.target

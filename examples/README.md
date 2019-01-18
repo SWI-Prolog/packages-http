@@ -26,9 +26,15 @@ body and the three documented server instantiations.
 	`/etc/init`
 
 	$ systemd-script.service :
-	Linux `systemd` script.  Must be configured and placed in
-	`/etc/systemd/system` and installed using `systemctl`. See
-	https://coreos.com/docs/launching-containers/launching/getting-started-with-systemd/
+	Linux `systemd` script.  The typical installation sequence
+	is:
+
+	    cp systemd-script.service demo.service
+	    <edit>
+	    cp demo.service /etc/systemd/system
+	    systemctl enable demo
+	    systemctl start demo
+	    journalctl -f -u demo
 
 ## Session management demo:
 
