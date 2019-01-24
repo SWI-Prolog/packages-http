@@ -1562,6 +1562,9 @@ attr_value_colour(Var, classify) :-
 attr_value_colour(location_by_id(ID), sgml_attr_function-[Colour]) :-
     !,
     location_id(ID, Colour).
+attr_value_colour(#(ID), sgml_attr_function-[Colour]) :-
+    !,
+    location_id(ID, Colour).
 attr_value_colour(A+B, sgml_attr_function-[CA,CB]) :-
     !,
     attr_value_colour(A, CA),

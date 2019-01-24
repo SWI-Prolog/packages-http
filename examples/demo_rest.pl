@@ -19,8 +19,23 @@ used for REST APIs. To run this  test,   start  the server and use e.g.,
 curl http://localhost:5000/user/jan
 curl http://localhost:5000/user/default
 curl http://localhost:5000/user/jan/parents
-
 ```
+
+Note that the predicate http_link_to_id/3 can   generate URLs that refer
+to these handlers. For example:
+
+    ?- http_link_to_id(parents('Bob'), [], URL).
+    URL = '/user/Bob/parents'.
+
+The library(http/html_write) can generate also   generate links to these
+handlers, for example:
+
+    ...,
+    html(a(href(#(user('Bob'))), 'Bob'))
+
+produces
+
+    <a href="/user/Bob">Bob</a>
 */
 
 :- http_handler(root(user/User),         user(M, User), [method(M)]).

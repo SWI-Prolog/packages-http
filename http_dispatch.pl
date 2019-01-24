@@ -147,7 +147,8 @@ write_index(Request) :-
 %
 %     - id(+Atom)
 %       Identifier of the handler. The default identifier is the
-%       predicate name. Used by http_location_by_id/2.
+%       predicate name. Used by http_location_by_id/2 and
+%       http_link_to_id/3.
 %
 %     - hide_children(+Bool)
 %       If =true= on a prefix-handler (see prefix), possible children
@@ -262,7 +263,7 @@ http_delete_handler(Path) :-
 %   Increment the generation count.
 
 next_generation :-
-    retractall(id_location_cache(_,_)),
+    retractall(id_location_cache(_,_,_,_)),
     with_mutex(http_dispatch, next_generation_unlocked).
 
 next_generation_unlocked :-
@@ -573,60 +574,111 @@ http_current_handler(Path, M:C, Options) :-
 
 %!  http_location_by_id(+ID, -Location) is det.
 %
-%   Find the HTTP Location of handler with   ID. If the setting (see
-%   setting/2)  http:prefix  is  active,  Location  is  the  handler
-%   location prefixed with the prefix setting.   Handler  IDs can be
-%   specified in two ways:
+%   True when Location represents the  HTTP   path  to which the handler
+%   with identifier ID is bound. Handler   identifiers  are deduced from
+%   the http_handler/3 declaration as follows:
 %
-%       * id(ID)
-%       If this appears in the option list of the handler, this
+%       $ Explicit id :
+%       If a term id(ID) appears in the option list of the handler, ID
 %       it is used and takes preference over using the predicate.
-%       * M:PredName
-%       The module-qualified name of the predicate.
-%       * PredName
-%       The unqualified name of the predicate.
+%       $ Using the handler predicate :
+%       ID matches a handler if the predicate name matches ID.  The
+%       ID may have a module qualification, e.g., `Module:Pred`
+%
+%   If the handler is declared with   a  pattern, e.g., root(user/User),
+%   the location to access a  particular   _user_  may be accessed using
+%   e.g., user('Bob'). The number of arguments to the compound term must
+%   match the number of variables in the path pattern.
+%
+%   A plain atom ID can be used to   find  a handler with a pattern. The
+%   returned location is the  path  up   to  the  first  variable, e.g.,
+%   =|/user/|= in the example above.
+%
+%   User code is adviced to  use   http_link_to_id/3  which can also add
+%   query parameters to  the  URL.  This   predicate  is  a  helper  for
+%   http_link_to_id/3.
 %
 %   @error existence_error(http_handler_id, Id).
-%   @deprecated The predicate http_link_to_id/3 provides the same
-%   functionality with the option to add query parameters or a
-%   path parameter.
+%   @see http_link_to_id/3 and the library(http/html_write) construct
+%   location_by_id(ID) or its abbreviation `#(ID)`
 
 :- dynamic
-    id_location_cache/2.
+    id_location_cache/4.                        % Id, Argv, Location, Segments
 
-http_location_by_id(ID, Location) :-
-    must_be(ground, ID),
-    id_location_cache(ID, L0),
+http_location_by_id(ID, _) :-
+    \+ ground(ID),
     !,
-    Location = L0.
+    instantiation_error(ID).
+http_location_by_id(M:ID, Location) :-
+    compound(ID),
+    !,
+    compound_name_arguments(ID, Name, Argv),
+    http_location_by_id(M:Name, Argv, Location).
+http_location_by_id(M:ID, Location) :-
+    atom(ID),
+    must_be(atom, M),
+    !,
+    http_location_by_id(M:ID, -, Location).
 http_location_by_id(ID, Location) :-
-    findall(P-L, location_by_id(ID, L, P), List),
-    keysort(List, RevSorted),
-    reverse(RevSorted, Sorted),
-    (   Sorted = [_-One]
-    ->  assert(id_location_cache(ID, One)),
-        Location = One
+    compound(ID),
+    !,
+    compound_name_arguments(ID, Name, Argv),
+    http_location_by_id(Name, Argv, Location).
+http_location_by_id(ID, Location) :-
+    atom(ID),
+    !,
+    http_location_by_id(ID, -, Location).
+http_location_by_id(ID, _) :-
+    type_error(location_id, ID).
+
+http_location_by_id(ID, Argv, Location) :-
+    id_location_cache(ID, Argv, Segments, Path),
+    !,
+    add_segments(Path, Segments, Location).
+http_location_by_id(ID, Argv, Location) :-
+    findall(t(Priority, ArgvP, Segments, Prefix),
+            location_by_id(ID, Argv, ArgvP, Segments, Prefix, Priority),
+            List),
+    sort(1, >=, List, Sorted),
+    (   Sorted = [t(_,ArgvP,Segments,Path)]
+    ->  assert(id_location_cache(ID,ArgvP,Segments,Path)),
+        Argv = ArgvP
     ;   List == []
     ->  existence_error(http_handler_id, ID)
-    ;   List = [P0-Best,P1-_|_]
-    ->  (   P0 == P1
+    ;   List = [t(P0,ArgvP,Segments,Path),t(P1,_,_,_)|_]
+    ->  (   P0 =:= P1
         ->  print_message(warning,
-                          http_dispatch(ambiguous_id(ID, Sorted, Best)))
+                          http_dispatch(ambiguous_id(ID, Sorted, Path)))
         ;   true
         ),
-        assert(id_location_cache(ID, Best)),
-        Location = Best
-    ).
+        assert(id_location_cache(ID,Argv,Segments,Path)),
+        Argv = ArgvP
+    ),
+    add_segments(Path, Segments, Location).
 
-location_by_id(ID, Location, Priority) :-
-    location_by_id_raw(ID, L0, Priority),
+add_segments(Path0, [], Path) :-
+    !,
+    Path = Path0.
+add_segments(Path0, Segments, Path) :-
+    maplist(uri_encoded(path), Segments, Encoded),
+    atomic_list_concat(Encoded, '/', Rest),
+    atom_concat(Path0, Rest, Path).
+
+location_by_id(ID, -, _, [], Location, Priority) :-
+    !,
+    location_by_id_raw(ID, L0, _Segments, Priority),
+    to_path(L0, Location).
+location_by_id(ID, Argv, ArgvP, Segments, Location, Priority) :-
+    location_by_id_raw(ID, L0, Segments, Priority),
+    include(var, Segments, ArgvP),
+    same_length(Argv, ArgvP),
     to_path(L0, Location).
 
-to_path(prefix(Path0), Path) :-        % old style prefix notation
+to_path(prefix(Path0), Path) :-         % old style prefix notation
     !,
     add_prefix(Path0, Path).
 to_path(Path0, Path) :-
-    atomic(Path0),                 % old style notation
+    atomic(Path0),                      % old style notation
     !,
     add_prefix(Path0, Path).
 to_path(Spec, Path) :-                  % new style notation
@@ -639,20 +691,21 @@ add_prefix(P0, P) :-
     ;   P = P0
     ).
 
-location_by_id_raw(ID, Location, Priority) :-
+location_by_id_raw(ID, Location, Pattern, Priority) :-
     handler(Location, _, _, Options),
     option(id(ID), Options),
     option(priority(P0), Options, 0),
+    option(segment_pattern(Pattern), Options, []),
     Priority is P0+1000.            % id(ID) takes preference over predicate
-location_by_id_raw(ID, Location, Priority) :-
+location_by_id_raw(ID, Location, Pattern, Priority) :-
     handler(Location, M:C, _, Options),
     option(priority(Priority), Options, 0),
     functor(C, PN, _),
     (   ID = M:PN
+    ->  true
     ;   ID = PN
     ),
-    !.
-
+    option(segment_pattern(Pattern), Options, []).
 
 %!  http_link_to_id(+HandleID, +Parameters, -HREF)
 %
@@ -668,7 +721,7 @@ location_by_id_raw(ID, Location, Priority) :-
 %   HTTP locations can thus be moved   freely  without breaking this
 %   code fragment.
 %
-%     ==
+%     ```
 %     :- http_handler(root(user_details), user_details, []).
 %
 %     user_details(Request) :-
@@ -682,14 +735,22 @@ location_by_id_raw(ID, Location, Priority) :-
 %           http_link_to_id(user_details, [id(ID)], HREF)
 %         },
 %         html(a([class(user), href(HREF)], Name)).
-%     ==
+%     ```
+%
+%   @arg HandleID is either an atom, possibly module qualified
+%   predicate or a compound term if the hander is defined using
+%   a pattern.  See http_handler/3 and http_location_by_id/2.
 %
 %   @arg Parameters is one of
 %
-%           - path_postfix(File) to pass a single value as the last
-%             segment of the HTTP location (path). This way of
-%             passing a parameter is commonly used in REST APIs.
-%           - A list of search parameters for a =GET= request.
+%     - path_postfix(File) to pass a single value as the last
+%       segment of the HTTP location (path). This way of
+%       passing a parameter is commonly used in REST APIs.
+%
+%       New code should use a path pattern in the handler declaration
+%       and a term `HandleID(Arg, ...)`
+%
+%     - A list of search parameters for a =GET= request.
 %
 %   @see    http_location_by_id/2 and http_handler/3 for defining and
 %           specifying handler IDs.
@@ -704,10 +765,13 @@ http_link_to_id(HandleID, path_postfix(File), HREF) :-
 http_link_to_id(HandleID, Parameters, HREF) :-
     must_be(list, Parameters),
     http_location_by_id(HandleID, Location),
-    uri_data(path, Components, Location),
-    uri_query_components(String, Parameters),
-    uri_data(search, Components, String),
-    uri_components(HREF, Components).
+    (   Parameters == []
+    ->  HREF = Location
+    ;   uri_data(path, Components, Location),
+        uri_query_components(String, Parameters),
+        uri_data(search, Components, String),
+        uri_components(HREF, Components)
+    ).
 
 %!  http_reload_with_parameters(+Request, +Parameters, -HREF) is det.
 %
@@ -733,6 +797,9 @@ http_reload_with_parameters(Request, NewParams, HREF) :-
     html_write:expand_attribute_value//1.
 
 html_write:expand_attribute_value(location_by_id(ID)) -->
+    { http_location_by_id(ID, Location) },
+    html_write:html_quoted_attribute(Location).
+html_write:expand_attribute_value(#(ID)) -->
     { http_location_by_id(ID, Location) },
     html_write:html_quoted_attribute(Location).
 
@@ -1084,26 +1151,35 @@ unsafe_name(Name) :- sub_atom(Name, _, _, 0, '/..').
 %   Request as last argument, allows for  calling this directly from
 %   the handler declaration:
 %
-%       ==
+%       ```
 %       :- http_handler(root(.),
 %                       http_redirect(moved, myapp('index.html')),
 %                       []).
-%       ==
+%       ```
 %
-%   @param How is one of =moved=, =moved_temporary= or =see_other=
+%   @param How is one of `moved`, `moved_temporary` or `see_other`
 %   @param To is an atom, a aliased path as defined by
-%   http_absolute_location/3. or a term location_by_id(Id). If To is
-%   not absolute, it is resolved relative to the current location.
+%   http_absolute_location/3. or a term location_by_id(Id) or its
+%   abbreviations `#(Id)` or `#(Id)+Parameters`. If To is not absolute,
+%   it is resolved relative to the current location.
 
 http_redirect(How, To, Request) :-
-    (   To = location_by_id(Id)
-    ->  http_location_by_id(Id, URL)
+    must_be(oneof([moved, moved_temporary, see_other]), How),
+    must_be(ground, To),
+    (   id_location(To, URL)
+    ->  true
     ;   memberchk(path(Base), Request),
         http_absolute_location(To, URL, [relative_to(Base)])
     ),
-    must_be(oneof([moved, moved_temporary, see_other]), How),
     Term =.. [How,URL],
     throw(http_reply(Term)).
+
+id_location(location_by_id(Id), URL) :-
+    http_location_by_id(Id, URL).
+id_location(#(Id), URL) :-
+    http_location_by_id(Id, URL).
+id_location(#(Id)+Parameters, URL) :-
+    http_link_to_id(Id, Parameters, URL).
 
 
 %!  http_404(+Options, +Request) is det.

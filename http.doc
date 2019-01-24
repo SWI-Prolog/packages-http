@@ -1214,6 +1214,8 @@ Use format/3 and emit the result as quoted value.
 Use uri_encoded/3 to create a valid URL query component.
 	\item [\term{location_by_id}{ID}]
 HTTP location of the HTTP handler with given ID.  See http_location_by_id/2.
+	\item [\term{#}{ID}]
+Abbreviated for for \term{location_by_id}{ID}.
 	\item [$A$ + \arg{List}]
 \arg{List} is handled as a URL `search' component. The list members are
 terms of the format \mbox{\arg{Name} = \arg{Value}} or
