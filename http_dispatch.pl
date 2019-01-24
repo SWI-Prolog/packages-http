@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2018, University of Amsterdam
+    Copyright (c)  2007-2019, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -145,7 +145,7 @@ write_index(Request) :-
 %       not used by this library. It enhances the reflexive capabilities
 %       of this library through http_current_handler/3.
 %
-%     - id(+Term)
+%     - id(+Atom)
 %       Identifier of the handler. The default identifier is the
 %       predicate name. Used by http_location_by_id/2.
 %
@@ -286,6 +286,7 @@ current_generation(0).
 compile_handler(Path, Pred, Options0,
                 http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
     check_path(Path, Path1, PathOptions),
+    check_id(Options0),
     (   memberchk(segment_pattern(_), PathOptions)
     ->  IsPrefix = true,
         Options1 = Options0
@@ -431,6 +432,12 @@ path_to_list(Atom) -->
     [Atom].
 path_to_list(Value) -->
     { must_be(atom, Value) }.
+
+check_id(Options) :-
+    memberchk(id(Id), Options),
+    !,
+    must_be(atom, Id).
+check_id(_).
 
 
 %!  http_dispatch(Request) is det.
