@@ -195,9 +195,7 @@ write_index(Request) :-
 %
 %   Note that http_handler/3 is normally  invoked   as  a  directive and
 %   processed using term-expansion. Using  term-expansion ensures proper
-%   update through make/0 when the specification  is modified. We do not
-%   expand  when  the  cross-referencer  is  running  to  ensure  proper
-%   handling of the meta-call.
+%   update through make/0 when the specification is modified.
 %
 %   @error  existence_error(http_location, Location)
 %   @error  permission_error(http_method, Method, Location)
