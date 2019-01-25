@@ -931,8 +931,16 @@ term_to_dict(Value0, Value, _Options) :-
     !,
     Value = Value0.
 term_to_dict(List0, List, Options) :-
-    assertion(is_list(List0)),
+    is_list(List0),
+    !,
     terms_to_dicts(List0, List, Options).
+term_to_dict(Special, Special, Options) :-
+    (   json_options_true(Options, Special)
+    ;   json_options_false(Options, Special)
+    ;   json_options_null(Options, Special)
+    ;   json_options_end_of_file(Options, Special)
+    ),
+    !.
 
 json_dict_pairs([], [], _).
 json_dict_pairs([Name=Value0|T0], [Name=Value|T], Options) :-
