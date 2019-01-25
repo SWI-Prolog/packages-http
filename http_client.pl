@@ -102,7 +102,7 @@ by extending the multifile predicate http_client:http_convert_data/4.
   - 'application/json' | 'application/jsonrequest'
   Processed if library(http/http_json) is loaded.  The option
   json_object(As) can be used to return a term json(Attributes)
-  (`As` is `term`) or a dict (`As` is `json`).
+  (`As` is `term`) or a dict (`As` is `dict`).
 */
 
                  /*******************************
