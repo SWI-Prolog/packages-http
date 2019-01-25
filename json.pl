@@ -136,6 +136,7 @@ terms.
               null:ground = @(null),
               true:ground = @(true),
               false:ground = @(false),
+              end_of_file:ground = error,
               value_string_as:oneof([atom,string]) = atom,
               tag:atom = '',
               default_tag:atom).
@@ -250,15 +251,27 @@ type_term(chars,  Result, chars(Result)).
 
 json_read(Stream, Term) :-
     default_json_options(Options),
-    (   json_value(Stream, Term, _, Options)
+    (   json_value_top(Stream, Term, _, Options)
     ->  true
     ;   syntax_error(illegal_json, Stream)
     ).
 json_read(Stream, Term, Options) :-
     make_json_options(Options, OptionTerm, _RestOptions),
-    (   json_value(Stream, Term, _, OptionTerm)
+    (   json_value_top(Stream, Term, _, OptionTerm)
     ->  true
     ;   syntax_error(illegal_json, Stream)
+    ).
+
+json_value_top(Stream, Term, Next, Options) :-
+    get_code(Stream, C0),
+    ws(C0, Stream, C1),
+    (   C1 == -1
+    ->  json_options_end_of_file(Options, Action),
+        (   Action == error
+        ->  syntax_error(unexpected_end_of_file, Stream)
+        ;   Term = Action
+        )
+    ;   json_term(C1, Stream, Term, Next, Options)
     ).
 
 json_value(Stream, Term, Next, Options) :-
@@ -905,7 +918,7 @@ json_read_dict(Stream, Dict) :-
 
 json_read_dict(Stream, Dict, Options) :-
     make_json_dict_options(Options, OptionTerm, _RestOptions),
-    (   json_value(Stream, Term, _, OptionTerm)
+    (   json_value_top(Stream, Term, _, OptionTerm)
     ->  true
     ;   syntax_error(illegal_json, Stream)
     ),
