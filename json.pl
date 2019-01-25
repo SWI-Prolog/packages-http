@@ -142,7 +142,7 @@ terms.
               default_tag:atom).
 
 default_json_dict_options(
-    json_options(null, true, false, string, '', _)).
+    json_options(null, true, false, error, string, '', _)).
 
 
                  /*******************************
@@ -211,7 +211,7 @@ type_term(chars,  Result, chars(Result)).
 %   Here is a complete example in  JSON and its corresponding Prolog
 %   term.
 %
-%     ==
+%     ```
 %     { "name":"Demo term",
 %       "created": {
 %         "day":null,
@@ -221,48 +221,58 @@ type_term(chars,  Result, chars(Result)).
 %       "confirmed":true,
 %       "members":[1,2,3]
 %     }
-%     ==
+%     ```
 %
-%     ==
+%     ```
 %     json([ name='Demo term',
 %            created=json([day= @null, month='December', year=2007]),
 %            confirmed= @true,
 %            members=[1, 2, 3]
 %          ])
-%     ==
+%     ```
 %
 %   The following options are processed:
 %
-%           * null(+NullTerm)
-%           Term used to represent JSON =null=.  Default @(null)
-%           * true(+TrueTerm)
-%           Term used to represent JSON =true=.  Default @(true)
-%           * false(+FalseTerm)
-%           Term used to represent JSON =false=.  Default @(false)
-%           * value_string_as(+Type)
-%           Prolog type used for strings used as value.  Default
-%           is =atom=.  The alternative is =string=, producing a
-%           packed string object.  Please note that =codes= or
-%           =chars= would produce ambiguous output and is therefore
-%           not supported.
+%     - null(+NullTerm)
+%       Term used to represent JSON =null=.  Default @(null)
+%     - true(+TrueTerm)
+%       Term used to represent JSON =true=.  Default @(true)
+%     - false(+FalseTerm)
+%       Term used to represent JSON =false=.  Default @(false)
+%     - end_of_file(+ErrorOrTerm)
+%       If end of file is reached after skipping white space
+%       but before any input is processed take the following
+%       action (default `error`):
+%         - If ErrorOrTerm == `error`, throw an unexpected
+%           end of file syntax error
+%         - Otherwise return ErrorOrTerm.
+%       Returning an status term is required to process
+%       [Concatenated
+%       JSON](https://en.wikipedia.org/wiki/JSON_streaming#Concatenated_JSON).
+%       Suggested values are `@(eof)` or `end_of_file`.
+%     - value_string_as(+Type)
+%       Prolog type used for strings used as value. Default is `atom`.
+%       The alternative is `string`, producing a packed string object.
+%       Please note that `codes` or `chars` would produce ambiguous
+%       output and are therefore not supported.
 %
 %   @see    json_read_dict/3 to read a JSON term using the version 7
 %           extended data types.
 
 json_read(Stream, Term) :-
     default_json_options(Options),
-    (   json_value_top(Stream, Term, _, Options)
+    (   json_value_top(Stream, Term, Options)
     ->  true
     ;   syntax_error(illegal_json, Stream)
     ).
 json_read(Stream, Term, Options) :-
     make_json_options(Options, OptionTerm, _RestOptions),
-    (   json_value_top(Stream, Term, _, OptionTerm)
+    (   json_value_top(Stream, Term, OptionTerm)
     ->  true
     ;   syntax_error(illegal_json, Stream)
     ).
 
-json_value_top(Stream, Term, Next, Options) :-
+json_value_top(Stream, Term, Options) :-
     get_code(Stream, C0),
     ws(C0, Stream, C1),
     (   C1 == -1
@@ -271,7 +281,7 @@ json_value_top(Stream, Term, Next, Options) :-
         ->  syntax_error(unexpected_end_of_file, Stream)
         ;   Term = Action
         )
-    ;   json_term(C1, Stream, Term, Next, Options)
+    ;   json_term_top(C1, Stream, Term, Options)
     ).
 
 json_value(Stream, Term, Next, Options) :-
@@ -282,34 +292,33 @@ json_value(Stream, Term, Next, Options) :-
     ;   json_term(C1, Stream, Term, Next, Options)
     ).
 
-json_term(0'{, Stream, json(Pairs), Next, Options) :-
+json_term(C0, Stream, JSON, Next, Options) :-
+    json_term_top(C0, Stream, JSON, Options),
+    get_code(Stream, Next).
+
+json_term_top(0'{, Stream, json(Pairs), Options) :-
     !,
     ws(Stream, C),
-    json_pairs(C, Stream, Pairs, Options),
-    get_code(Stream, Next).
-json_term(0'[, Stream, Array, Next, Options) :-
+    json_pairs(C, Stream, Pairs, Options).
+json_term_top(0'[, Stream, Array, Options) :-
     !,
     ws(Stream, C),
-    json_array(C, Stream, Array, Options),
-    get_code(Stream, Next).
-json_term(0'", Stream, String, Next, Options) :-
+    json_array(C, Stream, Array, Options).
+json_term_top(0'", Stream, String, Options) :-
     !,
     get_code(Stream, C1),
     json_string_codes(C1, Stream, Codes),
     json_options_value_string_as(Options, Type),
-    codes_to_type(Type, Codes, String),
-    get_code(Stream, Next).
-json_term(0'-, Stream, Number, Next, _Options) :-
+    codes_to_type(Type, Codes, String).
+json_term_top(0'-, Stream, Number, _Options) :-
     !,
-    json_read_number(Stream, 0'-, Number, Next).
-json_term(D, Stream, Number, Next, _Options) :-
+    json_read_number(Stream, 0'-, Number).
+json_term_top(D, Stream, Number, _Options) :-
     between(0'0, 0'9, D),
     !,
-    json_read_number(Stream, D, Number, Next).
-json_term(C, Stream, Constant, Next, Options) :-
-    get_code(Stream, C1),
-    json_identifier_codes(C1, Stream, Codes, Next),
-    atom_codes(ID, [C|Codes]),
+    json_read_number(Stream, D, Number).
+json_term_top(C, Stream, Constant, Options) :-
+    json_read_constant(C, Stream, ID),
     json_constant(ID, Constant, Options).
 
 json_pairs(0'}, _, [], _) :- !.
@@ -391,13 +400,24 @@ escape(0'u, Stream, C) :-
     code_type(C4, xdigit(D4)),
     C is D1<<12+D2<<8+D3<<4+D4.
 
-json_identifier_codes(C1, Stream, [C1|T], Next) :-
-    between(0'a, 0'z, C1),
+json_read_constant(0't, Stream, true) :-
     !,
-    get_code(Stream, C2),
-    json_identifier_codes(C2, Stream, T, Next).
-json_identifier_codes(C, _, [], C).
+    must_see(`rue`, Stream, true).
+json_read_constant(0'f, Stream, false) :-
+    !,
+    must_see(`alse`, Stream, false).
+json_read_constant(0'n, Stream, null) :-
+    !,
+    must_see(`ull`, Stream, null).
 
+must_see([], _Stream, _).
+must_see([H|T], Stream, Name) :-
+    get_code(Stream, C),
+    (   C == H
+    ->  true
+    ;   syntax_error(json_expected(Name), Stream)
+    ),
+    must_see(T, Stream, Name).
 
 json_constant(true, Constant, Options) :-
     !,
@@ -918,7 +938,7 @@ json_read_dict(Stream, Dict) :-
 
 json_read_dict(Stream, Dict, Options) :-
     make_json_dict_options(Options, OptionTerm, _RestOptions),
-    (   json_value_top(Stream, Term, _, OptionTerm)
+    (   json_value_top(Stream, Term, OptionTerm)
     ->  true
     ;   syntax_error(illegal_json, Stream)
     ),

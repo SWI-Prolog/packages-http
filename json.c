@@ -95,7 +95,7 @@ put_byte(text *t, int c)
 
 
 static foreign_t
-json_read_number(term_t stream, term_t c0, term_t number, term_t next)
+json_read_number(term_t stream, term_t c0, term_t number)
 { IOSTREAM *in;
   text t;
   int rc = FALSE;
@@ -110,7 +110,7 @@ json_read_number(term_t stream, term_t c0, term_t number, term_t next)
   put_byte(&t, c);
 
   for(;;)
-  { c = Sgetcode(in);
+  { c = Speekcode(in);
 
     if ( (c >= '0' && c <= '9') ||
 	 c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E' )
@@ -119,6 +119,7 @@ json_read_number(term_t stream, term_t c0, term_t number, term_t next)
 	break;
       }
 
+      (void)Sgetcode(in);
       continue;
     }
     if ( put_byte(&t, 0) != 0 )
@@ -136,7 +137,7 @@ json_read_number(term_t stream, term_t c0, term_t number, term_t next)
 
   PL_release_stream(in);
 
-  return rc && PL_unify_integer(next, c);
+  return rc;
 }
 
 static int
@@ -301,7 +302,7 @@ out:
 
 install_t
 install_json()
-{ PL_register_foreign("json_read_number",  4, json_read_number,  0);
+{ PL_register_foreign("json_read_number",  3, json_read_number,  0);
   PL_register_foreign("json_skip_ws",      3, json_skip_ws,      0);
   PL_register_foreign("json_write_string", 2, json_write_string, 0);
   PL_register_foreign("json_write_indent", 3, json_write_indent, 0);
