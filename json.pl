@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2018, University of Amsterdam
+    Copyright (c)  2007-2019, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -928,6 +928,8 @@ is_json_pair(Options, Name=Value) :-
 %       Default the atom `true`.
 %     * false(+FalseTerm)
 %       Default the atom `false`
+%     * end_of_file(+ErrorOrTerm)
+%       Action on reading end-of-file. See json_read/3 for details.
 %     * value_string_as(+Type)
 %       Prolog type used for strings used as value.  Default
 %       is `string`.  The alternative is `atom`, producing a
