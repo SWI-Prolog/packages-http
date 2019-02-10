@@ -1,4 +1,4 @@
----+ [jsonsupport] Supporting JSON
+# Supporting JSON			{#jsonsupport}
 
 From  http://json.org, "
 JSON (JavaScript Object Notation) is a lightweight data-interchange
@@ -11,20 +11,38 @@ languages, including C, C++, C#, Java, JavaScript, Perl, Python, and
 many others. These properties make JSON an ideal data-interchange
 language."
 
-JSON is interesting to Prolog because using AJAX web technology we can
-easily created web-enabled user interfaces where we implement the server
-side using the SWI-Prolog HTTP services provided by this package.
-The interface consists of three libraries:
+Although JSON is nowadays used a lot outside the context of web
+applications, SWI-Prolog's support for JSON started life as part of the
+HTTP package. SWI-Prolog supports two Prolog representations for JSON
+terms. The first and oldest map JSON objects to a term
+json(PropertyList) and use the `@` functor to disambiguate e.g. `null`
+from the string `"null"`, leading to `@(null)`. As of SWI-Prolog version
+7, JSON objects may be represented using _dict_ objects and JSON strings
+using Prolog strings. Predicates following this convention are suffixed
+with ``_dict``, e.g. json_read_dict/2.  For example, given the JSON document
+
+    { "name": "Bob", "children": ["Mary", "John"], "age":42, "married": true }
+
+we get either (using json_read/2):
+
+    json([name='Bob', children=['Mary', 'John'], age=42, married= @(true)]).
+
+or (using json_read_dict/2):
+
+    _{age:42, children:["Mary", "John"], married:true, name:"Bob"}
+
+
+The SWI-Prolog JSON interface consists of three libraries:
 
     * library(http/json) provides support for the core JSON object
-      serialization.
+      serialization and parsing.
     * library(http/json_convert) converts between the primary
       representation of JSON terms in Prolog and more application
       oriented Prolog terms.  E.g. point(X,Y) vs. object([x=X,y=Y]).
     * library(http/http_json) hooks the conversion libraries into
       the HTTP client and server libraries.
 
-    [[json.pl]]
-    [[json_convert.pl]]
-    [[http_json.pl]]
+    [[library(http/json)]]
+    [[library(http/json_convert)]]
+    [[library(http/http_json)]]
 
