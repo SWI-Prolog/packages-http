@@ -2451,8 +2451,7 @@ ws --> [].
 %
 %   True if input represents a valid  Cookie option. Officially, all
 %   cookie  options  use  the  syntax   <name>=<value>,  except  for
-%   =secure=.  M$  decided  to  extend  this  to  include  at  least
-%   =httponly= (only the Gods know what it means).
+%   =Secure= and =HttpOnly=.
 %
 %   @param  Option  Term of the form Name=Value
 %   @bug    Incorrectly accepts options without = for M$ compatibility.
