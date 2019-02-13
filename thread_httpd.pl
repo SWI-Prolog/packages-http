@@ -253,6 +253,7 @@ create_server(Goal, Address, Options) :-
     get_time(StartTime),
     memberchk(queue(Queue), Options),
     scheme(Scheme, Options),
+    autoload_https(Scheme),
     address_port(Address, Port),
     make_addr_atom(Scheme, Port, Alias),
     thread_self(Initiator),
@@ -276,6 +277,12 @@ scheme(http, _).
 address_port(_Host:Port, Port) :- !.
 address_port(Port, Port).
 
+autoload_https(https) :-
+    \+ clause(accept_hook(_Goal, _Options), _),
+    exists_source(library(http/http_ssl_plugin)),
+    !,
+    use_module(library(http/http_ssl_plugin)).
+autoload_https(_).
 
 %!  http_current_server(:Goal, ?Port) is nondet.
 %
