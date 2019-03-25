@@ -119,6 +119,7 @@ session_setting(enabled(true)).
 session_setting(create(auto)).
 session_setting(proxy_enabled(false)).
 session_setting(gc(passive)).
+session_setting(samesite(lax)).
 
 session_option(timeout, integer).
 session_option(cookie, atom).
@@ -128,6 +129,7 @@ session_option(route, atom).
 session_option(enabled, boolean).
 session_option(proxy_enabled, boolean).
 session_option(gc, oneof([active,passive])).
+session_option(samesite, oneof([lax,strict])).
 
 %!  http_set_session_options(+Options) is det.
 %
@@ -173,6 +175,14 @@ session_option(gc, oneof([active,passive])).
 %           performs session cleanup at close to the moment of the
 %           timeout or `passive`, which runs session GC when a new
 %           session is created.
+%
+%           * samesite(+Restriction)
+%           One of lax (default), or strict - The
+%           SameSite attribute prevents the CSRF vulnerability.
+%           strict has best security, but prevents links from
+%           external sites from operating properly. lax stops most
+%           CSRF attacks against REST endpoints but rarely interferes
+%           with legitimage operations.
 
 http_set_session_options([]).
 http_set_session_options([H|T]) :-
@@ -350,9 +360,10 @@ create_session(Request0, Request, SessionID) :-
     http_session_cookie(SessionID),
     session_setting(cookie(Cookie)),
     session_setting(path(Path)),
+    session_setting(samesite(SameSite)),
     debug(http_session, 'Created session ~q at path=~q', [SessionID, Path]),
-    format('Set-Cookie: ~w=~w; Path=~w; Version=1\r\n',
-           [Cookie, SessionID, Path]),
+    format('Set-Cookie: ~w=~w; Path=~w; Version=1; SameSite=~w\r\n',
+           [Cookie, SessionID, Path, SameSite]),
     Request = [session(SessionID)|Request0],
     peer(Request0, Peer),
     open_session(SessionID, Peer).
