@@ -141,6 +141,7 @@ pack(Name=Value, Out) :-
     ),
     pack(Value, Out).
 pack(html(HTML), Out) :-
+    !,
     format(Out, 'Content-Type: text/html\r\n\r\n', []),
     print_html(Out, HTML).
 pack(file(File), Out) :-
