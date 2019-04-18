@@ -74,6 +74,9 @@
 
 :- use_foreign_library(foreign(json)).
 
+:- multifile
+    json_write_hook/4.                          % +Term, +Stream, +State, +Options
+
 :- predicate_options(json_read/3, 3,
                      [ null(ground),
                        true(ground),
@@ -535,6 +538,25 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %   objects  can  be  safely  embedded  into  an  HTML  =|<script>|=
 %   element.
 
+%!  json_write_hook(+Term, +Stream, +State, +Options) is semidet.
+%
+%   Hook that can be used to  emit   a  JSON  representation for Term to
+%   Stream. If the  predicate  succeeds  it   __must__  have  written  a
+%   __valid__ JSON data element and if it fails it may not have produced
+%   any output. This facility may be used  to map arbitrary Prolog terms
+%   to JSON. It was added to manage   the  precision with which floating
+%   point numbers are emitted.
+%
+%   Note that this hook is shared by all   users  of this library. It is
+%   generally  adviced  to  map  a  unique    compound   term  to  avoid
+%   interference with normal output.
+%
+%   @arg State and Options are opaque handles to the current output
+%   state and settings.  Future versions may provide documented access
+%   to these terms.  Currently it is adviced to ignore these arguments.
+
+
+
 :- record json_write_state(indent:nonneg = 0,
                        step:positive_integer = 2,
                        tab:positive_integer = 8,
@@ -588,6 +610,10 @@ json_write_term(List, Stream, State, Options) :-
         indent(Stream, State),
         write(Stream, ']')
     ).
+
+json_write_term(Term, Stream, State, Options) :-
+    json_write_hook(Term, Stream, State, Options),
+    !.
 json_write_term(Number, Stream, _State, _Options) :-
     number(Number),
     !,
