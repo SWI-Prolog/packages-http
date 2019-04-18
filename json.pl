@@ -588,6 +588,11 @@ json_write_term(List, Stream, State, Options) :-
         indent(Stream, State),
         write(Stream, ']')
     ).
+
+:-multifile(json_write_hook/4).
+json_write_term(Term, Stream, State, Options):-
+    json_write_hook(Term, Stream, State, Options),
+    !.
 json_write_term(Number, Stream, _State, _Options) :-
     number(Number),
     !,
