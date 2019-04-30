@@ -38,6 +38,8 @@
 #include <string.h>
 
 
+static predicate_t PREDICATE_mk_rational3;	/* +Integer, +NumberOfDecimals, -Rational */
+
 		 /*******************************
 		 *	       READ		*
 		 *******************************/
@@ -95,26 +97,45 @@ put_byte(text *t, int c)
 
 
 static foreign_t
-json_read_number(term_t stream, term_t c0, term_t number)
+json_read_number(term_t stream, term_t c0, term_t use_rdiv, term_t number)
 { IOSTREAM *in;
   text t;
   int rc = FALSE;
   int c;
   term_t tmp;
+  int decimal_places = 0;
+  int is_decimal = 0;
+  int preserve_precision = FALSE;
 
+  if ( !PL_get_bool_ex(use_rdiv, &preserve_precision) )
+    return FALSE;
   if ( !PL_get_stream(stream, &in, SIO_INPUT) ||
        !PL_get_char_ex(c0, &c, FALSE) )
     return FALSE;
 
   init_text(&t);
   put_byte(&t, c);
+  if (c == '.')
+    is_decimal = 1;
 
   for(;;)
   { c = Speekcode(in);
-
     if ( (c >= '0' && c <= '9') ||
 	 c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E' )
-    { if ( put_byte(&t, c) != 0 )
+    { if (preserve_precision && c == '.')
+      { is_decimal = 1;
+	(void)Sgetcode(in);
+	continue;
+      }
+      else if (c == 'e' || c == 'E')
+      { /* We cannot hope to have a perfect-precision result if the input contains an e
+	   or E, so just give back a float in this case */
+	is_decimal = 0;
+      }
+      else if (preserve_precision && is_decimal)
+      { decimal_places++;
+      }
+      if ( put_byte(&t, c) != 0 )
       { rc = PL_resource_error("memory");
 	break;
       }
@@ -126,11 +147,19 @@ json_read_number(term_t stream, term_t c0, term_t number)
     { rc = PL_resource_error("memory");
       break;
     }
-
-    rc = ( (tmp = PL_new_term_ref()) &&
-	   PL_chars_to_term(t.t, tmp) &&
-	   PL_unify(tmp, number) );
-
+    if (is_decimal)
+    { fid_t fid = PL_open_foreign_frame();
+      term_t av = PL_new_term_refs(3);
+      rc = (PL_chars_to_term(t.t, av+0) &&
+	    PL_put_integer(av+1, decimal_places) &&
+	    PL_call_predicate(NULL, PL_Q_NORMAL, PREDICATE_mk_rational3, av) &&
+	    PL_unify(number, av+2));
+      PL_close_foreign_frame(fid);
+    } else
+    { rc = ( (tmp = PL_new_term_ref()) &&
+	     PL_chars_to_term(t.t, tmp) &&
+	     PL_unify(tmp, number) );
+    }
     break;
   }
   free_text(&t);
@@ -302,7 +331,9 @@ out:
 
 install_t
 install_json()
-{ PL_register_foreign("json_read_number",  3, json_read_number,  0);
+{ PREDICATE_mk_rational3   = PL_predicate("mk_rational", 3, "json");
+
+  PL_register_foreign("json_read_number",  4, json_read_number,  0);
   PL_register_foreign("json_skip_ws",      3, json_skip_ws,      0);
   PL_register_foreign("json_write_string", 2, json_write_string, 0);
   PL_register_foreign("json_write_indent", 3, json_write_indent, 0);
