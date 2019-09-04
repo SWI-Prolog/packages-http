@@ -118,7 +118,7 @@ map_exception_to_http_status(E,
               resource_error(E),
               [connection(close)],
               []) :-
-    resource_error(E),
+    is_resource_error(E),
     !.
 map_exception_to_http_status(E,
               bad_request(E2),
@@ -132,7 +132,7 @@ map_exception_to_http_status(E,
               [connection(close)],
               []).
 
-resource_error(error(resource_error(_), _)).
+is_resource_error(error(resource_error(_), _)).
 
 bad_request_exception(error(Error, Context)) :-
     nonvar(Error),
