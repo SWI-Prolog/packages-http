@@ -711,9 +711,6 @@ name(Name) -->
 %   location on the current server  based   on  the  handler id. See
 %   http_location_by_id/2.
 
-:- multifile
-    expand_attribute_value//1.
-
 attribute_value(List) -->
     { is_list(List) },
     !,
