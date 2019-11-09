@@ -45,9 +45,19 @@
 :- use_module(library(apply)).
 :- use_module(library(option)).
 
+:- meta_predicate
+    http_reply_dirindex(+, :, +),
+    directory_index(+, :, ?, ?).
+
 :- predicate_options(http_reply_dirindex/3, 2,
                      [ title(any),
-                       pass_to(http_dispatch:http_safe_file/2, 2)
+                       pass_to(http_dispatch:http_safe_file/2, 2),
+                       pass_to(directory_index/4, 2)
+                     ]).
+:- predicate_options(directory_index/4, 2,
+                     [ name(callable),
+                       order_by(oneof([name,size,time])),
+                       order(oneof([ascending,descending]))
                      ]).
 
 /** <module> HTTP directory listings
@@ -60,7 +70,7 @@ http:file_extension_icon/2.
 @tbd    Provide more options (sorting, selecting columns, hiding files)
 */
 
-%!  http_reply_dirindex(+DirSpec, +Options, +Request) is det.
+%!  http_reply_dirindex(+DirSpec, :Options, +Request) is det.
 %
 %   Provide a directory listing for Request, assuming it is an index
 %   for the physical directrory Dir. If   the  request-path does not
@@ -69,7 +79,8 @@ http:file_extension_icon/2.
 %   The  calling  conventions  allows  for    direct   calling  from
 %   http_handler/3.
 
-http_reply_dirindex(DirSpec, Options, Request) :-
+http_reply_dirindex(DirSpec, Options0, Request) :-
+    meta_options(is_meta, Options0, Options),
     http_safe_file(DirSpec, Options),
     absolute_file_name(DirSpec, Dir,
                        [ file_type(directory),
@@ -84,6 +95,8 @@ http_reply_dirindex(DirSpec, Options, Request) :-
     ;   atom_concat(Path, /, NewLocation),
         throw(http_reply(moved(NewLocation)))
     ).
+
+is_meta(name).
 
 dir_index(Dir, Options) :-
     directory_members(Dir, SubDirs, Files),
@@ -100,7 +113,7 @@ directory_members(Dir, Dirs, Files) :-
     expand_file_name(Pattern, Matches),
     partition(exists_directory, Matches, Dirs, Files).
 
-%!  directory_index(+Dir, +Options)// is det.
+%!  directory_index(+Dir, :Options)// is det.
 %
 %   Show index for a directory.  Options processed:
 %
@@ -110,9 +123,13 @@ directory_members(Dir, Dirs, Files) :-
 %     * order(+AscentDescent)
 %     Sorting order.  Default is =ascending=.  The altenative is
 %     =descending=
+%     * name(:RenderName)
+%     DCG used to render a name in the table.  The File is passed.
 
-directory_index(Dir, Options) -->
-    { directory_members(Dir, SubDirs, Files) },
+directory_index(Dir, Options0) -->
+    { meta_options(is_meta, Options0, Options),
+      directory_members(Dir, SubDirs, Files)
+    },
     dirindex_table(SubDirs, Files, Options).
 
 dirindex_table(SubDirs, Files, Options) -->
@@ -124,7 +141,7 @@ dirindex_table(SubDirs, Files, Options) -->
     html(table(class(dirindex),
                [ \dirindex_title,
                  \back
-               | \dirmembers(SubDirs, SortedFiles)
+               | \dirmembers(SubDirs, SortedFiles, Options)
                ])).
 
 sort_files(name, Files, Files) :- !.
@@ -156,14 +173,14 @@ dirindex_title -->
 
 back -->
     html(tr([ \icon_cell('back.png', '[UP]'),
-              \name_cell(.., 'Up'),
+              td(class(name), \name_cell(.., [label('Up')])),
               td(class(modified), -),
               td(class(size),     -)
             ])).
 
-dirmembers(Dirs, Files) -->
+dirmembers(Dirs, Files, Options) -->
     dir_rows(Dirs, odd, End),
-    file_rows(Files, End, _).
+    file_rows(Files, End, _, Options).
 
 dir_rows([], OE, OE) --> [].
 dir_rows([H|T], OE0, OE) -->
@@ -171,35 +188,32 @@ dir_rows([H|T], OE0, OE) -->
     { oe(OE0, OE1) },
     dir_rows(T, OE1, OE).
 
-file_rows([], OE, OE) --> [].
-file_rows([H|T], OE0, OE) -->
-    file_row(H, OE0),
+file_rows([], OE, OE, _) --> [].
+file_rows([H|T], OE0, OE, Options) -->
+    file_row(H, OE0, Options),
     {oe(OE0, OE1)},
-    file_rows(T, OE1, OE).
+    file_rows(T, OE1, OE, Options).
 
 oe(odd, even).
 oe(even, odd).
 
 dir_row(Dir, OE) -->
-    { file_base_name(Dir, Name)
-    },
     html(tr(class(OE),
             [ \icon_cell('folder.png', '[DIR]'),
-              \name_cell(Name, Name),
+              td(class(name), \name_cell(Dir, [])),
               \modified_cell(Dir),
               td(class(size), -)
             ])).
 
 
-file_row(File, OE) -->
+file_row(File, OE, Options) -->
     { file_base_name(File, Name),
       file_mime_type(File, MimeType),
-      mime_type_icon(MimeType, IconName),
-      uri_encoded(path, Name, Ref)
+      mime_type_icon(MimeType, IconName)
     },
     html(tr(class(OE),
             [ \icon_cell(IconName, '[FILE]'),
-              \name_cell(Ref, Name),
+              td(class(name), \name_cell(Name, Options)),
               \modified_cell(File),
               td(class(size), \size(File))
             ])).
@@ -210,9 +224,21 @@ icon_cell(IconName, Alt) -->
     html(td(class(icon), img([src(Icon), alt(Alt)]))).
 
 
-name_cell(Ref, Name) -->
-    html(td(class(name), a(href(Ref), Name))).
-
+name_cell(File, Options) -->
+    { option(label(Label), Options),
+      !,
+      uri_encoded(path, File, Ref)
+    },
+    html(a(href(Ref), Label)).
+name_cell(File, Options) -->
+    { option(name(Name), Options) },
+    !,
+    call(Name, File).
+name_cell(File, _Options) -->
+    { file_base_name(File, Name),
+      uri_encoded(path, Name, Ref)
+    },
+    html(a(href(Ref), Name)).
 
 modified_cell(Name) -->
     { time_file(Name, Stamp),
