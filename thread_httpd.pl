@@ -804,7 +804,12 @@ http_process(Goal, In, Out, Options) :-
                  ]),
     next(Connection, Request).
 
-next(switch_protocol(SwitchGoal, _SwitchOptions), Request) :-
+next(Connection, Request) :-
+    next_(Connection, Request), !.
+next(Connection, Request) :-
+    print_message(warning, goal_failed(next(Connection,Request))).
+
+next_(switch_protocol(SwitchGoal, _SwitchOptions), Request) :-
     !,
     memberchk(pool(client(_Queue, _Goal, In, Out)), Request),
     (   catch(call(SwitchGoal, In, Out), E,
@@ -813,14 +818,14 @@ next(switch_protocol(SwitchGoal, _SwitchOptions), Request) :-
     ->  true
     ;   http_close_connection(Request)
     ).
-next(spawned(ThreadId), _) :-
+next_(spawned(ThreadId), _) :-
     !,
     debug(http(spawn), 'Handler spawned to thread ~w', [ThreadId]).
-next(Connection, Request) :-
+next_(Connection, Request) :-
     downcase_atom(Connection, 'keep-alive'),
     http_requeue(Request),
     !.
-next(_, Request) :-
+next_(_, Request) :-
     http_close_connection(Request).
 
 
