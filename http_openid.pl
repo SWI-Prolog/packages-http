@@ -122,7 +122,7 @@ A *consumer* (an application that allows OpenID login) typically uses
 this library through openid_user/3. In addition, it must implement the
 hook http_openid:openid_hook(trusted(OpenId, Server)) to define accepted
 OpenID servers. Typically, this hook is used to provide a white-list of
-aceptable servers. Note that accepting any OpenID server is possible,
+acceptable servers. Note that accepting any OpenID server is possible,
 but anyone on the internet can setup a dummy OpenID server that simply
 grants and signs every request. Here is an example:
 
