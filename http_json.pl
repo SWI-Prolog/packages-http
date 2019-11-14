@@ -449,7 +449,7 @@ json_status_reply(method_not_allowed(Method,Location),
                   _{location:Location, method:UMethod}) :-
     upcase_atom(Method, UMethod).
 json_status_reply(not_acceptable(Why),
-                  [ 'Request is not aceptable: ~p'-[Why]
+                  [ 'Request is not acceptable: ~p'-[Why]
                   ],
                   _{}).
 json_status_reply(server_error(ErrorTerm), Lines, _{}) :-
