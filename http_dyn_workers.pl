@@ -50,6 +50,10 @@
 
 /** <module> Dynamically schedule HTTP workers.
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This module defines  hooks  into  the   HTTP  framework  to  dynamically
 schedule worker threads. Dynamic scheduling relieves   us from finding a
 good value for the size of the HTTP worker pool.

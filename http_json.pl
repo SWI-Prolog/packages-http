@@ -80,6 +80,10 @@
 
 /** <module> HTTP JSON Plugin module
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This module adds hooks to several parts   of  the HTTP libraries, making
 them JSON-aware.  Notably:
 

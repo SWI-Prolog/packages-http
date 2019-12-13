@@ -76,6 +76,10 @@
 
 /** <module> Dispatch requests in the HTTP server
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This module can be placed between   http_wrapper.pl  and the application
 code to associate HTTP _locations_ to   predicates that serve the pages.
 In addition, it associates parameters  with   locations  that  deal with

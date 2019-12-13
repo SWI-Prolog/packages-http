@@ -87,8 +87,13 @@
 
 /** <module> HTTP server library
 
-This library combines the core server  functionality provided by several
-libraries that are needed by almost any web server.
+This  library  combines  the  core  server  functionality  provided  by
+several libraries that are needed by almost any web server.  It exports
+the   commonly   used  predicates   from    library(http/thread_httpd),
+library(http/http_dispatch),                library(http/http_wrapper),
+library(http/http_parameters),                library(http/html_write),
+library(http/http_json),      and       library(http/http_dyn_workers).
+
 */
 
 %!  http_server(+Options) is det.
