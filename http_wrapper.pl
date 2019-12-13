@@ -57,6 +57,10 @@
 
 /** <module> Server processing of an HTTP request
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This library provides  the  core  of   the  implementation  of  the HTTP
 protocol at the server side and is   mainly intended for *internal use*.
 It   is   used   by    library(thread_httpd)   and   library(inet_httpd)

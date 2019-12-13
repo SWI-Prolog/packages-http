@@ -101,6 +101,10 @@
 
 /** <module> Write HTML text
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 The purpose of this library  is  to   simplify  writing  HTML  pages. Of
 course, it is possible to  use  format/3   to  write  to the HTML stream
 directly, but this is generally not very satisfactory:

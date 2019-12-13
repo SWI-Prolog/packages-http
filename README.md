@@ -10,7 +10,7 @@ both HTTP and HTTPS connections and handle all request methods.
 
 ## Server library
 
-The main server libarys are
+The main server libraris are
 
   - `library(http/thread_httpd)` implements the server
   - `library(http/http_dispatch)` implements binding locations
@@ -20,6 +20,12 @@ The main server libarys are
     for HTTP servers on Unix.
   - `library(http/html_write)` implements generating HTML
   - `library(http/http_json)` implements reading and writing JSON documents.
+
+For simplicity, you can use `library(http/http_server)`, which
+combines the typical HTTP libraries that most servers need. The
+idea of a common request handling system and three controlling
+libraries is outdated; the threaded server now being the only sensible
+controlling library.
 
 # Requirements
 

@@ -83,6 +83,10 @@
 
 /** <module> Threaded HTTP server
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This library defines the HTTP server  frontend of choice for SWI-Prolog.
 It is based on the multi-threading   capabilities of SWI-Prolog and thus
 exploits multiple cores  to  serve   requests  concurrently.  The server

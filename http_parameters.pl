@@ -59,6 +59,10 @@
 
 /** <module> Extract parameters (GET and POST) from HTTP requests
 
+Most   code   doesn't   need  to   use  this   directly;  instead   use
+library(http/http_server),  which  combines   this  library  with   the
+typical HTTP libraries that most servers need.
+
 This module is used to extract the value  of GET or POST parameters from
 an HTTP request. The typical usage is e.g.,
 
