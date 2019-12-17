@@ -225,7 +225,9 @@ http_reply(Data, Out, HdrExtra, _Context, Request, Code) :-
     !,
     (   var(E)
     ->  true
-    ;   E = error(io_error(write, _), _)
+    ;   (   E = error(io_error(write,_), _)
+        ;   E = error(socket_error(_,_), _)
+        )
     ->  byte_count(Out, C1),
         Sent is C1 - C0,
         throw(error(http_write_short(Data, Sent), _))
