@@ -751,10 +751,11 @@ recreate_on_error(time_limit_exceeded).
 :- multifile
     message_level/2.
 
-message_level(error(io_error(read, _), _),      silent).
-message_level(error(socket_error(epipe,_), _),	silent).
-message_level(error(timeout_error(read, _), _), informational).
-message_level(keep_alive_timeout,               silent).
+message_level(error(io_error(read, _), _),               silent).
+message_level(error(socket_error(epipe,_), _),           silent).
+message_level(error(http_write_short(_Obj,_Written), _), silent).
+message_level(error(timeout_error(read, _), _),          informational).
+message_level(keep_alive_timeout,                        silent).
 
 current_message_level(Term, Level) :-
     (   message_level(Term, Level)
