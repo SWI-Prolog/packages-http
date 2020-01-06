@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2018, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -376,16 +376,15 @@ user_agent('SWI-Prolog').
     socket:proxy_for_url/3.           % +URL, +Host, -ProxyList
 
 http_open(URL, Stream, QOptions) :-
-    meta_options(is_meta, QOptions, Options),
+    meta_options(is_meta, QOptions, Options0),
     (   atomic(URL)
     ->  parse_url_ex(URL, Parts)
     ;   Parts = URL
     ),
     autoload_https(Parts),
+    upgrade_ssl_options(Parts, Options0, Options),
     add_authorization(Parts, Options, Options1),
-    findall(HostOptions,
-            http:open_options(Parts, HostOptions),
-            AllHostOptions),
+    findall(HostOptions, hooked_options(Parts, HostOptions), AllHostOptions),
     foldl(merge_options_rev, AllHostOptions, Options1, Options2),
     (   option(bypass_proxy(true), Options)
     ->  try_http_proxy(direct, Parts, Stream, Options2)
@@ -483,6 +482,21 @@ http:http_connection_over_proxy(socks(SocksHost, SocksPort), _Parts, Host:Port,
             throw(Error)
           )).
 
+%!  hooked_options(+Parts, -Options) is nondet.
+%
+%   Calls  http:open_options/2  and  if  necessary    upgrades  old  SSL
+%   cacerts_file(File) option to a cacerts(List) option to ensure proper
+%   merging of options.
+
+hooked_options(Parts, Options) :-
+    http:open_options(Parts, Options0),
+    upgrade_ssl_options(Parts, Options0, Options).
+
+upgrade_ssl_options(Parts, Options0, Options) :-
+    (   requires_ssl(Parts)
+    ->  ssl:upgrade_legacy_options(Options0, Options)
+    ;   Options = Options0
+    ).
 
 merge_options_rev(Old, New, Merged) :-
     merge_options(New, Old, Merged).
@@ -505,13 +519,17 @@ host_and_port(Host, _,       Port,    Host:Port).
 %   If the requested scheme is https or wss, load the HTTPS plugin.
 
 autoload_https(Parts) :-
+    requires_ssl(Parts),
     memberchk(scheme(S), Parts),
-    secure_scheme(S),
     \+ clause(http:http_protocol_hook(S, _, StreamPair, StreamPair, _),_),
     exists_source(library(http/http_ssl_plugin)),
     !,
     use_module(library(http/http_ssl_plugin)).
 autoload_https(_).
+
+requires_ssl(Parts) :-
+    memberchk(scheme(S), Parts),
+    secure_scheme(S).
 
 secure_scheme(https).
 secure_scheme(wss).
