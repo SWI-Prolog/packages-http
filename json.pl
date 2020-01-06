@@ -70,7 +70,7 @@
 :- use_module(library(memfile)).
 :- use_module(library(error)).
 :- use_module(library(option)).
-:- use_module(library(debug)).
+:- use_module(library(lists)).
 
 :- use_foreign_library(foreign(json)).
 
