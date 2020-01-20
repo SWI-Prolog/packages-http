@@ -1212,6 +1212,7 @@ add_authorization(_, Options, Options) :-
 add_authorization(Parts, Options0, Options) :-
     url_part(user(User), Parts),
     url_part(password(Passwd), Parts),
+    !,
     Options = [authorization(basic(User,Passwd))|Options0].
 add_authorization(Parts, Options0, Options) :-
     stored_authorization(_, _) ->   % quick test to avoid work
