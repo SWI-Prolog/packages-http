@@ -707,7 +707,7 @@ openid_resolve(URL, OpenID0, OpenID, Server, []) :-
                          syntax_errors(quiet)
                        ]),
         close(Stream)),
-    debug(openid(resolve), 'Scanning HTML document ...', [URL]),
+    debug(openid(resolve), 'Scanning HTML document ...', []),
     contains_term(element(head, _, Head), Term),
     (   link(Head, 'openid.server', Server)
     ->  debug(openid(resolve), 'OpenID Server=~q', [Server])
