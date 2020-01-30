@@ -233,7 +233,9 @@ method_not_allowed(Request) :-
     format('Method ~p should not have been alowed', [Method]).
 
 server_error(_Request) :-
-    X is 1/0,
+    Num = 1,
+    Den = 0,
+    X is Num/Den,
     format('Content-type: text/plain~n~n'),
     format('X = ~q~n', [X]).
 
