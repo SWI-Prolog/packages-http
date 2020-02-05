@@ -1238,6 +1238,7 @@ parse_url_ex(URL, [uri(URL)|Parts]) :-
 
 components(Components) -->
     uri_scheme(Components),
+    uri_path(Components),
     uri_authority(Components),
     uri_request_uri(Components).
 
@@ -1247,6 +1248,18 @@ uri_scheme(Components) -->
     [ scheme(Scheme)
     ].
 uri_scheme(_) --> [].
+
+uri_path(Components) -->
+    { uri_data(path, Components, Path0), nonvar(Path0),
+      (   Path0 == ''
+      ->  Path = (/)
+      ;   Path = Path0
+      )
+    },
+    !,
+    [ path(Path)
+    ].
+uri_path(_) --> [].
 
 uri_authority(Components) -->
     { uri_data(authority, Components, Auth), nonvar(Auth),
