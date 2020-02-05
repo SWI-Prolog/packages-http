@@ -1250,7 +1250,12 @@ uri_scheme(Components) -->
 uri_scheme(_) --> [].
 
 uri_path(Components) -->
-    { uri_data(path, Components, Path), nonvar(Path) },
+    { uri_data(path, Components, Path0), nonvar(Path0),
+      (   Path0 == ''
+      ->  Path = (/)
+      ;   Path = Path0
+      )
+    },
     !,
     [ path(Path)
     ].
