@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2019, University of Amsterdam
+    Copyright (c)  2007-2020, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -846,7 +846,7 @@ authentication([_|Options], Request, Fields) :-
 
 auth_expansion(Request0, Request, Options) :-
     authentication(Options, Request0, Extra),
-    append(Extra, Request, Request0).
+    append(Extra, Request0, Request).
 
 %!  find_handler(+Path, -Action, -Options) is det.
 %
