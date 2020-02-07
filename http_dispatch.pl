@@ -846,7 +846,7 @@ authentication([_|Options], Request, Fields) :-
 
 auth_expansion(Request0, Request, Options) :-
     authentication(Options, Request0, Extra),
-    append(Extra, Request, Request0).
+    append(Extra, Request0, Request).
 
 %!  find_handler(+Path, -Action, -Options) is det.
 %
