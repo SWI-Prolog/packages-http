@@ -50,18 +50,42 @@
             http_reload_with_parameters/3, % +Request, +Parameters, -HREF
             http_safe_file/2            % +Spec, +Options
           ]).
-:- use_module(library(option)).
-:- use_module(library(lists)).
-:- use_module(library(pairs)).
-:- use_module(library(time)).
-:- use_module(library(error)).
-:- use_module(library(settings)).
-:- use_module(library(uri)).
-:- use_module(library(apply)).
-:- use_module(library(http/mimetype)).
-:- use_module(library(http/http_path)).
-:- use_module(library(http/http_header)).
-:- use_module(library(http/thread_httpd)).
+:- autoload(library(apply),
+	    [partition/4,maplist/3,maplist/2,include/3,exclude/3]).
+:- autoload(library(broadcast),[listen/2]).
+:- autoload(library(error),
+	    [ must_be/2,
+	      domain_error/2,
+	      type_error/2,
+	      instantiation_error/1,
+	      existence_error/2,
+	      permission_error/3
+	    ]).
+:- autoload(library(filesex),[directory_file_path/3]).
+:- autoload(library(lists),
+	    [ select/3,
+	      append/3,
+	      append/2,
+	      same_length/2,
+	      member/2,
+	      last/2,
+	      delete/3
+	    ]).
+:- autoload(library(option),[option/3,option/2,merge_options/3]).
+:- autoload(library(pairs),[pairs_values/2]).
+:- autoload(library(time),[call_with_time_limit/2]).
+:- autoload(library(uri),
+	    [ uri_encoded/3,
+	      uri_data/3,
+	      uri_components/2,
+	      uri_query_components/2
+	    ]).
+:- autoload(library(http/http_header),[http_timestamp/2]).
+:- autoload(library(http/http_path),[http_absolute_location/3]).
+:- autoload(library(http/mimetype),
+	    [file_content_type/2,file_content_type/3]).
+:- autoload(library(http/thread_httpd),[http_spawn/2]).
+:- use_module(library(settings),[setting/4,setting/2]).
 
 :- predicate_options(http_404/2, 1, [index(any)]).
 :- predicate_options(http_reply_file/3, 2,
