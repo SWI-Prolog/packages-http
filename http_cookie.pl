@@ -37,9 +37,9 @@
             cookie_remove_all_clients/0,
             cookie_current_cookie/4     % ?ClientId, ?Name, ?Value, ?Options
           ]).
-:- use_module(library(http/http_header)).
-:- use_module(library(option)).
-:- use_module(library(debug)).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(option),[option/3]).
+:- autoload(library(http/http_header),[http_parse_header_value/3]).
 
 /** <module> HTTP client cookie handling
 

@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2014, University of Amsterdam
+    Copyright (c)  2008-2020, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -38,17 +38,20 @@
             http_absolute_location/3,   % +Spec, -Path, +Options
             http_clean_location_cache/0
           ]).
-:- use_module(library(lists)).
-:- use_module(library(error)).
-:- use_module(library(apply)).
-:- use_module(library(debug)).
-:- use_module(library(option)).
-:- use_module(library(settings)).
-:- use_module(library(broadcast)).
-:- use_module(library(uri)).
-:- use_module(library(http/http_host)).
-:- use_module(library(http/http_wrapper)).
-
+:- autoload(library(apply),[exclude/3]).
+:- autoload(library(broadcast),[listen/2]).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(error),
+	    [must_be/2,existence_error/2,instantiation_error/1]).
+:- autoload(library(lists),[reverse/2,append/3]).
+:- autoload(library(option),[option/3]).
+:- autoload(library(pairs),[pairs_values/2]).
+:- autoload(library(uri),
+	    [ uri_authority_data/3, uri_authority_components/2,
+	      uri_data/3, uri_components/2, uri_normalized/3
+	    ]).
+:- autoload(library(http/http_host),[http_current_host/4]).
+:- use_module(library(settings),[setting/4,setting/2]).
 
 :- predicate_options(http_absolute_location/3, 3, [relative_to(atom)]).
 

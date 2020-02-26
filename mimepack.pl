@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2012, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -36,10 +36,10 @@
 :- module(mime_pack,
           [ mime_pack/3                 % +Input, +Stream, ?Boundary
           ]).
-:- use_module(mimetype).
-:- use_module(html_write).
-:- use_module(library(lists)).
-:- use_module(library(error)).
+:- autoload(html_write,[print_html/2]).
+:- autoload(mimetype,[file_mime_type/2]).
+:- autoload(library(error),[instantiation_error/1]).
+:- autoload(library(lists),[select/3]).
 
 /** <module> Create a MIME message
 

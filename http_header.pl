@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2018, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -60,23 +60,38 @@
             http_update_connection/4,   % +HeaderIn, +Request, -Connection, -HeaderOut
             http_update_transfer/4      % +HeaderIn, +Request, -Transfer, -HeaderOut
           ]).
-:- use_module(library(readutil)).
-:- use_module(library(debug)).
-:- use_module(library(error)).
-:- use_module(library(option)).
-:- use_module(library(lists)).
-:- use_module(library(url)).
-:- use_module(library(uri)).
-:- use_module(library(memfile)).
-:- use_module(library(settings)).
-:- use_module(library(error)).
-:- use_module(library(pairs)).
-:- use_module(library(socket)).
-:- use_module(library(dcg/basics)).
-:- use_module(html_write).
-:- use_module(http_exception).
-:- use_module(mimetype).
-:- use_module(mimepack).
+:- autoload(html_write,
+	    [ print_html/2, print_html/1, page/4, html/3,
+	      html_print_length/2
+	    ]).
+:- autoload(http_exception,[map_exception_to_http_status/4]).
+:- autoload(mimepack,[mime_pack/3]).
+:- autoload(mimetype,[file_mime_type/2]).
+:- autoload(library(apply),[maplist/2]).
+:- autoload(library(base64),[base64/2]).
+:- autoload(library(debug),[debug/3,debugging/1]).
+:- autoload(library(error),[syntax_error/1,domain_error/2]).
+:- autoload(library(lists),[append/3,member/2,select/3,delete/3]).
+:- autoload(library(memfile),
+	    [ new_memory_file/1, open_memory_file/3,
+	      free_memory_file/1, open_memory_file/4,
+	      size_memory_file/3
+	    ]).
+:- autoload(library(option),[option/3,option/2]).
+:- autoload(library(pairs),[pairs_values/2]).
+:- autoload(library(readutil),
+	    [read_line_to_codes/2,read_line_to_codes/3]).
+:- autoload(library(sgml_write),[xml_write/3]).
+:- autoload(library(socket),[gethostname/1]).
+:- autoload(library(uri),
+	    [ uri_components/2, uri_data/3, uri_encoded/3, uri_query_components/2
+	    ]).
+:- autoload(library(url),[parse_url_search/2]).
+:- autoload(library(dcg/basics),
+	    [ integer/3, atom/3, whites/2, blanks_to_nl/2, string/3,
+	      number/3, blanks/2, float/3, nonblanks/3, eos/2
+	    ]).
+:- use_module(library(settings),[setting/4,setting/2]).
 
 :- multifile
     http:status_page/3,             % +Status, +Context, -HTML

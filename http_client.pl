@@ -42,14 +42,20 @@
             http_read_data/3,           % +Header, -Data, :Options
             http_disconnect/1           % +What
           ]).
-:- use_module(library(http/http_open)).
-:- use_module(library(uri)).
-:- use_module(http_header).
-:- use_module(http_stream).
-:- use_module(library(memfile)).
-:- use_module(library(lists)).
-:- use_module(library(error)).
-:- use_module(library(option)).
+:- autoload(http_header,[http_post_data/3]).
+:- autoload(http_stream,[http_chunked_open/3,stream_range_open/3]).
+:- autoload(library(error),[must_be/2]).
+:- autoload(library(lists),[delete/3,select/3]).
+:- autoload(library(memfile),
+	    [ new_memory_file/1, open_memory_file/4, free_memory_file/1,
+	      memory_file_to_atom/3, memory_file_to_string/3,
+	      memory_file_to_codes/3, open_memory_file/3
+	    ]).
+:- autoload(library(option),
+	    [option/3,option/2,meta_options/3,select_option/3]).
+:- autoload(library(uri),[uri_query_components/2]).
+:- autoload(library(http/http_open),
+	    [http_open/3,http_close_keep_alive/1]).
 
 :- meta_predicate
     http_read_data(+, -, :).

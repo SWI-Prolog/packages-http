@@ -43,15 +43,16 @@
             ws_open/3,                  % +Stream, -WebSocket, +Options
             ws_property/2               % +WebSocket, ?Property
           ]).
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(http/http_open)).
-:- use_module(library(http/json)).
-:- use_module(library(sha)).
-:- use_module(library(base64)).
-:- use_module(library(option)).
-:- use_module(library(lists)).
-:- use_module(library(error)).
-:- use_module(library(debug)).
+:- autoload(library(base64),[base64//1]).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(error),
+	    [permission_error/3,must_be/2,type_error/2,domain_error/2]).
+:- autoload(library(lists),[member/2]).
+:- autoload(library(option),[select_option/3,option/2,option/3]).
+:- autoload(library(sha),[sha_hash/3]).
+:- autoload(library(http/http_dispatch),[http_switch_protocol/2]).
+:- autoload(library(http/http_open),[http_open/3]).
+:- autoload(library(http/json),[json_write_dict/2,json_read_dict/3]).
 
 :- meta_predicate
     http_upgrade_to_websocket(1, +, +).

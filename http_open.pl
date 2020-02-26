@@ -39,18 +39,28 @@
             http_set_authorization/2,   % +URL, +Authorization
             http_close_keep_alive/1     % +Address
           ]).
-:- use_module(library(uri)).
-:- use_module(library(readutil)).
-:- use_module(library(socket)).
-:- use_module(library(lists)).
-:- use_module(library(option)).
-:- use_module(library(error)).
-:- use_module(library(base64)).
-:- use_module(library(debug)).
-:- use_module(library(aggregate)).
-:- use_module(library(apply)).
-:- use_module(library(http/http_header), [http_parse_header/2]).
-:- use_module(library(http/http_stream)).
+:- autoload(library(aggregate),[aggregate_all/3]).
+:- autoload(library(apply),[foldl/4,include/3]).
+:- autoload(library(base64),[base64/3]).
+:- autoload(library(debug),[debug/3,debugging/1]).
+:- autoload(library(error),
+	    [ domain_error/2, must_be/2, existence_error/2, instantiation_error/1
+	    ]).
+:- autoload(library(lists),[last/2,member/2]).
+:- autoload(library(option),
+	    [ meta_options/3, option/2, select_option/4, merge_options/3,
+	      option/3, select_option/3
+	    ]).
+:- autoload(library(readutil),[read_line_to_codes/2]).
+:- autoload(library(socket),
+	    [tcp_connect/3,negotiate_socks_connection/2]).
+:- autoload(library(uri),
+	    [ uri_resolve/3, uri_components/2, uri_data/3,
+              uri_authority_components/2, uri_authority_data/3,
+	      uri_encoded/3, uri_query_components/2, uri_is_global/1
+	    ]).
+:- autoload(library(http/http_header),[http_parse_header/2]).
+:- autoload(library(http/http_stream),[stream_range_open/3]).
 
 /** <module> HTTP client library
 

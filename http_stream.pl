@@ -47,7 +47,6 @@
             is_cgi_stream/1,            % +Stream
             cgi_statistics/1            % ?Statistics
           ]).
-
 :- use_foreign_library(foreign(http_stream)).
 :- public http_stream_debug/1.          % set debug level
 
