@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2019, University of Amsterdam
+    Copyright (c)  2007-2020, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -34,8 +34,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- if(current_predicate(is_dict/1)).
-
 :- module(json,
           [ json_read/2,                % +Stream, -JSONTerm
             json_read/3,                % +Stream, -JSONTerm, +Options
@@ -51,21 +49,6 @@
             json_write_dict/3,          % +Stream, +Dict, +Options
             atom_json_dict/3            % ?Atom, ?JSONDict, +Options
           ]).
-
-:- else.
-
-:- module(json,
-          [ json_read/2,                % +Stream, -JSONTerm
-            json_read/3,                % +Stream, -JSONTerm, +Options
-            atom_json_term/3,           % ?Atom, ?JSONTerm, +Options
-            json_write/2,               % +Stream, +Term
-            json_write/3,               % +Stream, +Term, +Options
-            is_json_term/1,             % @Term
-            is_json_term/2
-          ]).
-
-:- endif.
-
 :- use_module(library(record)).
 :- use_module(library(memfile)).
 :- use_module(library(error)).
@@ -578,7 +561,6 @@ json_write_term(Var, _, _, _) :-
 json_write_term(json(Pairs), Stream, State, Options) :-
     !,
     json_write_object(Pairs, Stream, State, Options).
-:- if(current_predicate(is_dict/1)).
 json_write_term(Dict, Stream, State, Options) :-
     is_dict(Dict),
     !,
@@ -590,7 +572,6 @@ json_write_term(Dict, Stream, State, Options) :-
     ;   Pairs = Pairs0
     ),
     json_write_object(Pairs, Stream, State, Options).
-:- endif.
 json_write_term(List, Stream, State, Options) :-
     is_list(List),
     !,
@@ -772,7 +753,6 @@ json_print_length(json(Pairs), Options, Max, Len0, Len) :-
     Len1 =< Max,
     must_be(list, Pairs),
     pairs_print_length(Pairs, Options, Max, Len1, Len).
-:- if(current_predicate(is_dict/1)).
 json_print_length(Dict, Options, Max, Len0, Len) :-
     is_dict(Dict),
     !,
@@ -780,7 +760,6 @@ json_print_length(Dict, Options, Max, Len0, Len) :-
     Len1 is Len0 + 2,
     Len1 =< Max,
     pairs_print_length(Pairs, Options, Max, Len1, Len).
-:- endif.
 json_print_length(Array, Options, Max, Len0, Len) :-
     is_list(Array),
     !,
@@ -915,8 +894,6 @@ is_json_pair(_, Var) :-
 is_json_pair(Options, Name=Value) :-
     atom(Name),
     is_json_term2(Options, Value).
-
-:- if(current_predicate(is_dict/1)).
 
                  /*******************************
                  *         DICT SUPPORT         *
@@ -1079,7 +1056,6 @@ text_memfile(String, MF) :-
     new_memory_file(MF),
     insert_memory_file(MF, 0, String).
 
-:- endif.
 
                  /*******************************
                  *           MESSAGES           *
