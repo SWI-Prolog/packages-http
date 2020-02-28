@@ -71,6 +71,7 @@
             (html_meta)/1,              % +Spec
             op(1150, fx, html_meta)
           ]).
+:- use_module(html_quasiquotations, [html/4]).
 :- autoload(library(apply),[maplist/3,maplist/4]).
 :- autoload(library(debug),[debug/3]).
 :- autoload(library(error),
