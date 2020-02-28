@@ -61,6 +61,9 @@
 	    ]).
 :- autoload(library(http/http_header),[http_parse_header/2]).
 :- autoload(library(http/http_stream),[stream_range_open/3]).
+:- if(exists_source(library(ssl))).
+:- autoload(library(ssl), [ssl_upgrade_legacy_options/2]).
+:- endif.
 
 /** <module> HTTP client library
 
@@ -502,11 +505,13 @@ hooked_options(Parts, Options) :-
     http:open_options(Parts, Options0),
     upgrade_ssl_options(Parts, Options0, Options).
 
+:- if(current_predicate(ssl_upgrade_legacy_options/2)).
 upgrade_ssl_options(Parts, Options0, Options) :-
-    (   requires_ssl(Parts)
-    ->  ssl:upgrade_legacy_options(Options0, Options)
-    ;   Options = Options0
-    ).
+    requires_ssl(Parts),
+    !,
+    ssl_upgrade_legacy_options(Options0, Options).
+:- endif.
+upgrade_ssl_options(_, Options, Options).
 
 merge_options_rev(Old, New, Merged) :-
     merge_options(New, Old, Merged).

@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2015, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -71,16 +71,20 @@
             (html_meta)/1,              % +Spec
             op(1150, fx, html_meta)
           ]).
-:- use_module(library(error)).
-:- use_module(library(apply)).
-:- use_module(library(lists)).
-:- use_module(library(option)).
-:- use_module(library(pairs)).
-:- use_module(library(sgml)).           % Quote output
-:- use_module(library(uri)).
-:- use_module(library(debug)).
-:- use_module(html_quasiquotations).
+:- autoload(library(apply),[maplist/3,maplist/4]).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(error),
+	    [must_be/2,domain_error/2,instantiation_error/1]).
+:- autoload(library(lists),
+	    [permutation/2,selectchk/3,append/3,select/4,list_to_set/2]).
+:- autoload(library(option),[option/2]).
+:- autoload(library(pairs),[group_pairs_by_key/2]).
+:- autoload(library(sgml),[xml_quote_cdata/3,xml_quote_attribute/3]).
+:- autoload(library(uri),[uri_encoded/3]).
+:- autoload(library(url),[www_form_encode/2]).
+:- autoload(library(http/http_dispatch), [http_location_by_id/2]).
 
+% Quote output
 :- set_prolog_flag(generate_debug_info, false).
 
 :- meta_predicate
@@ -1586,8 +1590,7 @@ location_id(ID, classify) :-
     var(ID),
     !.
 location_id(ID, Class) :-
-    (   current_predicate(http_dispatch:http_location_by_id/2),
-        catch(http_dispatch:http_location_by_id(ID, Location), _, fail)
+    (   catch(http_location_by_id(ID, Location), _, fail)
     ->  Class = http_location_for_id(Location)
     ;   Class = http_no_location_for_id(ID)
     ).
