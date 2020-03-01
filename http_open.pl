@@ -59,7 +59,8 @@
               uri_authority_components/2, uri_authority_data/3,
 	      uri_encoded/3, uri_query_components/2, uri_is_global/1
 	    ]).
-:- autoload(library(http/http_header),[http_parse_header/2]).
+:- autoload(library(http/http_header),
+            [ http_parse_header/2, http_post_data/3 ]).
 :- autoload(library(http/http_stream),[stream_range_open/3]).
 :- if(exists_source(library(ssl))).
 :- autoload(library(ssl), [ssl_upgrade_legacy_options/2]).
@@ -590,7 +591,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
     x_headers(Options, URI, StreamPair),
     write_cookies(StreamPair, Parts, Options),
     (   option(post(PostData), Options)
-    ->  http_header:http_post_data(PostData, StreamPair, [])
+    ->  http_post_data(PostData, StreamPair, [])
     ;   format(StreamPair, '\r\n', [])
     ),
     flush_output(StreamPair),
