@@ -50,6 +50,10 @@
             http_reload_with_parameters/3, % +Request, +Parameters, -HREF
             http_safe_file/2            % +Spec, +Options
           ]).
+:- use_module(library(lists),
+              [ select/3, append/3, append/2, same_length/2, member/2,
+                last/2, delete/3
+              ]).
 :- autoload(library(apply),
 	    [partition/4,maplist/3,maplist/2,include/3,exclude/3]).
 :- autoload(library(broadcast),[listen/2]).
@@ -62,15 +66,6 @@
 	      permission_error/3
 	    ]).
 :- autoload(library(filesex),[directory_file_path/3]).
-:- autoload(library(lists),
-	    [ select/3,
-	      append/3,
-	      append/2,
-	      same_length/2,
-	      member/2,
-	      last/2,
-	      delete/3
-	    ]).
 :- autoload(library(option),[option/3,option/2,merge_options/3]).
 :- autoload(library(pairs),[pairs_values/2]).
 :- autoload(library(time),[call_with_time_limit/2]).
