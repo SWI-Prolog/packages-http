@@ -461,19 +461,23 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %!  json_write(+Stream, +Term) is det.
 %!  json_write(+Stream, +Term, +Options) is det.
 %
-%   Write a JSON term to Stream.  The   JSON  object  is of the same
-%   format as produced by json_read/2, though we allow for some more
-%   flexibility with regard to pairs in  objects. All of Name=Value,
-%   Name-Value and Name(Value) produce the  same output.
+%   Write a JSON term to Stream. The JSON   object is of the same format
+%   as  produced  by  json_read/2,  though  we    allow  for  some  more
+%   flexibility with regard to pairs  in   objects.  All  of Name=Value,
+%   Name-Value and Name(Value) produce the same output.
 %
-%   Values can be of the form  #(Term),   which  causes `Term` to be
-%   _stringified_ if it is not an atom or string. Stringification is
+%   Values can be of  the  form  #(Term),   which  causes  `Term`  to be
+%   _stringified_ if it is not  an   atom  or string. Stringification is
 %   based on term_string/2.
 %
-%   The version 7 _dict_ type is supported as well.  Optionally,  if
-%   the dict has a _tag_,  a property  "type":"tag"  can be added to
-%   the object.  This behaviour can be controlled using the  =tag=
-%   option (see below). For example:
+%   Rational numbers are emitted as  floating   point  numbers. The hook
+%   json_write_hook/4  can  be  used   to    realize   domain   specific
+%   alternatives.
+%
+%   The version 7 _dict_ type is supported   as well. Optionally, if the
+%   dict has a _tag_, a  property  "type":"tag"   can  be  added  to the
+%   object. This behaviour can be controlled using the =tag= option (see
+%   below). For example:
 %
 %     ==
 %     ?- json_write(current_output, point{x:1,y:2}).
@@ -598,7 +602,13 @@ json_write_term(Term, Stream, State, Options) :-
 json_write_term(Number, Stream, _State, _Options) :-
     number(Number),
     !,
-    write(Stream, Number).
+    (   float(Number)
+    ->  write(Stream, Number)
+    ;   integer(Number)
+    ->  write(Stream, Number)
+    ;   Float is float(Number)              % rational number
+    ->  write(Stream, Float)
+    ).
 json_write_term(True, Stream, _State, Options) :-
     json_options_true(Options, True),
     !,
