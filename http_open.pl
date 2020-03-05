@@ -965,8 +965,19 @@ transfer_encoding_filter_(Encoding, In0, In) :-
     ),
     (   http:encoding_filter(Encoding, In1, In)
     ->  true
+    ;   autoload_encoding(Encoding),
+        http:encoding_filter(Encoding, In1, In)
+    ->  true
     ;   domain_error(http_encoding, Encoding)
     ).
+
+:- multifile
+    autoload_encoding/1.
+
+:- if(exists_source(library(zlib))).
+autoload_encoding(gzip) :-
+    use_module(library(zlib)).
+:- endif.
 
 content_type(Lines, Type) :-
     member(Line, Lines),
