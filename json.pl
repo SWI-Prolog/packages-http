@@ -259,6 +259,16 @@ json_read(Stream, Term, Options) :-
     ).
 
 json_value_top(Stream, Term, Options) :-
+    stream_property(Stream, type(binary)),
+    !,
+    setup_call_cleanup(
+        set_stream(Stream, encoding(utf8)),
+        json_value_top_(Stream, Term, Options),
+        set_stream(Stream, type(binary))).
+json_value_top(Stream, Term, Options) :-
+    json_value_top_(Stream, Term, Options).
+
+json_value_top_(Stream, Term, Options) :-
     get_code(Stream, C0),
     ws(C0, Stream, C1),
     (   C1 == -1
