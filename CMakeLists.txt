@@ -132,5 +132,4 @@ pkg_doc(http
 	    http_authenticate.pl http_client.pl
 	    http_header.pl http_digest.pl http_dyn_workers.pl
 	SUBSUBSECTION
-	    ${HTTP_PLATFORM_FILES}
-        DEPENDS ssl)
+	    ${HTTP_PLATFORM_FILES})
