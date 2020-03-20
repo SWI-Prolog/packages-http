@@ -23,8 +23,13 @@
 :- endif.
 :- use_module(library(debug)).
 :- use_module(library(dcg/basics)).
+:- if(exists_source(library(ssl))).
 :- use_module(library(ssl)).
 :- use_module(library(http/http_ssl_plugin)).
+test_https(true).
+:- else.
+test_https(false).
+:- endif.
 
 test_proxy :-
     assign_ports,
@@ -45,7 +50,10 @@ assign_ports :-
 assign_ports :-
     free_ports(5, [P1,P2,P3,P4,P5]),
     assertz(port(http_endpoint,  P1)),      % our HTTP target server
-    assertz(port(https_endpoint, P2)),      % our HTTPS target server
+    (   test_https(true)
+    ->  assertz(port(https_endpoint, P2))   % our HTTPS target server
+    ;   true
+    ),
     assertz(port(socks,          P3)),      % our socks server
     assertz(port(http_proxy,     P4)),      % our HTTP proxy
     assertz(port(unused,         P5)).      % port without a server
@@ -349,7 +357,6 @@ http_endpoint(_Request):-
 
 start_servers :-
     port(http_endpoint, HTTP_port),
-    port(https_endpoint, HTTPS_port),
     port(http_proxy, HTTP_PROXY_port),
     port(socks, SOCKS_port),
     start_socks_server(SOCKS_port),
@@ -357,26 +364,31 @@ start_servers :-
                 [ port(HTTP_port),
                   workers(2)
                 ]),
-    test_input('../ssl/etc/server/server-cert.pem', ServerCert),
-    test_input('../ssl/etc/server/server-key.pem', ServerKey),
-    http_server(http_endpoint,
-                [ port(HTTPS_port),
-                  workers(2),
-                  ssl([ certificate_file(ServerCert),
-                        key_file(ServerKey),
-                        password("apenoot1")
-                      ])
-                ]),
+    (   port(https_endpoint, HTTPS_port)
+    ->  test_input('../ssl/etc/server/server-cert.pem', ServerCert),
+        test_input('../ssl/etc/server/server-key.pem', ServerKey),
+        http_server(http_endpoint,
+                    [ port(HTTPS_port),
+                      workers(2),
+                      ssl([ certificate_file(ServerCert),
+                            key_file(ServerKey),
+                            password("apenoot1")
+                          ])
+                    ])
+    ;   true
+    ),
     start_http_proxy(HTTP_PROXY_port).
 
 stop_servers :-
     port(socks, SOCKS_port),
     port(http_endpoint, HTTP_port),
-    port(https_endpoint, HTTPS_port),
     port(http_proxy, HTTP_PROXY_port),
     stop_socks_server(SOCKS_port),
     http_stop_server(HTTP_port, []),
-    http_stop_server(HTTPS_port, []),
+    (   port(https_endpoint, HTTPS_port)
+    ->  http_stop_server(HTTPS_port, [])
+    ;   true
+    ),
     stop_http_proxy_server(HTTP_PROXY_port).
 
 proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts, Messages) :-
@@ -550,8 +562,8 @@ test('Request invalid URL directly and expect exception rather than failure'):-
           Exception = Error),
     assertion(nonvar(Exception)).
 
-test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET'):-
-    port(https_endpoint, HTTPS_port),
+test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET',
+     condition(port(https_endpoint, HTTPS_port))) :-
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'https://localhost:~w', [HTTPS_port]),
     retractall(test_proxy(_,_,_)),
