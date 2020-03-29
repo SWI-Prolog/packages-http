@@ -582,15 +582,8 @@ http_worker(Options) :-
     option(queue(Queue), Options),
     option(max_idle_time(MaxIdle), Options, infinite),
     repeat,
-      garbage_collect,
-      trim_stacks,
+      thread_idle(get_work(Queue, Message, MaxIdle), long),
       debug(http(worker), 'Waiting for a job ...', []),
-      (   MaxIdle == infinite
-      ->  thread_get_message(Queue, Message)
-      ;   thread_get_message(Queue, Message, [timeout(MaxIdle)])
-      ->  true
-      ;   Message = quit(idle)
-      ),
       debug(http(worker), 'Got job ~p', [Message]),
       (   Message = quit(Sender)
       ->  !,
@@ -617,6 +610,15 @@ http_worker(Options) :-
               fail
           )
       ).
+
+get_work(Queue, Message, infinite) :-
+    !,
+    thread_get_message(Queue, Message).
+get_work(Queue, Message, MaxIdle) :-
+    (   thread_get_message(Queue, Message, [timeout(MaxIdle)])
+    ->  true
+    ;   Message = quit(idle)
+    ).
 
 
 %!  open_client(+Message, +Queue, -Goal, -In, -Out,
