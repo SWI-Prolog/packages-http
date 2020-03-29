@@ -827,7 +827,8 @@ wait(Options) :-
     repeat,
         State = deadline(Count),
         Deadline is FirstDeadline+Count*Interval,
-        (   thread_get_message(Me, Msg, [deadline(Deadline)])
+        (   thread_idle(thread_get_message(Me, Msg, [deadline(Deadline)]),
+                        long)
         ->  catch(ignore(handle_message(Msg)), E,
                   print_message(error, E)),
             Msg == quit,
@@ -841,7 +842,7 @@ wait(Options) :-
 wait(_) :-
     thread_self(Me),
     repeat,
-        thread_get_message(Me, Msg),
+        thread_idle(thread_get_message(Me, Msg), long),
         catch(ignore(handle_message(Msg)), E,
               print_message(error, E)),
         Msg == quit,
