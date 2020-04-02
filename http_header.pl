@@ -1854,19 +1854,19 @@ auth_field_value(negotiate(Data)) -->
     { base64(Data, DataBase64),
       atom_codes(DataBase64, Codes)
     },
-    string(Codes), "\r\n".
+    string(Codes).
 auth_field_value(negotiate) -->
-    "Negotiate\r\n".
+    "Negotiate".
 auth_field_value(basic) -->
     !,
-    "Basic\r\n".
+    "Basic".
 auth_field_value(basic(Realm)) -->
-    "Basic Realm=\"", atom(Realm), "\"\r\n".
+    "Basic Realm=\"", atom(Realm), "\"".
 auth_field_value(digest) -->
     !,
-    "Digest\r\n".
+    "Digest".
 auth_field_value(digest(Details)) -->
-    "Digest ", atom(Details), "\r\n".
+    "Digest ", atom(Details).
 
 %!  value_options(+List, +Field)//
 %
