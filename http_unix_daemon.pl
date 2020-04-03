@@ -54,7 +54,8 @@
 :- use_module(library(main)).
 :- use_module(library(readutil)).
 
-:- if(exists_source(library(http/http_ssl_plugin))).
+:- if(( exists_source(library(http/http_ssl_plugin)),
+        \+ current_prolog_flag(pldoc_to_tex,true))).
 :- use_module(library(ssl)).
 :- use_module(library(http/http_ssl_plugin)).
 :- endif.

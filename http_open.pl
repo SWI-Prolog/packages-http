@@ -62,7 +62,8 @@
 :- autoload(library(http/http_header),
             [ http_parse_header/2, http_post_data/3 ]).
 :- autoload(library(http/http_stream),[stream_range_open/3]).
-:- if(exists_source(library(ssl))).
+:- if(( exists_source(library(ssl)),
+        \+ current_prolog_flag(pldoc_to_tex,true))).
 :- autoload(library(ssl), [ssl_upgrade_legacy_options/2]).
 :- endif.
 
