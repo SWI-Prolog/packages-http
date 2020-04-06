@@ -111,11 +111,6 @@ test_libs(cgi_stream http json multipart proxy websocket
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
 
-if(INSTALL_TESTS)
-  install(FILES examples/demo_body.pl
-	  DESTINATION ${INSTALL_TESTS_DIR}/packages/http/examples)
-endif()
-
 has_package(ssl, HAVE_SSL_PACKAGE)
 if(HAVE_SSL_PACKAGE)
   set(doc_depends ssl)
