@@ -116,12 +116,20 @@ if(INSTALL_TESTS)
 	  DESTINATION ${INSTALL_TESTS_DIR}/packages/http/examples)
 endif()
 
+has_package(ssl, HAVE_SSL_PACKAGE)
+if(HAVE_SSL_PACKAGE)
+  set(doc_depends ssl)
+endif()
+
 pkg_doc(http
 	LIBSUBDIR
 	    http
 	SOURCES
 	    json.md
-	SOURCE post.md --lib=http/html_write
+	SOURCE
+	    post.md --lib=http/html_write
+	DEPENDS
+	    ${doc_depends}
 	SECTION
 	    websocket.pl hub.pl
 	SUBSECTION
