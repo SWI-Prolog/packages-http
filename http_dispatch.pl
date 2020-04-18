@@ -136,7 +136,7 @@ write_index(Request) :-
 %      ```
 %      :- http_handler(root(user/User), user(Method, User),
 %                      [ method(Method),
-%                        methods([get,port,put])
+%                        methods([get,post,put])
 %                      ]).
 %
 %      user(get, User, Request) :-
