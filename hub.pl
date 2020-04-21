@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2018, VU University Amsterdam
+    Copyright (c)  2014-2020, VU University Amsterdam
                               CWI Amsterdam
     All rights reserved.
 
@@ -36,6 +36,7 @@
 :- module(hub,
           [ hub_create/3,               % +HubName, -Hub, +Options
             hub_add/3,                  % +HubName, +Websocket, ?Id
+            hub_member/2,               % +HubName, ?Id
             hub_send/2,                 % +ClientId, +Message
             hub_broadcast/2,            % +HubName, +Message
             hub_broadcast/3,            % +HubName, +Message, +Condition
@@ -187,6 +188,13 @@ hub_add(HubName, WebSocket, Id) :-
                         hub{joined:Id}),
     debug(hub(gate), 'Joined ~w: ~w', [HubName, Id]),
     create_wait_thread(Hub).
+
+%!  hub_member(?HubName, ?Id) is nondet.
+%
+%   True when Id is a member of the hub HubName.
+
+hub_member(HubName, Id) :-
+    websocket(HubName, _WebSocket, _OutputQueue, _Lock, Id).
 
 :- if(\+current_predicate(uuid/1)).
 % FIXME: Proper pure Prolog random UUID implementation
