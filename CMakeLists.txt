@@ -11,6 +11,8 @@ if(NOT DEFINED JQUERYDIR)
 	      ${JQUERYFILE}
 	      PATHS /usr/share/javascript/jquery
 	      NO_DEFAULT_PATH)
+    # Deal with snap creation
+    string(REPLACE "-sdk/current/" "/current/" JQUERYDIR "${JQUERYDIR}")
   endif()
 
   if(JQUERYDIR AND EXISTS ${JQUERYDIR}/${JQUERYFILE})
