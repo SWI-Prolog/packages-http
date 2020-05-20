@@ -102,7 +102,7 @@ request_path(Parts, Path) :-
 
 %!  cookie_value(+NameValueList, -CookieString) is det.
 %
-%   Create a cookie value string with name=value, seperated by ";".
+%   Create a cookie value string with name=value, separated by ";".
 
 cookie_value(List, Cookie) :-
     with_output_to(string(Cookie),

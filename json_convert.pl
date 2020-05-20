@@ -108,9 +108,9 @@ Using this declaration, the conversion becomes:
   ==
 
 The predicate json_to_prolog/2 is often  used after http_read_json/2 and
-prolog_to_json/2 before reply_json/1. For now  we consider them seperate
+prolog_to_json/2 before reply_json/1. For now  we consider them separate
 predicates because the transformation may be   too  general, too slow or
-not needed for dedicated  applications.  Using   a  seperate  step  also
+not needed for dedicated  applications.  Using   a  separate  step  also
 simplifies debugging this rather complicated process.
 
 @tbd    Ignore extra fields.  Using a partial list of _extra_?
