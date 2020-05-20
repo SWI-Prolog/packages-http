@@ -259,7 +259,7 @@ get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
     return FALSE;
   if ( s->functions != &cgi_functions )
   { silent_release_stream(s);
-    return type_error(t, "cgi_stream");
+    return type_error(t, "cgi_stream"), FALSE;
   }
 
   *sp = s;

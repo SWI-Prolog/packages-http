@@ -198,7 +198,7 @@ get_ws_stream(term_t t, IOSTREAM **sp, ws_context **ctx, int flags)
     return FALSE;
   if ( s->functions != &ws_functions )
   { PL_release_stream(s);
-    return PL_type_error("ws_stream", t);
+    return PL_type_error("ws_stream", t),FALSE;
   }
 
   *sp = s;
