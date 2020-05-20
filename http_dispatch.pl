@@ -205,7 +205,7 @@ write_index(Request) :-
 %       change due to reloading files. The default priority is 0 (zero).
 %
 %     - spawn(+SpawnOptions)
-%       Run the handler in a seperate thread. If SpawnOptions is an
+%       Run the handler in a separate thread. If SpawnOptions is an
 %       atom, it is interpreted as a thread pool name (see
 %       create_thread_pool/3). Otherwise the options are passed to
 %       http_spawn/2 and from there to thread_create/3. These options

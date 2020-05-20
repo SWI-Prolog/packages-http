@@ -327,7 +327,7 @@ openid_login_page(Request) :-
 
 %!  openid_login_form(+ReturnTo, +Options)// is det.
 %
-%   Create the OpenID  form.  This  exported   as  a  seperate  DCG,
+%   Create the OpenID  form.  This  exported   as  a  separate  DCG,
 %   allowing applications to redefine /openid/login   and reuse this
 %   part of the page.  Options processed:
 %
