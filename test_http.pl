@@ -34,7 +34,7 @@ test_http :-
               ]).
 
 run_network_tests :-
-    \+ getenv('USE_PUBLIC_NETWORK_TESTS', false),
+    getenv('SWIPL_PUBLIC_NETWORK_TESTS', true),
     exists_source(library(ssl)).
 
 :- begin_tests(http_open, [condition(run_network_tests)]).
