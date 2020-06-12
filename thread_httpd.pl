@@ -467,6 +467,9 @@ connect(Address) :-
 %   hook http:schedule_workers/1 to extend  the   worker  pool. This
 %   predicate can be used by accept_hook/2.
 
+http_enough_workers(Queue, _Why, _Peer) :-
+    message_queue_property(Queue, waiting(_)),
+    !.
 http_enough_workers(Queue, Why, Peer) :-
     message_queue_property(Queue, size(Size)),
     (   enough(Size, Why)
