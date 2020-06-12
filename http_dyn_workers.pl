@@ -139,21 +139,27 @@ reschedule(no_workers(Reported, Dict), State0, State) :-
               [ Load, MaxLoad ])
     ;   aggregate_all(count, http_current_worker(Dict.port, _), Workers),
         setting(http:max_workers, MaxWorkers),
-        Wait is 0.001*(MaxWorkers/max(1, MaxWorkers-Workers)),
-        get_time(Now),
-        Sleep is Wait + Reported-Now,
-        debug(http(scheduler), 'Waiting: ~w; active: ~w; sleep: ~3f; load: ~1f',
-              [Dict.waiting, Workers, Sleep, Load]),
-        sleep(Sleep),
-        accept_queue(Dict, Queue),
-        message_queue_property(Queue, size(Newsize)),
-        (   Newsize == 0
-        ->  debug(http(scheduler), 'Drained', [])
-        ;   debug(http(scheduler), 'Size is ~w: adding worker', [Newsize]),
-            setting(http:worker_idle_limit, MaxIdle),
-            http_add_worker(Dict.port,
-                            [ max_idle_time(MaxIdle)
-                            ])
+        (   Workers >= MaxWorkers
+        ->  debug(http(scheduler),
+                  'Reached max workers (~D); not adding workers',
+                  [ MaxWorkers ])
+        ;   Wait is 0.001*(MaxWorkers/max(1, MaxWorkers-Workers)),
+            get_time(Now),
+            Sleep is max(0.001, Wait + Reported-Now),
+            debug(http(scheduler),
+                  'Waiting: ~w; active: ~w; sleep: ~3f; load: ~1f',
+                  [Dict.waiting, Workers, Sleep, Load]),
+            sleep(Sleep),
+            accept_queue(Dict, Queue),
+            message_queue_property(Queue, size(Newsize)),
+            (   Newsize == 0
+            ->  debug(http(scheduler), 'Drained', [])
+            ;   debug(http(scheduler), 'Size is ~w: adding worker', [Newsize]),
+                setting(http:worker_idle_limit, MaxIdle),
+                http_add_worker(Dict.port,
+                                [ max_idle_time(MaxIdle)
+                                ])
+            )
         )
     ).
 reschedule(update_load_avg, State0, State) :-
