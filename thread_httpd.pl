@@ -581,7 +581,7 @@ resize_pool(Queue, Size) :-
 %   stops.
 
 http_worker(Options) :-
-    thread_at_exit(done_worker),
+    prolog_listen(this_thread_exit, done_worker),
     option(queue(Queue), Options),
     option(max_idle_time(MaxIdle), Options, infinite),
     repeat,
