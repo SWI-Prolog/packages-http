@@ -221,7 +221,7 @@ make_socket(Port, _:Options0, Options) :-
     tcp_socket(Socket),
     tcp_setopt(Socket, reuseaddr),
     tcp_bind(Socket, Port),
-    tcp_listen(Socket, 5),
+    tcp_listen(Socket, 64),
     make_addr_atom('httpd', Port, Queue),
     Options = [ queue(Queue),
                 tcp_socket(Socket)
