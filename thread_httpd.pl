@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2018, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -124,6 +124,9 @@ self-signed SSL certificate.
     open_client_hook/6,
     http:create_pool/1,
     http:schedule_workers/1.
+
+:- meta_predicate
+    thread_repeat_wait(0).
 
 %!  http_server(:Goal, :Options) is det.
 %
@@ -589,8 +592,7 @@ http_worker(Options) :-
     prolog_listen(this_thread_exit, done_worker),
     option(queue(Queue), Options),
     option(max_idle_time(MaxIdle), Options, infinite),
-    repeat,
-      thread_idle(get_work(Queue, Message, MaxIdle), long),
+    thread_repeat_wait(get_work(Queue, Message, MaxIdle)),
       debug(http(worker), 'Waiting for a job ...', []),
       debug(http(worker), 'Got job ~p', [Message]),
       (   Message = quit(Sender)
@@ -927,6 +929,67 @@ create_pool(Pool) :-
     print_message(informational, httpd(created_pool(Pool))),
     thread_pool_create(Pool, 10, []).
 
+
+		 /*******************************
+		 *         WAIT POLICIES	*
+		 *******************************/
+
+:- meta_predicate
+    thread_repeat_wait(0).
+
+%!  thread_repeat_wait(:Goal) is multi.
+%
+%   Acts as `repeat,  thread_idle(Goal)`,  choosing   whether  to  use a
+%   `long` or `short` idle time based on the average firing rate.
+
+thread_repeat_wait(Goal) :-
+    new_rate_mma(5, 1000, State),
+    repeat,
+      update_rate_mma(State, MMA),
+      long(MMA, IsLong),
+      (   IsLong == brief
+      ->  call(Goal)
+      ;   thread_idle(Goal, IsLong)
+      ).
+
+long(MMA, brief) :-
+    MMA < 0.05,
+    !.
+long(MMA, short) :-
+    MMA < 1,
+    !.
+long(_, long).
+
+%!  new_rate_mma(+N, +Resolution, -State) is det.
+%!  update_rate_mma(!State, -MMA) is det.
+%
+%   Implement _Modified Moving  Average_  computing   the  average  time
+%   between requests as an exponential moving averate with alpha=1/N.
+%
+%   @arg Resolution is the time resolution  in 1/Resolution seconds. All
+%   storage is done in integers to avoid  the need for stack freezing in
+%   nb_setarg/3.
+%
+%   @see https://en.wikipedia.org/wiki/Moving_average
+
+new_rate_mma(N, Resolution, rstate(Base, 0, MaxI, Resolution, N, 0)) :-
+    current_prolog_flag(max_tagged_integer, MaxI),
+    get_time(Base).
+
+update_rate_mma(State, MMAr) :-
+    State = rstate(Base, Last, MaxI, Resolution, N, MMA0),
+    get_time(Now),
+    Stamp is round((Now-Base)*Resolution),
+    (   Stamp > MaxI
+    ->  nb_setarg(1, State, Now),
+        nb_setarg(2, State, 0)
+    ;   true
+    ),
+    Diff is Stamp-Last,
+    nb_setarg(2, State, Stamp),
+    MMA is round(((N-1)*MMA0+Diff)/N),
+    nb_setarg(6, State, MMA),
+    MMAr is MMA/float(Resolution).
 
 
                  /*******************************
