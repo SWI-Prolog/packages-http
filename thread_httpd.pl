@@ -413,6 +413,7 @@ accept_server3(Goal, Options) :-
 accept_server3(Goal, Options) :-
     memberchk(tcp_socket(Socket), Options),
     memberchk(queue(Queue), Options),
+    debug(http(connection), 'Waiting for connection', []),
     tcp_accept(Socket, Client, Peer),
     debug(http(connection), 'New HTTP connection from ~p', [Peer]),
     thread_send_message(Queue, tcp_client(Client, Goal, Peer)),
@@ -468,19 +469,22 @@ connect(Address) :-
 %   predicate can be used by accept_hook/2.
 
 http_enough_workers(Queue, _Why, _Peer) :-
-    message_queue_property(Queue, waiting(_)),
-    !.
+    message_queue_property(Queue, waiting(_0)),
+    !,
+    debug(http(scheduler), '~D waiting for work; ok', [_0]).
 http_enough_workers(Queue, Why, Peer) :-
     message_queue_property(Queue, size(Size)),
     (   enough(Size, Why)
-    ->  true
+    ->  debug(http(scheduler), '~D in queue; ok', [Size])
     ;   current_server(Port, _, _, Queue, _, _),
-        catch(http:schedule_workers(_{port:Port,
-                                      reason:Why,
-                                      peer:Peer,
-                                      waiting:Size,
-                                      queue:Queue
-                                     }),
+        Data = _{ port:Port,
+                  reason:Why,
+                  peer:Peer,
+                  waiting:Size,
+                  queue:Queue
+                },
+        debug(http(scheduler), 'Asking to reschedule: ~p', [Data]),
+        catch(http:schedule_workers(Data),
               Error,
               print_message(error, Error))
     ->  true
@@ -581,6 +585,7 @@ resize_pool(Queue, Size) :-
 %   stops.
 
 http_worker(Options) :-
+    debug(http(scheduler), 'New worker', []),
     prolog_listen(this_thread_exit, done_worker),
     option(queue(Queue), Options),
     option(max_idle_time(MaxIdle), Options, infinite),
