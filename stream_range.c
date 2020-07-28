@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2017, University of Amsterdam,
-			      VU University Amsterdam
+    Copyright (c)  2007-2020, University of Amsterdam,
+			      VU University Amsterdam,
+			      CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -230,7 +231,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
     if ( name == ATOM_size )
     { if ( !get_int_ex(arg, &size) )
 	return FALSE;
-      if ( size <= 0 )
+      if ( size < 0 )
 	return domain_error(arg, "nonneg");
     } else if ( name == ATOM_onclose )
     { if ( !PL_strip_module(arg, &ocm, arg) )
