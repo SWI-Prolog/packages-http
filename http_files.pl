@@ -99,18 +99,19 @@ handle all paths that begin with the registed location of the handler.
 %           determine the =|Content-type|= from the file name.
 
 http_reply_from_files(Dir, Options, Request) :-
+    memberchk(path(RequestPath), Request),
     (   memberchk(path_info(PathInfo), Request)
     ->  true
     ;   PathInfo = ''
     ),
     http_safe_file(PathInfo, []),
-    locate_file(Dir, PathInfo, Path, IsFile, Options),
+    locate_file(Dir, PathInfo, RequestPath, Path, IsFile, Options),
     (   IsFile == true
     ->  http_reply_file(Path, [unsafe(true)], Request)
     ;   http_reply_dirindex(Path, [unsafe(true)], Request)
     ).
 
-locate_file(Dir, PathInfo, Result, IsFile, Options) :-
+locate_file(Dir, PathInfo, RequestPath, Result, IsFile, Options) :-
     absolute_file_name(Dir, DirPath,
                        [ file_type(directory),
                          access(read),
@@ -125,8 +126,12 @@ locate_file(Dir, PathInfo, Result, IsFile, Options) :-
             member(Index, Indexes),
             directory_file_path(Path, Index, IndexFile),
             exists_file(IndexFile)
-        ->  Result = IndexFile,
-            IsFile = true
+        ->  (   atom_concat(_, /, RequestPath)
+            ->  Result = IndexFile,
+                IsFile = true
+            ;   atom_concat(RequestPath, /, NewLocation),
+                throw(http_reply(moved(NewLocation)))
+            )
         ;   Result = Path,
             IsFile = false
         )
