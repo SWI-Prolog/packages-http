@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2011, VU University Amsterdam
+    Copyright (c)  2011-2020, VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -45,24 +45,23 @@
 
 /** <module> Serve plain files from a hierarchy
 
-Although the SWI-Prolog Web Server is intended to serve documents that
-are computed dynamically, serving plain files is sometimes necessary.
-This small module combines the functionality of http_reply_file/3 and
-http_reply_dirindex/3 to act as a simple web-server.  Such a server
-can be created using the following code sample, which starts a server
-at port 8080 that serves files from the current directory ('.').  Note
-that the handler needs a =prefix= option to specify that it must
-handle all paths that begin with the registed location of the handler.
+Although the SWI-Prolog Web Server is   intended to serve documents that
+are computed dynamically, serving plain   files  is sometimes necessary.
+This small module combines the   functionality  of http_reply_file/3 and
+http_reply_dirindex/3 to act as a simple   web-server. Such a server can
+be created using the following code  sample,   which  starts a server at
+port 8080 that serves files from the  current directory ('.'). Note that
+the handler needs a `prefix` option to   specify that it must handle all
+paths that begin with the registed location of the handler.
 
-  ==
-  :- use_module(library(http/thread_httpd)).
-  :- use_module(library(http/http_dispatch)).
+```
+:- use_module(library(http/http_server)).
+:- use_module(library(http/http_files)).
 
-  :- http_handler(root(.), http_reply_from_files('.', []), [prefix]).
+:- http_handler(root(.), http_reply_from_files('.', []), [prefix]).
 
-  :- initialization
-        http_server(http_dispatch, [port(8080)]).
-  ==
+:- initialization(http_server([port(8080)]), main).
+```
 
 @see    pwp_handler/2 provides similar facilities, where .pwp files
         can be used to add dynamic behaviour.
@@ -81,7 +80,7 @@ handle all paths that begin with the registed location of the handler.
 %
 %     * indexes(+List)
 %     List of files tried to find an index for a directory.  The
-%     default is ['index.html'].
+%     default is `['index.html']`.
 %
 %   Note that this handler must be tagged as a =prefix= handler (see
 %   http_handler/3 and module introduction). This  also implies that
@@ -96,7 +95,7 @@ handle all paths that begin with the registed location of the handler.
 %           user:file_search_path/2 clauses that define the same
 %           alias.
 %   @see    The hookable predicate file_mime_type/2 is used to
-%           determine the =|Content-type|= from the file name.
+%           determine the ``Content-type`` from the file name.
 
 http_reply_from_files(Dir, Options, Request) :-
     (   memberchk(path_info(PathInfo), Request)
@@ -104,13 +103,20 @@ http_reply_from_files(Dir, Options, Request) :-
     ;   PathInfo = ''
     ),
     http_safe_file(PathInfo, []),
-    locate_file(Dir, PathInfo, Path, IsFile, Options),
-    (   IsFile == true
-    ->  http_reply_file(Path, [unsafe(true)], Request)
-    ;   http_reply_dirindex(Path, [unsafe(true)], Request)
-    ).
+    locate_file(Dir, PathInfo, Result, ResultType, Options),
+    !,
+    reply(ResultType, Result, Request).
 
-locate_file(Dir, PathInfo, Result, IsFile, Options) :-
+reply(file, Path, Request) :-
+    http_reply_file(Path, [unsafe(true)], Request).
+reply(index, Path, Request) :-
+    http_reply_dirindex(Path, [unsafe(true)], Request).
+reply(redirect, _, Request) :-
+    memberchk(path(Path), Request),
+    atom_concat(Path, /, NewLocation),
+    http_redirect(moved_temporary, NewLocation, Request).
+
+locate_file(Dir, PathInfo, Result, ResultType, Options) :-
     absolute_file_name(Dir, DirPath,
                        [ file_type(directory),
                          access(read),
@@ -118,16 +124,19 @@ locate_file(Dir, PathInfo, Result, IsFile, Options) :-
                        ]),
     directory_file_path(DirPath, PathInfo, Path),
     (   exists_file(Path)
-    ->  IsFile = true,
+    ->  ResultType = file,
         Result = Path
     ;   exists_directory(Path),
-        (   option(indexes(Indexes), Options, ['index.html']),
-            member(Index, Indexes),
-            directory_file_path(Path, Index, IndexFile),
-            exists_file(IndexFile)
-        ->  Result = IndexFile,
-            IsFile = true
-        ;   Result = Path,
-            IsFile = false
+        (   sub_atom(Path, _, _, 0, /)
+        ->  (   option(indexes(Indexes), Options, ['index.html']),
+                member(Index, Indexes),
+                directory_file_path(Path, Index, IndexFile),
+                exists_file(IndexFile)
+            ->  Result = IndexFile,
+                ResultType = file
+            ;   Result = Path,
+                ResultType = index
+            )
+        ;   ResultType = redirect
         )
     ).
