@@ -45,8 +45,9 @@ set(HTTP_PL_FILES
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     http_openid.pl js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl yadis.pl ax.pl html_quasiquotations.pl
-    http_load.pl http_multipart_plugin.pl http_digest.pl README.md
-    ${HTTP_PLATFORM_FILES})
+    http_load.pl http_multipart_plugin.pl http_digest.pl
+    http_redis_plugin.pl
+    README.md ${HTTP_PLATFORM_FILES})
 
 set(HTTP_EXAMPLE_FILES
     README.md
