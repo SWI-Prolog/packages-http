@@ -516,13 +516,16 @@ options_password(Options, Passwd) :-
     split_string(String, "", "\r\n\t ", [Passwd]).
 options_password(_, '').
 
-%!  start_server(+Server) is det.
+%!  start_servers(+Servers) is det.
 %
 %   Start the HTTP server.  It performs the following steps:
 %
 %     1. Call broadcast(http(pre_server_start))
-%     2. Call http_server(http_dispatch, Options)
-%     2. Call broadcast(http(post_server_start))
+%     2. Foreach server
+%        a. Call broadcast(http(pre_server_start(Port)))
+%        b. Call http_server(http_dispatch, Options)
+%        c. Call broadcast(http(post_server_start(Port)))
+%     3. Call broadcast(http(post_server_start))
 %
 %   This predicate can be  hooked   using  http_server_hook/1.  This
 %   predicate is executed after
@@ -545,7 +548,10 @@ start_server(server(_Scheme, Socket, Options)) :-
     http_server_hook([tcp_socket(Socket)|Options]),
     !.
 start_server(server(_Scheme, Socket, Options)) :-
-    http_server(http_dispatch, [tcp_socket(Socket)|Options]).
+    option(port(Port), Options),
+    broadcast(http(pre_server_start(Port))),
+    http_server(http_dispatch, [tcp_socket(Socket)|Options]),
+    broadcast(http(post_server_start(Port))).
 
 make_socket(server(Scheme, Address, Options),
             server(Scheme, Socket, Options)) :-
