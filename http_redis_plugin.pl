@@ -65,14 +65,15 @@ server  such as host, port or authentication.
 ```
 :- http_set_session_options(
        [ redis_db(default),
-         redis_prefix('http:session')
+         redis_prefix('swipl:http:session')
        ]).
 ```
 
 ## Redis key usage
 
 All  Redis  keys  reside  under  a    prefix  specified  by  the  option
-redis_prefix(Prefix), which defaults to `'http:session'`.  Here we find:
+redis_prefix(Prefix), which defaults to  `'swipl:http:session'`. Here we
+find:
 
   - An ordered set at <prefix>:expire that contains the session ids,
     ordered by the time the session expires.  Session enumeration and
@@ -267,4 +268,4 @@ session_data_db(SessionID, DB, Key) :-
 key_prefix(Prefix) :-
     http_session:session_setting(redis_prefix(Prefix)),
     !.
-key_prefix('http:sessions').
+key_prefix('swipl:http:sessions').

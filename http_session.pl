@@ -203,7 +203,7 @@ session_option(samesite, oneof([none,lax,strict])).
 %       Alias name of the redis database to access.  See redis_server/2.
 %     - redis_prefix(+Atom)
 %       Prefix to use for all HTTP session related keys.  Default is
-%       `'http:session'`
+%       `'swipl:http:session'`
 
 http_set_session_options([]).
 http_set_session_options([H|T]) :-
