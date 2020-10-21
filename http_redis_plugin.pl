@@ -116,12 +116,12 @@ http_session:hook(assert_session(SessionID, Peer)) :-
     get_time(Now),
     redis(DB, hset(Key,
                    peer, PeerS,
-                   last_used, Now), _),
+                   last_used, Now)),
     expire(SessionID, Timeout).
 http_session:hook(set_session_option(SessionID, Setting)) :-
     session_db(SessionID, DB, Key),
     Setting =.. [Name,Value],
-    redis(DB, hset(Key, Name, prolog(Value)), _),
+    redis(DB, hset(Key, Name, prolog(Value))),
     (   Setting = timeout(Timeout)
     ->  expire(SessionID, Timeout)
     ;   true
@@ -139,22 +139,22 @@ http_session:hook(active_session(SessionID, Peer, LastUsed)) :-
 http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
     session_db(SessionID, DB, Key),
     redis(DB, hset(Key,
-                   last_used, Now), _),
+                   last_used, Now)),
     Expire is Now+Timeout,
     expire(SessionID, Expire).
 http_session:hook(asserta(session_data(SessionID, Data))) :-
     must_be(ground, Data),
     session_data_db(SessionID, DB, Key),
-    redis(DB, lpush(Key, prolog(Data)), _).
+    redis(DB, lpush(Key, prolog(Data))).
 http_session:hook(assertz(session_data(SessionID, Data))) :-
     must_be(ground, Data),
     session_data_db(SessionID, DB, Key),
-    redis(DB, rpush(Key, prolog(Data)), _).
+    redis(DB, rpush(Key, prolog(Data))).
 http_session:hook(retract(session_data(SessionID, Data))) :-
     session_data_db(SessionID, DB, Key),
     redis_get_list(DB, Key, 10, List),
     member(Data, List),
-    redis(DB, lrem(Key, 1, prolog(Data)), _).
+    redis(DB, lrem(Key, 1, prolog(Data))).
 http_session:hook(retractall(session_data(SessionID, Data))) :-
     forall(http_session:hook(retract(session_data(SessionID, Data))),
            true).
@@ -164,8 +164,7 @@ http_session:hook(session_data(SessionID, Data)) :-
     member(Data, List).
 http_session:hook(current_session(SessionID, Data)) :-
     session_db(SessionID, DB, Key),
-    redis(DB, hget(Key, last_used), TimeS),
-    number_string(Time, TimeS),
+    redis(DB, hget(Key, last_used), Time as number),
     get_time(Now),
     Idle is Now - Time,
     (   http_session:session_setting(SessionID, timeout(TMO)),
@@ -205,12 +204,12 @@ expire(SessionID, Timeout) :-
     get_time(Now),
     Time is Now+Timeout,
     session_expire_db(DB, Key),
-    redis(DB, zadd(Key, Time, SessionID), _).
+    redis(DB, zadd(Key, Time, SessionID)).
 
 gc_sessions :-
     session_expire_db(DB, Key),
     get_time(Now),
-    redis(DB, zrangebyscore(Key, "-inf", Now), TimedOut),
+    redis(DB, zrangebyscore(Key, "-inf", Now), TimedOut as atom),
     forall(member(SessionID, TimedOut),
            gc_session(SessionID)).
 
@@ -218,14 +217,13 @@ gc_session(SessionID) :-
     debug(http_session(gc), 'GC session ~p', [SessionID]),
     session_db(SessionID, DB, SessionKey),
     session_expire_db(DB, TMOKey),
-    redis(DB, zrem(TMOKey, SessionID), _),
+    redis(DB, zrem(TMOKey, SessionID)),
     redis(DB, hget(SessionKey, peer), PeerS),
     peer_string(Peer, PeerS),
-    atom_string(SessionIDAtom, SessionID),
-    broadcast(http_session(end(SessionIDAtom, Peer))),
-    redis(DB, del(SessionKey), _),
+    broadcast(http_session(end(SessionID, Peer))),
+    redis(DB, del(SessionKey)),
     session_data_db(SessionID, DB, DataKey),
-    redis(DB, del(DataKey), _).
+    redis(DB, del(DataKey)).
 
 
 		 /*******************************
