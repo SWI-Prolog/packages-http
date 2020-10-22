@@ -57,6 +57,7 @@
 :- use_module(http_wrapper).
 :- use_module(http_path).
 
+:- autoload(library(uri), [uri_resolve/3]).
 
 :- predicate_options(http_server/2, 2,
                      [ port(any),
