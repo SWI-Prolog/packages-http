@@ -134,8 +134,7 @@ http_session:hook(active_session(SessionID, Peer, LastUsed)) :-
     session_db(SessionID, DB, Key),
     redis(DB, hget(Key, peer), PeerS),
     peer_string(Peer, PeerS),
-    redis(DB, hget(Key, last_used), LastUsedS),
-    number_string(LastUsed, LastUsedS).
+    redis(DB, hget(Key, last_used), LastUsed as number).
 http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
     session_db(SessionID, DB, Key),
     redis(DB, hset(Key,
