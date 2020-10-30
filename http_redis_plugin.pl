@@ -168,11 +168,7 @@ http_session:hook(current_session(SessionID, Data)) :-
     Idle is Now - Time,
     (   http_session:session_setting(SessionID, timeout(TMO)),
         TMO > 0
-    ->  (   Idle =< TMO
-        ->  true
-        ;   http_close_session(SessionID),
-            fail
-        )
+    ->  Idle =< TMO
     ;   true
     ),
     (   Data = peer(Peer),
