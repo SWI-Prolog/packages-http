@@ -121,7 +121,7 @@ http_session:hook(assert_session(SessionID, Peer)) :-
 http_session:hook(set_session_option(SessionID, Setting)) :-
     session_db(SessionID, DB, Key),
     Setting =.. [Name,Value],
-    redis(DB, hset(Key, Name, prolog(Value))),
+    redis(DB, hset(Key, Name, Value as prolog)),
     (   Setting = timeout(Timeout)
     ->  expire(SessionID, Timeout)
     ;   true
@@ -144,16 +144,16 @@ http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
 http_session:hook(asserta(session_data(SessionID, Data))) :-
     must_be(ground, Data),
     session_data_db(SessionID, DB, Key),
-    redis(DB, lpush(Key, prolog(Data))).
+    redis(DB, lpush(Key, Data as prolog)).
 http_session:hook(assertz(session_data(SessionID, Data))) :-
     must_be(ground, Data),
     session_data_db(SessionID, DB, Key),
-    redis(DB, rpush(Key, prolog(Data))).
+    redis(DB, rpush(Key, Data as prolog)).
 http_session:hook(retract(session_data(SessionID, Data))) :-
     session_data_db(SessionID, DB, Key),
     redis_get_list(DB, Key, 10, List),
     member(Data, List),
-    redis(DB, lrem(Key, 1, prolog(Data))).
+    redis(DB, lrem(Key, 1, Data as prolog)).
 http_session:hook(retractall(session_data(SessionID, Data))) :-
     forall(http_session:hook(retract(session_data(SessionID, Data))),
            true).
