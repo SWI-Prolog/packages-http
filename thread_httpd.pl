@@ -61,7 +61,7 @@
 
 :- predicate_options(http_server/2, 2,
                      [ port(any),
-                       af_unix(atom),
+                       unix_socket(atom),
                        entry_page(atom),
                        tcp_socket(any),
                        workers(positive_integer),
@@ -140,7 +140,7 @@ self-signed SSL certificate.
 %     Host:Port. The port may be a variable, causing the system
 %     to select a free port.  See tcp_bind/2.
 %
-%     * af_unix(+Path)
+%     * unix_socket(+Path)
 %     Instead of binding to a TCP port, bind to a _Unix Domain
 %     Socket_ at Path.
 %
@@ -194,16 +194,39 @@ self-signed SSL certificate.
 %   server for handling sensitive requests.
 
 http_server(Goal, M:Options0) :-
-    make_socket(M:Options0, Options),
+    server_address(Address, Options0),
+    !,
+    make_socket(Address, M:Options0, Options),
     create_workers(Options),
-    create_server(Goal, Port, Options),
+    create_server(Goal, Address, Options),
     (   option(silent(true), Options0)
     ->  true
     ;   print_message(informational,
-                      httpd_started_server(Port, Options0))
+                      httpd_started_server(Address, Options0))
+    ).
+http_server(_Goal, _:Options0) :-
+    existence_error(server_address, Options0).
+
+server_address(Address, Options) :-
+    (   option(port(Port), Options)
+    ->  Address = Port
+    ;   option(unix_socket(Path), Options)
+    ->  Address = unix_socket(Path)
     ).
 
-%!  make_socket(:OptionsIn, -OptionsOut) is det.
+address_port(_IFace:Port, Port) :- !.
+address_port(unix_socket(Path), Path) :- !.
+address_port(Address, Address) :- !.
+
+tcp_address(Port) :-
+    var(Port),
+    !.
+tcp_address(Port) :-
+    integer(Port),
+    !.
+tcp_address(_Iface:_Port).
+
+%!  make_socket(+Address, :OptionsIn, -OptionsOut) is det.
 %
 %   Create the HTTP server socket and  worker pool queue. OptionsOut
 %   is quaranteed to hold the option queue(QueueId).
@@ -211,45 +234,42 @@ http_server(Goal, M:Options0) :-
 %   @arg   OptionsIn   is   qualified   to     allow   passing   the
 %   module-sensitive ssl option argument.
 
-make_socket(M:Options0, Options) :-
-    option(port(Port), Options0),
-    make_socket_hook(Port, M:Options0, Options),
+make_socket(Address, M:Options0, Options) :-
+    tcp_address(Address),
+    make_socket_hook(Address, M:Options0, Options),
     !.
-make_socket(_:Options0, Options) :-
+make_socket(Address, _:Options0, Options) :-
     option(tcp_socket(_), Options0),
     !,
-    option(port(Port), Options0, 0),
-    make_addr_atom('httpd', Port, Queue),
+    make_addr_atom('httpd', Address, Queue),
     Options = [ queue(Queue)
               | Options0
               ].
-make_socket(_:Options0, Options) :-
-    option(port(Port), Options0),
+make_socket(Address, _:Options0, Options) :-
+    tcp_address(Address),
     !,
     tcp_socket(Socket),
     tcp_setopt(Socket, reuseaddr),
-    tcp_bind(Socket, Port),
+    tcp_bind(Socket, Address),
     tcp_listen(Socket, 64),
-    make_addr_atom('httpd', Port, Queue),
+    make_addr_atom('httpd', Address, Queue),
     Options = [ queue(Queue),
                 tcp_socket(Socket)
               | Options0
               ].
 :- if(current_predicate(unix_domain_socket/1)).
-make_socket(_:Options0, Options) :-
-    option(af_unix(Path), Options0),
+make_socket(Address, _:Options0, Options) :-
+    Address = unix_socket(Path),
     !,
     unix_domain_socket(Socket),
     tcp_bind(Socket, Path),
     tcp_listen(Socket, 64),
-    make_addr_atom('httpd', Path, Queue),
+    make_addr_atom('httpd', Address, Queue),
     Options = [ queue(Queue),
                 tcp_socket(Socket)
               | Options0
               ].
 :- endif.
-make_socket(_, _) :-
-    existence_error(option, port).
 
 %!  make_addr_atom(+Scheme, +Address, -Atom) is det.
 %
@@ -270,6 +290,9 @@ address_parts(Host:Port) -->
 address_parts(ip(A,B,C,D)) -->
     !,
     [ A, '.', B, '.', C, '.', D ].
+address_parts(unix_socket(Path)) -->
+    [Path].
+
 
 %!  create_server(:Goal, +Address, +Options) is det.
 %
@@ -300,9 +323,6 @@ scheme(Scheme, Options) :-
     !,
     Scheme = https.
 scheme(http, _).
-
-address_port(_Host:Port, Port) :- !.
-address_port(Port, Port).
 
 autoload_https(https) :-
     \+ clause(accept_hook(_Goal, _Options), _),
@@ -1038,13 +1058,18 @@ http_root(Address, Options) -->
     [ '~w'-[URI] ].
 
 landing_page(Host:Port, URI, Options) :-
+    !,
     must_be(atom, Host),
+    must_be(integer, Port),
     http_server_property(Port, scheme(Scheme)),
     (   default_port(Scheme, Port)
     ->  format(atom(Base), '~w://~w', [Scheme, Host])
     ;   format(atom(Base), '~w://~w:~w', [Scheme, Host, Port])
     ),
     entry_page(Base, URI, Options).
+landing_page(unix_socket(Path), URI, _Options) :-
+    !,
+    format(string(URI), 'Unix domain socket "~w"', [Path]).
 landing_page(Port, URI, Options) :-
     landing_page(localhost:Port, URI, Options).
 
