@@ -84,7 +84,7 @@ The high-level interface provides http_upgrade_to_websocket/3 to realise
 a   websocket   inside   the    HTTP     server    infrastructure    and
 http_open_websocket/3 as a layer over http_open/3   to  realise a client
 connection. After establishing a connection,  ws_send/2 and ws_receive/2
-can be used to send and receive   messages.  The predicate ws_close/2 is
+can be used to send and receive   messages.  The predicate ws_close/3 is
 provided to perform the closing  handshake   and  dispose  of the stream
 objects.
 
