@@ -100,20 +100,28 @@ objects.
 
 %!  http_open_websocket(+URL, -WebSocket, +Options) is det.
 %
-%   Establish a client websocket connection.   This  predicate calls
-%   http_open/3 with additional headers  to   negotiate  a websocket
-%   connection. In addition to the   options processed by http_open,
-%   the following options are recognised:
+%   Establish  a  client  websocket  connection.  This  predicate  calls
+%   http_open/3  with  additional  headers  to   negotiate  a  websocket
+%   connection. In addition to the options processed by http_open/3, the
+%   following options are recognised:
 %
 %     - subprotocols(+List)
 %     List of subprotocols that are acceptable. The selected
 %     protocol is available as ws_property(WebSocket,
 %     subprotocol(Protocol).
 %
-%   The   following   example   exchanges   a   message   with   the
+%   Note that clients often provide an  `Origin` header and some servers
+%   require this field. See  RFC  6455   for  details.  By  default this
+%   predicate  does  not  set  `Origin`.  It    may  be  set  using  the
+%   `request_header` option of http_open/3, e.g. by  passing this in the
+%   Options list:
+%
+%       request_header('Origin' = 'https://www.swi-prolog.org')
+%
+%   The   following   example   exchanges    a     message    with   the
 %   html5rocks.websocket.org echo service:
 %
-%     ==
+%     ```
 %     ?- URL = 'ws://html5rocks.websocket.org/echo',
 %        http_open_websocket(URL, WS, []),
 %        ws_send(WS, text('Hello World!')),
@@ -122,7 +130,7 @@ objects.
 %     URL = 'ws://html5rocks.websocket.org/echo',
 %     WS = <stream>(0xe4a440,0xe4a610),
 %     Reply = websocket{data:"Hello World!", opcode:text}.
-%     ==
+%     ```
 %
 %   @arg WebSocket is a stream pair (see stream_pair/3)
 
