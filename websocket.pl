@@ -59,7 +59,7 @@
 
 :- predicate_options(http_open_websocket/3, 3,
                      [ subprotocols(list(atom)),
-                       pass_to(http_open/3, 3)
+                       pass_to(http_open:http_open/3, 3)
                      ]).
 :- predicate_options(http_upgrade_to_websocket/3, 2,
                      [ guarded(boolean),
