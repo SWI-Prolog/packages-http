@@ -87,6 +87,7 @@
                      [ cache(boolean),
                        mime_type(any),
                        static_gzip(boolean),
+                       cached_gzip(boolean),
                        pass_to(http_safe_file/2, 2),
                        headers(list)
                      ]).
@@ -1057,10 +1058,18 @@ extend(G0, Extra, G) :-
 %           provided by file_mime_type/2.
 %
 %           * static_gzip(+Boolean)
-%           If true (default =false=) and, in addition to the plain
-%           file, there is a =|.gz|= file that is not older than the
+%           If `true` (default `false`) and, in addition to the plain
+%           file, there is a ``.gz`` file that is not older than the
 %           plain file and the client acceps =gzip= encoding, send
-%           the compressed file with =|Transfer-encoding: gzip|=.
+%           the compressed file with ``Transfer-encoding: gzip``.
+%
+%           * cached_gzip(+Boolean)
+%           If `true` (default `false`) the system maintains cached
+%           gzipped files in a directory accessible using the file
+%           search path `http_gzip_cache` and serves these similar
+%           to the `static_gzip(true)` option.  If the gzip file
+%           does not exist or is older than the input the file is
+%           recreated.
 %
 %           * unsafe(+Boolean)
 %           If =false= (default), validate that FileSpec does not
@@ -1100,6 +1109,10 @@ http_reply_file(File, Options, Request) :-
             time_file(Path, Time),
             TimeGZ >= Time
         ->  Reply = gzip_file(Type, PathGZ)
+        ;   option(cached_gzip(true), Options),
+            accepts_encoding(Request, gzip),
+            gzip_cached(Path, PathGZ)
+        ->  Reply = gzip_file(Type, PathGZ)
         ;   Reply = file(Type, Path)
         )
     ;   Reply = tmp_file(Type, Path)
@@ -1120,6 +1133,33 @@ accepts_encoding(Request, Enc) :-
     split_string(Part, ";", " ", [EncS|_]),
     atom_string(Enc, EncS).
 
+gzip_cached(Path, PathGZ) :-
+    with_mutex(http_reply_file, gzip_cached_sync(Path, PathGZ)).
+
+gzip_cached_sync(Path, PathGZ) :-
+    time_file(Path, Time),
+    variant_sha1(Path, SHA1),
+    (   absolute_file_name(http_gzip_cache(SHA1),
+                           PathGZ,
+                           [ access(read),
+                             file_errors(fail)
+                           ]),
+        time_file(PathGZ, TimeGZ),
+        TimeGZ >= Time
+    ->  true
+    ;   absolute_file_name(http_gzip_cache(SHA1),
+                           PathGZ,
+                           [ access(write),
+                             file_errors(fail)
+                           ])
+    ->  setup_call_cleanup(
+            gzopen(PathGZ, write, Out, [type(binary)]),
+            setup_call_cleanup(
+                open(Path, read, In, [type(binary)]),
+                copy_stream_data(In, Out),
+                close(In)),
+            close(Out))
+    ).
 
 %!  http_safe_file(+FileSpec, +Options) is det.
 %

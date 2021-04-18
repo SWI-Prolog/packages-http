@@ -105,13 +105,13 @@ http_reply_from_files(Dir, Options, Request) :-
     http_safe_file(PathInfo, []),
     locate_file(Dir, PathInfo, Result, ResultType, Options),
     !,
-    reply(ResultType, Result, Request).
+    reply(ResultType, Result, Options, Request).
 
-reply(file, Path, Request) :-
-    http_reply_file(Path, [unsafe(true)], Request).
-reply(index, Path, Request) :-
-    http_reply_dirindex(Path, [unsafe(true)], Request).
-reply(redirect, _, Request) :-
+reply(file, Path, Options, Request) :-
+    http_reply_file(Path, [unsafe(true)|Options], Request).
+reply(index, Path, Options, Request) :-
+    http_reply_dirindex(Path, [unsafe(true)|Options], Request).
+reply(redirect, _, _, Request) :-
     memberchk(path(Path), Request),
     atom_concat(Path, /, NewLocation),
     http_redirect(moved_temporary, NewLocation, Request).
