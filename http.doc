@@ -27,12 +27,14 @@
 \begin{abstract}
 This article documents the package HTTP, a series of libraries for
 accessing data on HTTP servers as well as providing HTTP server
-capabilities from SWI-Prolog. Both server and client are modular
+capabilities from SWI-Prolog (up to HTTP 1.1). Both server and client are modular
 libraries.  Further reading material is available from the locations
 below.
 \begin{shortlist}
     \item \href{http://www.swi-prolog.org/howto/http/}{HOWTO collection}
-    \item \href{http://www.pathwayslms.com/swipltuts/html}{Tutorial by Anne Ogborn}
+    \item \href{https://github.com/Anniepoo/swiplwebtut/blob/master/web.adoc}{Tutorial by Anne Ogborn}
+    \item \href{https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol}{Wikipedia entry on HTTP}
+    \item \href{https://en.wikipedia.org/wiki/Representational_state_transfer}{Wikipedia entry on REST}
 \end{shortlist}
 \end{abstract}
 
@@ -50,16 +52,18 @@ below.
 \section{Introduction}
 \label{sec:http-intro}
 
-The HTTP (HyperText Transfer Protocol) is the W3C standard protocol for
+HTTP (Hypertext Transfer Protocol) is the W3C standard protocol for
 transferring information between a web-client (e.g., a browser) and a
 web-server. The protocol is a simple \emph{envelope} protocol where
 standard name/value pairs in the header are used to split the stream
 into messages and communicate about the connection-status. Many
-languages have client and or server libraries to deal with the HTTP
-protocol, making it a suitable candidate for general purpose
-client-server applications.
+languages have client and server libraries to deal with the HTTP
+protocol, making this protocol an excellent candidate for building
+client-server applications. In particular, HTTP is a natural fit
+for networked systems built according to the principles of
+``Representational State Transfer'' (\jargon{REST}).
 
-In this document we describe a modular infra-structure to access
+In this document we describe a modular infrastructure to access
 web-servers from SWI-Prolog and turn Prolog into a web-server.
 
 
@@ -68,17 +72,18 @@ web-servers from SWI-Prolog and turn Prolog into a web-server.
 
 This work has been carried out under the following projects:
 \href{http://hcs.science.uva.nl/projects/GARP/}{GARP},
-\href{http://www.ins.cwi.nl/projects/MIA/}{MIA},
-\href{http://hcs.science.uva.nl/projects/ibrow/home.html}{IBROW},
-\href{http://kits.edte.utwente.nl/}{KITS} and
-\href{http://e-culture.multimedian.nl/}{MultiMediaN}
+\href{http://www.ins.cwi.nl/projects/MIA/}{MIA} (dead link),
+\href{http://hcs.science.uva.nl/projects/ibrow/home.html}{IBROW} (dead link),
+\href{http://kits.edte.utwente.nl/}{KITS} (dead link) and
+\href{http://e-culture.multimedian.nl/}{MultiMediaN} (dead link).
+
 The following people have pioneered parts of this library and
-contributed with bug-report and suggestions for improvements: Anjo
+contributed with bug reports and suggestions for improvements: Anjo
 Anjewierden, Bert Bredeweg, Wouter Jansweijer, Bob Wielinga, Jacco
 van Ossenbruggen, Michiel Hildebrandt, Matt Lilley and Keri Harris.
 
-Path wildcarts (see http_handler/3) have been modelled after the
-`arouter` package by Raivo Laanemets.  Request rewriting has been
+\jargon{Path wildcards} (see http_handler/3) have been modelled after the
+``arouter'' add-on pack by Raivo Laanemets. \jargon{Request rewriting} has been
 added after discussion with Raivo Laanemets and Anne Ogborn on the
 SWI-Prolog mailinglist.
 
@@ -87,8 +92,12 @@ SWI-Prolog mailinglist.
 \label{sec:http-clients}
 
 This package provides two client libraries for accessing HTTP servers.
-The first, \pllib{http/http_open} is a library for opening a HTTP URL
-address as a Prolog stream. The general skeleton for using this library
+
+\begin{description}
+    \definition{\pllib{http/http_open}}
+This library provides http_open/3 and friends. It
+is a library for opening an endpoint identified by an HTTP URL as a
+Prolog stream. The general skeleton for using this library
 is given below, where \nopredref{process}{1} processes the data from the
 HTTP server.\footnote{One may opt to use cleanup/2 intead of
 setup_call_cleanup/3 to allow for aborting while http_open/3 is waiting
@@ -101,11 +110,13 @@ for the connection.}
 	close(In)).
 \end{code}
 
-The second, \pllib{http/http_client} provides http_get/3 and
-http_post/4, both of which process the reply using plugins to convert
-the data based on the \texttt{Content-Type} of the reply.  This library
-supports a plugin infrastructure that can register hooks for converting
-additional document types.
+    \definition{\pllib{http/http_client}}
+This library provides http_get/3 and http_post/4 and friends. These
+predicates process the reply using plugins to convert the data based on
+the \texttt{Content-Type} of the reply. 
+This library supports a plugin infrastructure that can register hooks 
+for converting additional document types.
+\end{description}
 
 \input{httpopen.tex}
 \input{httpclient.tex}
@@ -743,7 +754,7 @@ the \pllib{ssl} library. See option \term{ssl}{+SSLOptions} below.
 
 
 \begin{description}
-    \predicate{http_server}{3}{:Goal, +Options}
+    \predicate{http_server}{2}{:Goal, +Options}
 Create the server. \arg{Options} must provide the \term{port}{?Port}
 option to specify the port the server should listen to. If \arg{Port} is
 unbound an arbitrary free port is selected and \arg{Port} is unified to
@@ -777,7 +788,7 @@ a worker may wait forever on a client that doesn't complete its
 request. Default is 60~seconds.
 
     \termitem{keep_alive_timeout}{+SecondsOrInfinite}
-Maximum time to wait for new activity on \emph{Keep-Alive} connections.
+Maximum time to wait for new activity on \jargon{Keep-Alive} connections.
 Choosing the correct value for this parameter is hard. Disabling
 Keep-Alive is bad for performance if the clients request multiple
 documents for a single page. This may ---for example-- be caused by HTML
@@ -902,31 +913,33 @@ image thumbnails.
 \label{sec:http-inetd}
 
 All modern Unix systems handle a large number of the services they run
-through the super-server \emph{inetd}. This program reads
-\file{/etc/inetd.conf} and opens server-sockets on all ports defined in
+through the super-server \jargon{inetd} or one of its descendants
+(\jargon{xinetd}, \jargon{systemd} etc.) Such a program reads a
+configuration file (for example \file{/etc/inetd.conf}) and opens
+server-sockets on all ports defined in
 this file. As a request comes in it accepts it and starts the associated
-server such that standard I/O refers to the socket. This approach has
-several advantages:
+server such that standard I/O is performed through the socket. This 
+approach has several advantages:
 
 \begin{itemlist}
     \item [Simplification of servers]
 Servers don't have to know about sockets and -operations.
 
     \item [Centralised authorisation]
-Using \emph{tcpwrappers} simple and effective firewalling of all
-services is realised.
+Using \jargon{tcpwrappers} and similar tools, simple and effective
+firewalling of all services can be realised.
 
     \item [Automatic start and monitor]
 The inetd automatically starts the server `just-in-time' and starts
-additional servers or restarts a crashed server according to the
-specifications.
+additional servers or restarts a crashed server according to its
+configuration.
 \end{itemlist}
 
 The very small generic script for handling inetd based connections
 is in \file{inetd_httpd}, defining http_server/1:
 
 \begin{description}
-    \predicate{http_server}{2}{:Goal, +Options}
+    \predicate{http_server}{1}{:Goal}
 Initialises and runs http_wrapper/5 in a loop until failure or
 end-of-file.  This server does not support the \arg{Port} option
 as the port is specified with the \program{inetd} configuration.
@@ -946,7 +959,7 @@ main :-
 
 With the above file installed in \file{/home/jan/plhttp/demo_inetd},
 the following line in \file{/etc/inetd} enables the server at port
-4001 guarded by \emph{tcpwrappers}.  After modifying inetd, send the
+4001 guarded by \jargon{tcpwrappers}.  After modifying inetd, send the
 daemon the \const{HUP} signal to make it reload its configuration.
 For more information, please check \manref{inetd.conf}{5}.
 
@@ -958,7 +971,7 @@ For more information, please check \manref{inetd.conf}{5}.
 \subsubsection{MS-Windows}
 \label{sec:http-inetd-mswin}
 
-There are rumours that \emph{inetd} has been ported to Windows.
+There are rumours that \jargon{inetd} has been ported to Windows.
 
 
 \subsubsection{As CGI script}
@@ -1113,7 +1126,7 @@ unifies \arg{RelPath} to \arg{AbsPath}.
 \subsection{Debugging HTTP servers}			\label{sec:http-debug}
 
 The library \pllib{http/http_error} defines a hook that decorates
-uncaught exceptions with a stack-trace. This will generate a \emph{500
+uncaught exceptions with a stack-trace. This will generate a \jargon{500
 internal server error} document with a stack-trace. To enable this
 feature, simply load this library.  Please do note that providing
 error information to the user simplifies the job of a hacker trying

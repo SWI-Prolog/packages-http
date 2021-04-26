@@ -68,7 +68,7 @@
 
 /** <module> HTTP client library
 
-This library defines http_open/3, which opens a  URL as a Prolog stream.
+This library defines http_open/3, which opens an URL as a Prolog stream.
 The functionality of the  library  can   be  extended  by  loading two
 additional modules that act as plugins:
 
@@ -96,58 +96,59 @@ additional modules that act as plugins:
 
 Here is a simple example to fetch a web-page:
 
-  ==
-  ?- http_open('http://www.google.com/search?q=prolog', In, []),
-     copy_stream_data(In, user_output),
-     close(In).
-  <!doctype html><head><title>prolog - Google Search</title><script>
-  ...
-  ==
+```
+?- http_open('http://www.google.com/search?q=prolog', In, []),
+   copy_stream_data(In, user_output),
+   close(In).
+<!doctype html><head><title>prolog - Google Search</title><script>
+...
+```
 
 The example below fetches the modification time of a web-page. Note that
-Modified is '' (the empty atom)  if   the  web-server does not provide a
+=|Modified|= is =|''|= (the empty atom) if the  web-server does not provide a
 time-stamp for the resource. See also parse_time/2.
 
-  ==
-  modified(URL, Stamp) :-
-          http_open(URL, In,
-                    [ method(head),
-                      header(last_modified, Modified)
-                    ]),
-          close(In),
-          Modified \== '',
-          parse_time(Modified, Stamp).
-  ==
+```
+modified(URL, Stamp) :-
+       http_open(URL, In,
+                 [ method(head),
+                   header(last_modified, Modified)
+                 ]),
+       close(In),
+       Modified \== '',
+       parse_time(Modified, Stamp).
+```
 
 Then next example uses Google search. It exploits library(uri) to manage
 URIs, library(sgml) to load  an  HTML   document  and  library(xpath) to
 navigate the parsed HTML. Note that  you   may  need to adjust the XPath
-queries if the data returned by Google changes.
+queries if the data returned by Google changes (this example indeed
+no longer works and currently fails at the first xpath/3 call)
 
-  ==
-  :- use_module(library(http/http_open)).
-  :- use_module(library(xpath)).
-  :- use_module(library(sgml)).
-  :- use_module(library(uri)).
+```
+:- use_module(library(http/http_open)).
+:- use_module(library(xpath)).
+:- use_module(library(sgml)).
+:- use_module(library(uri)).
 
-  google(For, Title, HREF) :-
-          uri_encoded(query_value, For, Encoded),
-          atom_concat('http://www.google.com/search?q=', Encoded, URL),
-          http_open(URL, In, []),
-          call_cleanup(
-              load_html(In, DOM, []),
-              close(In)),
-          xpath(DOM, //h3(@class=r), Result),
-          xpath(Result, //a(@href=HREF0, text), Title),
-          uri_components(HREF0, Components),
-          uri_data(search, Components, Query),
-          uri_query_components(Query, Parts),
-          memberchk(q=HREF, Parts).
-  ==
+google(For, Title, HREF) :-
+        uri_encoded(query_value, For, Encoded),
+        atom_concat('http://www.google.com/search?q=', Encoded, URL),
+        http_open(URL, In, []),
+        call_cleanup(
+            load_html(In, DOM, []),
+            close(In)),
+        xpath(DOM, //h3(@class=r), Result),
+        xpath(Result, //a(@href=HREF0, text), Title),
+        uri_components(HREF0, Components),
+        uri_data(search, Components, Query),
+        uri_query_components(Query, Parts),
+        memberchk(q=HREF, Parts).
+```
 
 An example query is below:
 
-==
+```
 ?- google(prolog, Title, HREF).
 Title = 'SWI-Prolog',
 HREF = 'http://www.swi-prolog.org/' ;
@@ -161,7 +162,7 @@ Title = 'Learn Prolog Now!',
 HREF = 'http://www.learnprolognow.org/' ;
 Title = 'Free Online Version - Learn Prolog
 ...
-==
+```
 
 @see load_html/3 and xpath/3 can be used to parse and navigate HTML
      documents.
@@ -386,14 +387,14 @@ user_agent('SWI-Prolog').
 %               Note that values must *not* be quoted because the
 %               library inserts the required quotes.
 %
-%               ==
+%               ```
 %               http_open([ host('www.example.com'),
 %                           path('/my/path'),
 %                           search([ q='Hello world',
 %                                    lang=en
 %                                  ])
 %                         ])
-%               ==
+%               ```
 %
 %   @throws error(existence_error(url, Id),Context) is raised if the
 %   HTTP result code is not in the range 200..299. Context has the
@@ -1235,10 +1236,10 @@ rest_(Atom, L, []) :-
 %   If  Authorization  is  the   atom    =|-|=,   possibly   defined
 %   authorization is cleared.  For example:
 %
-%   ==
+%   ```
 %   ?- http_set_authorization('http://www.example.com/private/',
 %                             basic('John', 'Secret'))
-%   ==
+%   ```
 %
 %   @tbd    Move to a separate module, so http_get/3, etc. can use this
 %           too.
@@ -1491,7 +1492,7 @@ update_cookies(Lines, Parts, Options) :-
 %!                     +Options0, -Options) is semidet.
 %
 %   Hook implementation that makes  open_any/5   support  =http= and
-%   =https= URLs for `Mode == read`.
+%   =https= URLs for =|Mode == read|=.
 
 iostream:open_hook(URL, read, Stream, Close, Options0, Options) :-
     (atom(URL) -> true ; string(URL)),
@@ -1665,7 +1666,7 @@ keep_alive_error(Error) :-
 %   options based on the the broken-down request-URL.  The following
 %   example redirects all trafic, except for localhost over a proxy:
 %
-%       ==
+%       ```
 %       :- multifile
 %           http:open_options/2.
 %
@@ -1673,7 +1674,7 @@ keep_alive_error(Error) :-
 %           option(host(Host), Parts),
 %           Host \== localhost,
 %           Options = [proxy('proxy.local', 3128)].
-%       ==
+%       ```
 %
 %   This hook may return multiple   solutions.  The returned options
 %   are  combined  using  merge_options/3  where  earlier  solutions
