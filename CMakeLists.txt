@@ -31,7 +31,7 @@ configure_file(config.h.cmake config.h)
 configure_file(jquery.pl.in jquery.pl)
 
 set(HTTP_PLATFORM_FILES)
-if(UNIX)
+if(UNIX AND MULTI_THREADED)
   set(HTTP_PLATFORM_FILES http_unix_daemon.pl)
 endif()
 

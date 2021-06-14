@@ -373,7 +373,7 @@ http:status_page_hook(authorise(Term), _Context, HTML) :-
 \end{description}
 
 
-\input{httpopenid.tex}
+\InputIfFileExists{httpopenid.tex}{}{}
 
 %================================================================
 \subsection{Get parameters from HTML forms}
