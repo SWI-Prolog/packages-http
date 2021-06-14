@@ -38,16 +38,21 @@ endif()
 set(HTTP_PL_FILES
     html_write.pl http_client.pl http_header.pl
     http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl
-    thread_httpd.pl http_wrapper.pl http_server.pl http_dyn_workers.pl
-    http_open.pl http_proxy.pl http_session.pl http_error.pl
+    http_wrapper.pl
+    http_open.pl http_proxy.pl http_error.pl
     http_parameters.pl http_dispatch.pl http_authenticate.pl http_log.pl
     http_path.pl http_hook.pl html_head.pl http_exception.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
-    http_openid.pl js_write.pl js_grammar.pl http_cookie.pl http_files.pl
+    js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl yadis.pl ax.pl html_quasiquotations.pl
     http_load.pl http_multipart_plugin.pl http_digest.pl
     http_redis_plugin.pl
     README.md ${HTTP_PLATFORM_FILES})
+if(MULTI_THREADED)
+    set(HTTP_PL_FILES ${HTTP_PL_FILES}
+	thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
+        http_openid.pl )
+endif()
 
 set(HTTP_EXAMPLE_FILES
     README.md
@@ -119,6 +124,18 @@ if(HAVE_SSL_PACKAGE)
   set(doc_depends ssl)
 endif()
 
+set(HTTP_PLDOC_FILES
+    http_log.pl http_path.pl html_head.pl
+    http_dispatch.pl http_dirindex.pl http_pwp.pl
+    http_open.pl http_host.pl js_write.pl
+    http_files.pl http_cors.pl mimepack.pl
+    http_authenticate.pl http_client.pl
+    http_header.pl http_digest.pl)
+if(MULTI_THREADED)
+set(HTTP_PLDOC_FILES ${HTTP_PLDOC_FILES}
+    http_session.pl http_openid.pl http_dyn_workers.pl)
+endif()
+
 pkg_doc(http
 	LIBSUBDIR
 	    http
@@ -131,11 +148,6 @@ pkg_doc(http
 	SECTION
 	    websocket.pl hub.pl
 	SUBSECTION
-	    http_log.pl http_path.pl html_head.pl http_session.pl
-	    http_dispatch.pl http_dirindex.pl http_pwp.pl
-	    http_open.pl http_host.pl http_openid.pl js_write.pl
-	    http_files.pl http_cors.pl mimepack.pl
-	    http_authenticate.pl http_client.pl
-	    http_header.pl http_digest.pl http_dyn_workers.pl
+	    ${HTTP_PLDOC_FILES}
 	SUBSUBSECTION
 	    ${HTTP_PLATFORM_FILES})

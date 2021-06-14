@@ -40,7 +40,9 @@
                                         % deprecated
             http_current_host/4         % +Request, -Host, -Port, +Options
           ]).
+:- if(exists_source(library(http/thread_httpd))).
 :- use_module(library(http/thread_httpd)).
+:- endif.
 :- use_module(library(http/http_wrapper)).
 :- use_module(library(socket)).
 :- use_module(library(option)).
@@ -147,9 +149,11 @@ http_public_host(Request, Host, Port, Options) :-
         option(port(Port), Request, 80)
     ),
     !.
+:- if(current_predicate(http_current_server/2)).
 http_public_host(_Request, Host, Port, _Options) :-
     gethostname(Host),
     http_current_server(_:_Pred, Port).
+:- endif.
 
 %!  http_current_host(?Request, -Hostname, -Port, +Options) is det.
 %

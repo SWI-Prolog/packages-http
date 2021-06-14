@@ -68,7 +68,9 @@
 :- autoload(library(filesex),[directory_file_path/3]).
 :- autoload(library(option),[option/3,option/2,merge_options/3]).
 :- autoload(library(pairs),[pairs_values/2]).
+:- if(exists_source(library(time))).
 :- autoload(library(time),[call_with_time_limit/2]).
+:- endif.
 :- autoload(library(uri),
 	    [ uri_encoded/3,
 	      uri_data/3,
@@ -79,7 +81,9 @@
 :- autoload(library(http/http_path),[http_absolute_location/3]).
 :- autoload(library(http/mimetype),
 	    [file_content_type/2,file_content_type/3]).
+:- if(exists_source(library(http/thread_httpd))).
 :- autoload(library(http/thread_httpd),[http_spawn/2]).
+:- endif.
 :- use_module(library(settings),[setting/4,setting/2]).
 
 :- predicate_options(http_404/2, 1, [index(any)]).
@@ -985,11 +989,13 @@ action(Action, Request, Options) :-
 action(Action, Request, Options) :-
     spawn_action(Action, Request, Options).
 
+:- if(current_predicate(http_spawn/2)).
 spawn_action(Action, Request, Options) :-
     option(spawn(Spawn), Options),
     !,
     spawn_options(Spawn, SpawnOption),
     http_spawn(time_limit_action(Action, Request, Options), SpawnOption).
+:- endif.
 spawn_action(Action, Request, Options) :-
     time_limit_action(Action, Request, Options).
 
@@ -1000,6 +1006,7 @@ spawn_options(Pool, Options) :-
     Options = [pool(Pool)].
 spawn_options(List, List).
 
+:- if(current_predicate(call_with_time_limit/2)).
 time_limit_action(Action, Request, Options) :-
     (   option(time_limit(TimeLimit), Options),
         TimeLimit \== default
@@ -1010,6 +1017,7 @@ time_limit_action(Action, Request, Options) :-
     TimeLimit > 0,
     !,
     call_with_time_limit(TimeLimit, call_action(Action, Request, Options)).
+:- endif.
 time_limit_action(Action, Request, Options) :-
     call_action(Action, Request, Options).
 

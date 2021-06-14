@@ -113,8 +113,8 @@ for the connection.}
     \definition{\pllib{http/http_client}}
 This library provides http_get/3 and http_post/4 and friends. These
 predicates process the reply using plugins to convert the data based on
-the \texttt{Content-Type} of the reply. 
-This library supports a plugin infrastructure that can register hooks 
+the \texttt{Content-Type} of the reply.
+This library supports a plugin infrastructure that can register hooks
 for converting additional document types.
 \end{description}
 
@@ -326,11 +326,11 @@ handle_request(Request) :-
 \input{httpdispatch.tex}
 \input{httpdirindex.tex}
 \input{httpfiles.tex}
-\input{httpsession.tex}
+\InputIfFileExists{httpsession.tex}{}{}
 \input{httpcors.tex}
 \input{httpauthenticate.tex}
 \input{httpdigest.tex}
-\input{httpdynworkers.tex}
+\InputIfFileExists{httpdynworkers.tex}{}{}
 
 \subsection{Custom Error Pages}
 \label{sec:http-custom-error-page}
@@ -918,7 +918,7 @@ through the super-server \jargon{inetd} or one of its descendants
 configuration file (for example \file{/etc/inetd.conf}) and opens
 server-sockets on all ports defined in
 this file. As a request comes in it accepts it and starts the associated
-server such that standard I/O is performed through the socket. This 
+server such that standard I/O is performed through the socket. This
 approach has several advantages:
 
 \begin{itemlist}
