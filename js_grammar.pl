@@ -268,10 +268,6 @@ single_escape_char --> "r".
 single_escape_char --> "t".
 single_escape_char --> "v".
 
-eol --> "\r\n", !.
-eol --> "\n", !.
-eol --> "\r".
-
 eof -->
     \+ [_].
 
