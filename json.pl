@@ -555,11 +555,11 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 
 
 :- record json_write_state(indent:nonneg = 0,
-                       step:positive_integer = 2,
-                       tab:positive_integer = 8,
-                       width:nonneg = 72,
-                       serialize_unknown:boolean = false
-                      ).
+                           step:positive_integer = 2,
+                           tab:positive_integer = 8,
+                           width:nonneg = 72,
+                           serialize_unknown:boolean = false
+                          ).
 
 json_write(Stream, Term) :-
     json_write(Stream, Term, []).
