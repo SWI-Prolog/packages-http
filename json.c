@@ -129,11 +129,17 @@ json_read_number(term_t stream, term_t c0, term_t number)
 
     rc = ( (tmp = PL_new_term_ref()) &&
 	   PL_chars_to_term(t.t, tmp) &&
+	   PL_is_number(tmp) &&
 	   PL_unify(tmp, number) );
 
     break;
   }
   free_text(&t);
+
+  if ( !rc )
+  { PL_clear_exception();
+    rc = PL_syntax_error("illegal_number", in);
+  }
 
   PL_release_stream(in);
 
