@@ -125,10 +125,11 @@ terms.
               end_of_file:ground = error,
               value_string_as:oneof([atom,string]) = atom,
               tag:atom = '',
-              default_tag:atom).
+	      default_tag:atom,
+	      decimal_as:oneof([float, rdiv]) = float).
 
 default_json_dict_options(
-    json_options(null, true, false, error, string, '', _)).
+    json_options(null, true, false, error, string, '', _, float)).
 
 
                  /*******************************
@@ -241,6 +242,10 @@ type_term(chars,  Result, chars(Result)).
 %       The alternative is `string`, producing a packed string object.
 %       Please note that `codes` or `chars` would produce ambiguous
 %       output and are therefore not supported.
+%     - decimal_as(+Type)
+%       Prolog type used for non-integer numbers. Default is
+%       =float=. The alternative is =rdiv=, which produces a
+%       rdiv/2 term which guarantees no loss of precision.
 %
 %   @see    json_read_dict/3 to read a JSON term using the version 7
 %           extended data types.
@@ -306,13 +311,19 @@ json_term_top(0'", Stream, String, Options) :-
     json_string_codes(C1, Stream, Codes),
     json_options_value_string_as(Options, Type),
     codes_to_type(Type, Codes, String).
-json_term_top(0'-, Stream, Number, _Options) :-
+json_term_top(0'-, Stream, Number, Options) :-
     !,
-    json_read_number(Stream, 0'-, Number).
-json_term_top(D, Stream, Number, _Options) :-
+    (  json_options_decimal_as(Options, rdiv)
+    -> json_read_number(Stream, 0'-, true, Number)
+    ;  json_read_number(Stream, 0'-, false, Number)
+    ).
+json_term_top(D, Stream, Number, Options) :-
     between(0'0, 0'9, D),
     !,
-    json_read_number(Stream, D, Number).
+    (  json_options_decimal_as(Options, rdiv)
+    -> json_read_number(Stream, D, true, Number)
+    ;  json_read_number(Stream, D, false, Number)
+    ).
 json_term_top(C, Stream, Constant, Options) :-
     json_read_constant(C, Stream, ID),
     json_constant(ID, Constant, Options).
@@ -447,6 +458,11 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
     character_count(Read, CharNo),
     line_position(Read, LinePos),
     line_count(Read, Line).
+
+mk_rational(Integer, NumberOfDecimals, Rational):-
+    Rational is Integer rdiv (10 ** NumberOfDecimals).
+
+
 
 
                  /*******************************
@@ -957,6 +973,11 @@ is_json_pair(Options, Name=Value) :-
 %       Prolog type used for strings used as value.  Default
 %       is `string`.  The alternative is `atom`, producing a
 %       packed string object.
+%     * decimal_as(+Type)
+%       Prolog type used for non-integer numbers. Default is
+%       =float=. The alternative is =rdiv=, which produces a
+%       rdiv/2 term which guarantees no loss of precision.
+
 
 json_read_dict(Stream, Dict) :-
     json_read_dict(Stream, Dict, []).
@@ -988,6 +1009,10 @@ term_to_dict(Value0, Value, _Options) :-
     atomic(Value0), Value0 \== [],
     !,
     Value = Value0.
+term_to_dict(Rational0, Rational, _Options) :-
+    rational(Rational0),
+    !,
+    Rational = Rational0.
 term_to_dict(List0, List, Options) :-
     is_list(List0),
     !,
