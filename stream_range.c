@@ -136,9 +136,17 @@ range_control(void *handle, int op, void *data)
       return 0;
     }
     default:
-      if ( ctx->stream->functions->control )
-	return (*ctx->stream->functions->control)(ctx->stream->handle, op, data);
+    { IOSTREAM *s;
+      IOFUNCTIONS *fs;
+      Scontrol_function fc;
+
+      if ( (s  = ctx->stream) &&	/* be careful about race conditions */
+	   (fs = s->functions) &&
+	   (fc = fs->control) &&
+	   s->magic == SIO_MAGIC )
+	return (*fc)(s->handle, op, data);
       return -1;
+    }
   }
 }
 
