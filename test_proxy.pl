@@ -105,39 +105,33 @@ stop_http_proxy_server(Port):-
                           ]),
               true,
               close(Tmp)),
-          _, true),
+          E, print_message(warning, stop(http_proxy_server, E))),
     thread_join(ThreadId, _).
 
 http_proxy_server(Socket, ControlRead):-
     setup_call_cleanup(
         true,
-        http_proxy_server_loop(Socket, ControlRead),
+        http_proxy_accept_loop(Socket, ControlRead),
         ( tcp_close_socket(Socket),
           close(ControlRead, [force(true)])
         )).
 
-http_proxy_server_loop(ServerFd, Control):-
-    catch(http_proxy_accept_client(ServerFd, Control), exit, true),
+:- det(http_proxy_accept_loop/2).
+http_proxy_accept_loop(ServerFd, Control) :-
     thread_self(Self),
-    (   http_proxy_control(_, Self, _)
-    ->  http_proxy_server_loop(ServerFd, Control)
-    ;   true
-    ).
-
-http_proxy_accept_client(ServerFd, Control):-
-    tcp_accept(ServerFd, ClientFd, _Peer),
-    tcp_open_socket(ClientFd, Stream),
-    thread_self(Self),
-    (   http_proxy_control(_, Self, _)
-    ->  true
-    ;   close(Stream, [force(true)]),
-        throw(exit)
-    ),
-    catch(do_http_proxy_request(Stream, Control),
-          _Error,
-          ( format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', []),
-            close(Stream, [force(true)])
-          )).
+    http_proxy_control(_, Self, _),
+    setup_call_cleanup(
+        ( tcp_accept(ServerFd, ClientFd, _Peer),
+          tcp_open_socket(ClientFd, Stream)
+        ),
+        catch(do_http_proxy_request(Stream, Control),
+              Error,
+              ( print_message(warning, stop(http_proxy_accept_client, Error)),
+                format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', [])
+              )),
+        close(Stream, [force(true)])),
+    http_proxy_accept_loop(ServerFd, Control).
+http_proxy_accept_loop(_, _).
 
 
 parse_http_proxy_request(Verb, Target)-->
@@ -162,7 +156,11 @@ read_headers(Read, Tail):-
     ;   read_headers(Read, Tail)
     ).
 
-do_http_proxy_request(Stream, Control):-
+do_http_proxy_request(_, _) :-
+    thread_self(Self),
+    \+ http_proxy_control(_, Self, _),
+    !.
+do_http_proxy_request(Stream, Control) :-
     read_line_to_codes(Stream, Codes),
     read_headers(Stream, ReadHeaders),
     parse_http_proxy_request(Verb, Target, Codes, []),
@@ -232,32 +230,33 @@ stop_socks_server(Port):-
                           ]),
               true,
               close(Tmp)),
-          _, true),
+          E, print_message(warning, stop(socks_server, E))),
     thread_join(ThreadId, _).
 
-socks_server(Socket, ControlRead):-
+socks_server(Socket, ControlRead) :-
     call_cleanup(socks_server_loop(Socket, ControlRead),
                  ( tcp_close_socket(Socket),
                    close(ControlRead, [force(true)])
                  )).
 
-socks_server_loop(ServerFd, Control):-
-    catch(socks_accept_client(ServerFd, Control), exit, true),
+socks_server_loop(_, _) :-
     thread_self(Self),
-    (   socks_control(_, Self, _)
-    ->  socks_server_loop(ServerFd, Control)
-    ;   true
-    ).
+    \+ socks_control(_, Self, _),
+    !.
+socks_server_loop(ServerFd, Control) :-
+    setup_call_cleanup(
+        ( tcp_accept(ServerFd, Socket, _Peer),
+          tcp_open_socket(Socket, Stream)
+        ),
+        handle_socks_client(Control, Stream),
+        close(Stream)),
+    socks_server_loop(ServerFd, Control).
 
-socks_accept_client(ServerFd, Control):-
-    tcp_accept(ServerFd, Socket, _Peer),
-    tcp_open_socket(Socket, Stream),
+handle_socks_client(_Control, _Stream) :-
     thread_self(Self),
-    (   socks_control(_, Self, _)
-    ->  true
-    ;   close(Stream, [force(true)]),       % asked to stop
-        throw(exit)
-    ),
+    \+ socks_control(_, Self, _),
+    !.
+handle_socks_client(Control, Stream) :-
     get_byte(Stream, _Version),
     get_byte(Stream, AuthCount),
     findall(AuthMethod,
@@ -321,29 +320,33 @@ do_socks_request(Stream, Control):-
 
 shovel_loop(Pair, SlaveRead, SlaveWrite, Control) :-
     wait_for_input([Pair, SlaveRead, Control], ReadyList, infinite),
-    shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, ReadyList),
-    shovel_loop(Pair, SlaveRead, SlaveWrite, Control).
+    shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, ReadyList, Done),
+    (   Done == true
+    ->  true
+    ;   shovel_loop(Pair, SlaveRead, SlaveWrite, Control)
+    ).
 
-shovel_dispatch(_, _SlaveRead, _SlaveWrite, _Control, []):- !.
-shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More]):-
+shovel_dispatch(_, _SlaveRead, _SlaveWrite, _Control, [], _) :- !.
+shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More], Done) :-
     (   at_end_of_stream(Stream)
     ->  close(Pair),
         close(SlaveWrite),
         close(SlaveRead),
         close(Control),
-        throw(exit)
-    ;   Stream == Pair
-    ->  read_pending_codes(Stream, Bytes, []),
-        format(SlaveWrite, '~s', [Bytes]),
-        flush_output(SlaveWrite)
-    ;   Stream == SlaveRead
-    ->  read_pending_codes(Stream, Bytes, []),
-        format(Pair, '~s', [Bytes]),
-        flush_output(Pair)
-    ;   Stream == Control
-    ->  true
-    ),
-    shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, More).
+        Done = true
+    ;   (   Stream == Pair
+        ->  read_pending_codes(Stream, Bytes, []),
+            format(SlaveWrite, '~s', [Bytes]),
+            flush_output(SlaveWrite)
+        ;   Stream == SlaveRead
+        ->  read_pending_codes(Stream, Bytes, []),
+            format(Pair, '~s', [Bytes]),
+            flush_output(Pair)
+        ;   Stream == Control
+        ->  true
+        ),
+        shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, More, Done)
+    ).
 
 
 :- dynamic
@@ -508,8 +511,8 @@ test('All TCP connections via HTTP but to a non-existent server'):-
                      close(StreamPair),
                      _SocksProxyAttempts,
                      _HTTPProxyAttempts),
-          Error,
-          Exception = Error),
+          Exception,
+          true),
     assertion(nonvar(Exception)).
 
 test('Request URL directly'):-
@@ -558,8 +561,8 @@ test('Request invalid URL directly and expect exception rather than failure'):-
                      close(StreamPair),
                      _SocksProxyAttempts,
                      _HTTPProxyAttempts),
-          Error,
-          Exception = Error),
+          Exception,
+          true),
     assertion(nonvar(Exception)).
 
 test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET',
