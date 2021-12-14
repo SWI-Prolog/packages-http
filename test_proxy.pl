@@ -74,7 +74,8 @@ alloc_port(Socket, Port) :-
 :- dynamic
     test_proxy/3,
     http_proxy_control/3,                   % Port, Thread, ControlWrite
-    socks_control/3.
+    socks_control/3,
+    expect_failure/0.
 
 :- multifile
     socket:proxy_for_url/3.
@@ -97,6 +98,7 @@ start_http_proxy(Port):-
     assert(http_proxy_control(Port, ThreadId, ControlWrite)).
 
 stop_http_proxy_server(Port):-
+    debug(stop, 'Stopping http proxy server ...', []),
     retract(http_proxy_control(Port, ThreadId, ControlWrite)),
     close(ControlWrite),
     catch(setup_call_cleanup(
@@ -106,7 +108,8 @@ stop_http_proxy_server(Port):-
               true,
               close(Tmp)),
           E, print_message(warning, stop(http_proxy_server, E))),
-    thread_join(ThreadId, _).
+    thread_join(ThreadId, _),
+    debug(stop, 'ok', []).
 
 http_proxy_server(Socket, ControlRead):-
     setup_call_cleanup(
@@ -126,8 +129,12 @@ http_proxy_accept_loop(ServerFd, Control) :-
         ),
         catch(do_http_proxy_request(Stream, Control),
               Error,
-              ( print_message(warning, stop(http_proxy_accept_client, Error)),
-                format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', [])
+              (   (   expect_failure
+                  ->  true
+                  ;   print_message(warning,
+                                    stop(http_proxy_accept_client, Error))
+                  ),
+                  format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', [])
               )),
         close(Stream, [force(true)])),
     http_proxy_accept_loop(ServerFd, Control).
@@ -222,6 +229,7 @@ start_socks_server(Port):-
     assert(socks_control(Port, ThreadId, ControlWrite)).
 
 stop_socks_server(Port):-
+    debug(stop, 'Stopping socks server ...', []),
     retract(socks_control(Port, ThreadId, ControlWrite)),
     close(ControlWrite),
     catch(setup_call_cleanup(
@@ -231,7 +239,8 @@ stop_socks_server(Port):-
               true,
               close(Tmp)),
           E, print_message(warning, stop(socks_server, E))),
-    thread_join(ThreadId, _).
+    thread_join(ThreadId, _),
+    debug(stop, 'ok', []).
 
 socks_server(Socket, ControlRead) :-
     call_cleanup(socks_server_loop(Socket, ControlRead),
@@ -380,7 +389,9 @@ start_servers :-
                     ])
     ;   true
     ),
-    start_http_proxy(HTTP_PROXY_port).
+    start_http_proxy(HTTP_PROXY_port),
+    debug(start, 'Started servers (SOCKS@~w, HTTP@~w, HTTPS@~w, PROXY@~w)',
+          [SOCKS_port, HTTP_port, HTTPS_port, HTTP_PROXY_port]).
 
 stop_servers :-
     port(socks, SOCKS_port),
@@ -419,6 +430,7 @@ proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts) :-
                  *******************************/
 
 test('Direct connection for TCP'):-
+    debug(proxy, 'Test ~p', ['Direct connection for TCP']),
     port(http_endpoint, Port),
     retractall(test_proxy(_,_,_)),
     retractall(test_socks_mapping(_,_)),
@@ -430,6 +442,7 @@ test('Direct connection for TCP'):-
     assertion(HTTPProxyAttempts == []).
 
 test('All connections via SOCKS'):-
+    debug(proxy, 'Test ~p', ['All connections via SOCKS']),
     port(http_endpoint, HTTP_port),
     port(socks, SOCKS_port),
     retractall(test_proxy(_,_,_)),
@@ -443,6 +456,7 @@ test('All connections via SOCKS'):-
     assertion(HTTPProxyAttempts == []).
 
 test('Some TCP connections via SOCKS'):-
+    debug(proxy, 'Test ~p', ['Some TCP connections via SOCKS']),
     port(http_endpoint, HTTP_port),
     port(socks, SOCKS_port),
     port(unused, UNUSED_port),
@@ -461,6 +475,7 @@ test('Some TCP connections via SOCKS'):-
     assertion(HTTPProxyAttempts == []).
 
 test('First try SOCKS then fall back to direct'):-
+    debug(proxy, 'Test ~p', ['First try SOCKS then fall back to direct']),
     port(http_endpoint, HTTP_port),
     port(unused, UNUSED_port),
     format(atom(HTTP_socket_URL), 'socket://localhost:~w', [HTTP_port]),
@@ -475,6 +490,8 @@ test('First try SOCKS then fall back to direct'):-
     assertion(HTTPProxyAttempts == []).
 
 test('First try direct to a nonexistent-host then fall back to SOCKS'):-
+    debug(proxy, 'Test ~p',
+          ['First try direct to a nonexistent-host then fall back to SOCKS']),
     port(http_endpoint, HTTP_port),
     port(socks, SOCKS_port),
     port(unused, UNUSED_port),
@@ -491,6 +508,7 @@ test('First try direct to a nonexistent-host then fall back to SOCKS'):-
 
 
 test('All TCP connections via HTTP'):-
+    debug(proxy, 'Test ~p', ['All TCP connections via HTTP']),
     port(http_endpoint, HTTP_port),
     port(http_proxy, HTTP_PROXY_port),
     retractall(test_proxy(_,_,_)),
@@ -502,11 +520,15 @@ test('All TCP connections via HTTP'):-
     SocksProxyAttempts == [],
     HTTPProxyAttempts == [connect(localhost:HTTP_port)].
 
-test('All TCP connections via HTTP but to a non-existent server'):-
+test('All TCP connections via HTTP but to a non-existent server',
+     [cleanup(retractall(expect_failure))]) :-
+    debug(proxy, 'Test ~p',
+          ['All TCP connections via HTTP but to a non-existent server']),
     port(unused, UNUSED_port),
     port(http_proxy, HTTP_PROXY_port),
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [proxy(localhost, HTTP_PROXY_port)])),
+    assert(expect_failure),
     catch(proxy_test(tcp_connect(localhost:UNUSED_port, StreamPair, []),
                      close(StreamPair),
                      _SocksProxyAttempts,
@@ -516,6 +538,7 @@ test('All TCP connections via HTTP but to a non-existent server'):-
     assertion(nonvar(Exception)).
 
 test('Request URL directly'):-
+    debug(proxy, 'Test ~p', ['Request URL directly']),
     port(http_endpoint, HTTP_port),
     format(atom(URL), 'http://localhost:~w', [HTTP_port]),
     retractall(test_proxy(_,_,_)),
@@ -528,6 +551,7 @@ test('Request URL directly'):-
     assertion(HTTPProxyAttempts == []).
 
 test('Request URL when all connections go via SOCKS'):-
+    debug(proxy, 'Test ~p', ['Request URL when all connections go via SOCKS']),
     port(http_endpoint, HTTP_port),
     port(socks, SOCKS_port),
     format(atom(URL), 'http://localhost:~w', [HTTP_port]),
@@ -541,6 +565,7 @@ test('Request URL when all connections go via SOCKS'):-
     assertion(HTTPProxyAttempts == []).
 
 test('Request URL when all connections go via HTTP'):-
+    debug(proxy, 'Test ~p', ['']),
     port(http_endpoint, HTTP_port),
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'http://localhost:~w', [HTTP_port]),
@@ -554,6 +579,9 @@ test('Request URL when all connections go via HTTP'):-
     assertion(HTTPProxyAttempts == [get(URL)]).
 
 test('Request invalid URL directly and expect exception rather than failure'):-
+    debug(proxy, 'Test ~p',
+          ['Request invalid URL directly and expect exception \c
+            rather than failure']),
     port(unused, UNUSED_port),
     format(atom(URL), 'http://localhost:~w', [UNUSED_port]),
     retractall(test_proxy(_,_,_)),
@@ -567,6 +595,9 @@ test('Request invalid URL directly and expect exception rather than failure'):-
 
 test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET',
      condition(port(https_endpoint, HTTPS_port))) :-
+    debug(proxy, 'Test ~p',
+          ['Request HTTPS url via proxy - should get HTTP CONNECT \c
+            and not HTTP GET']),
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'https://localhost:~w', [HTTPS_port]),
     retractall(test_proxy(_,_,_)),
@@ -600,6 +631,8 @@ http:http_connection_over_proxy(
     ).
 
 test('Test an exotic application-level proxy - http with authentication'):-
+    debug(proxy, 'Test ~p',
+          ['Test an exotic application-level proxy - http with authentication']),
     port(http_endpoint, HTTP_port),
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'http://localhost:~w', [HTTP_port]),
