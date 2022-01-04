@@ -707,6 +707,20 @@ html_message_lines([nl|T]) -->
     html_message_lines(T).
 html_message_lines([flush]) -->
     [].
+html_message_lines([ansi(_Style,Fmt,Args)|T]) -->
+    !,
+    { format(string(S), Fmt, Args)
+    },
+    html([S]),
+    html_message_lines(T).
+html_message_lines([url(Pos)|T]) -->
+    !,
+    msg_url(Pos),
+    html_message_lines(T).
+html_message_lines([url(URL, Label)|T]) -->
+    !,
+    html(a(href(URL), Label)),
+    html_message_lines(T).
 html_message_lines([Fmt-Args|T]) -->
     !,
     { format(string(S), Fmt, Args)
@@ -719,6 +733,15 @@ html_message_lines([Fmt|T]) -->
     },
     html([S]),
     html_message_lines(T).
+
+msg_url(File:Line:Pos) -->
+    !,
+    html([File, :, Line, :, Pos]).
+msg_url(File:Line) -->
+    !,
+    html([File, :, Line]).
+msg_url(File) -->
+    html([File]).
 
 %!  http_join_headers(+Default, +Header, -Out)
 %
