@@ -280,6 +280,11 @@ make_addr_atom(Scheme, Address, Atom) :-
     phrase(address_parts(Address), Parts),
     atomic_list_concat([Scheme,@|Parts], Atom).
 
+address_parts(Var) -->
+    { var(Var),
+      !,
+      instantiation_error(Var)
+    }.
 address_parts(Atomic) -->
     { atomic(Atomic) },
     !,
@@ -292,6 +297,8 @@ address_parts(ip(A,B,C,D)) -->
     [ A, '.', B, '.', C, '.', D ].
 address_parts(unix_socket(Path)) -->
     [Path].
+address_parts(Address) -->
+    { domain_error(http_server_address, Address) }.
 
 
 %!  create_server(:Goal, +Address, +Options) is det.
