@@ -73,7 +73,7 @@ typedef enum ws_opcode
   WS_OP_BINARY   = 2,
   WS_OP_CLOSE    = 8,
   WS_OP_PING     = 9,
-  WS_OP_PONG	 = 10
+  WS_OP_PONG     = 10
 } ws_opcode;
 
 
@@ -725,6 +725,8 @@ ws_start_message(term_t WsStream, term_t OpCode, term_t RSV)
     ctx->payload_written = 0;
     switch(opcode)
     { case WS_OP_BINARY:
+      case WS_OP_PING:
+      case WS_OP_PONG:
       case WS_OP_CLOSE:			/* first two bytes for the code */
 	Ssetenc(ctx->ws_stream, ENC_OCTET, NULL);
         break;
@@ -879,6 +881,8 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
 
   switch(ctx->opcode)
   { case WS_OP_BINARY:
+    case WS_OP_PING:
+    case WS_OP_PONG:
     case WS_OP_CLOSE:
       Ssetenc(ctx->ws_stream, ENC_OCTET, NULL);
       break;
