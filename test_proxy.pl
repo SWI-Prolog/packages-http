@@ -229,8 +229,9 @@ start_socks_server(Port):-
     assert(socks_control(Port, ThreadId, ControlWrite)).
 
 stop_socks_server(Port):-
-    debug(stop, 'Stopping socks server ...', []),
     retract(socks_control(Port, ThreadId, ControlWrite)),
+    thread_property(ThreadId, id(_0Id)),
+    debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
     close(ControlWrite),
     catch(setup_call_cleanup(
               tcp_connect(localhost:Port, Tmp,
@@ -251,6 +252,7 @@ socks_server(Socket, ControlRead) :-
 socks_server_loop(_, _) :-
     thread_self(Self),
     \+ socks_control(_, Self, _),
+    debug(stop, 'Socks server ~p is done', [Self]),
     !.
 socks_server_loop(ServerFd, Control) :-
     setup_call_cleanup(
