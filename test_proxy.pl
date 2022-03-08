@@ -224,30 +224,44 @@ start_socks_server(Port):-
     tcp_listen(Socket, 5),
     pipe(ControlRead, ControlWrite),
     format(atom(Alias), 'socks@~w', [Port]),
-    thread_create(socks_server(Socket, ControlRead), ThreadId,
+    thread_self(Me),
+    thread_create(socks_server(Me, Socket, ControlRead), ThreadId,
                   [ alias(Alias) ]),
-    assert(socks_control(Port, ThreadId, ControlWrite)).
+    assert(socks_control(Port, ThreadId, ControlWrite)),
+    thread_get_message(started).
 
-stop_socks_server(Port):-
+:- dynamic socks_waiting/1.
+
+stop_socks_server(Port) :-
+    socks_control(Port, ThreadId, ControlWrite),
+    thread_wait(socks_waiting(ThreadId), []),
     retract(socks_control(Port, ThreadId, ControlWrite)),
     thread_property(ThreadId, id(_0Id)),
     debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
-    close(ControlWrite),
-    catch(setup_call_cleanup(
-              tcp_connect(localhost:Port, Tmp,
-                          [ bypass_proxy(true)
-                          ]),
-              true,
-              close(Tmp)),
-          E, print_message(warning, stop(socks_server, E))),
+    catch_with_backtrace(
+        setup_call_cleanup(
+            tcp_connect(localhost:Port, Tmp,
+                        [ bypass_proxy(true)
+                        ]),
+            true,
+            close(Tmp)),
+        E, print_message(warning, stop(socks_server, E))),
     thread_join(ThreadId, _),
+    close(ControlWrite),
     debug(stop, 'ok', []).
 
-socks_server(Socket, ControlRead) :-
-    call_cleanup(socks_server_loop(Socket, ControlRead),
-                 ( tcp_close_socket(Socket),
-                   close(ControlRead, [force(true)])
-                 )).
+socks_server(Initiator, Socket, ControlRead) :-
+    thread_send_message(Initiator, started),
+    thread_self(Me),
+    thread_property(Me, id(Id)),
+    debug(start, 'Started SOCKS server in thread ~p', [Id]),
+    catch_with_backtrace(
+        call_cleanup(socks_server_loop(Socket, ControlRead),
+                     ( tcp_close_socket(Socket),
+                       close(ControlRead)
+                     )),
+        E,
+        print_message(warning, E)).
 
 socks_server_loop(_, _) :-
     thread_self(Self),
@@ -255,14 +269,19 @@ socks_server_loop(_, _) :-
     debug(stop, 'Socks server ~p is done', [Self]),
     !.
 socks_server_loop(ServerFd, Control) :-
+    thread_self(Me),
     setup_call_cleanup(
-        ( tcp_accept(ServerFd, Socket, _Peer),
+        ( setup_call_cleanup(
+              asserta(socks_waiting(Me), Ref),
+              tcp_accept(ServerFd, Socket, _Peer),
+              erase(Ref)),
           tcp_open_socket(Socket, Stream)
         ),
         handle_socks_client(Control, Stream),
         close(Stream)),
     socks_server_loop(ServerFd, Control).
 
+:- det(handle_socks_client/2).
 handle_socks_client(_Control, _Stream) :-
     thread_self(Self),
     \+ socks_control(_, Self, _),
@@ -343,7 +362,6 @@ shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More], Done) :-
     ->  close(Pair),
         close(SlaveWrite),
         close(SlaveRead),
-        close(Control),
         Done = true
     ;   (   Stream == Pair
         ->  read_pending_codes(Stream, Bytes, []),
@@ -407,9 +425,8 @@ stop_servers :-
     ),
     stop_http_proxy_server(HTTP_PROXY_port).
 
-proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts, Messages) :-
-    catch_messages(proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts),
-                   Messages).
+:- meta_predicate
+    proxy_test(0,0,-,-).
 
 proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts) :-
     retractall(socks_proxy_connection_attempt(_)),
