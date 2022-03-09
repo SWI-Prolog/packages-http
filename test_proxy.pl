@@ -234,7 +234,7 @@ start_socks_server(Port):-
 
 stop_socks_server(Port) :-
     socks_control(Port, ThreadId, ControlWrite),
-    thread_wait(socks_waiting(ThreadId), []),
+    ignore(thread_wait(socks_waiting(ThreadId), [timeout(5)])),
     retract(socks_control(Port, ThreadId, ControlWrite)),
     thread_property(ThreadId, id(_0Id)),
     debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
