@@ -202,11 +202,12 @@ part_value(Stream, Name, Params, Encoding, Part, Options) :-
     mime_properties(Params, Properties),
     read_string(Stream, _, String),
     atom_string(Atom, String).
-part_value(Stream, Name, Params, Encoding, Name=Value, Options) :-
+part_value(Stream, Name, Params, _Encoding, Name=Value, Options) :-
     memberchk(filename(_), Params),
     option(on_filename(Goal), Options),
     !,
-    set_encoding(Encoding, Stream, Options),
+%   Always save files binary
+%   set_encoding(Encoding, Stream, Options),
     call(Goal, Stream, Value, [name(Name)|Params]).
 part_value(Stream, Name, _, Encoding, Name=Value, Options) :-
     set_encoding(Encoding, Stream, Options),
