@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2016, University of Amsterdam
+    Copyright (c)  2014-2022, University of Amsterdam
                               VU University Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -225,6 +226,10 @@ multipart_close(void *handle)
   DEBUG(1, Sdprintf("multipart_close() ...\n"));
 
   ctx->stream->encoding = ctx->parent_encoding;
+  if ( ctx->stream->encoding == ENC_OCTET )
+    ctx->stream->flags &= ~SIO_TEXT;
+  else
+    ctx->stream->flags |= SIO_TEXT;
 
   if ( ctx->close_parent )
   { IOSTREAM *parent = ctx->stream;
@@ -322,6 +327,7 @@ multipart_open(term_t org, term_t new, term_t options)
   s2->encoding = s->encoding;
   ctx->parent_encoding = s->encoding;
   s->encoding = ENC_OCTET;
+  s->flags &= ~SIO_TEXT;
   ctx->multipart_stream = s2;
   if ( PL_unify_stream(new, s2) )
   { Sset_filter(s, s2);
@@ -354,6 +360,7 @@ multipart_open_next(term_t stream)
     { ctx->state = s_part_data_next;
       Sclearerr(ctx->multipart_stream);
       ctx->multipart_stream->encoding = ENC_OCTET;
+      ctx->multipart_stream->flags &= ~SIO_TEXT;
       return TRUE;
     }
     case s_end:
