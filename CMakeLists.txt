@@ -20,7 +20,7 @@ if(NOT DEFINED JQUERYDIR)
   else()
     message("-- No system jquery.js; using our own")
     set(JQUERYDIR web/js)
-    set(JQUERYFILE jquery-1.11.3.min.js)
+    set(JQUERYFILE jquery-3.6.0.min.js)
   endif()
 
   set(JQUERYDIR  ${JQUERYDIR}  CACHE INTERNAL "Directory for jquery.js")
