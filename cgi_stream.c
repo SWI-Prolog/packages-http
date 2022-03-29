@@ -797,6 +797,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   }
 
   s2->encoding = ENC_ASCII;		/* Header is ASCII only */
+  s2->newline = SIO_NL_POSIX;
   ctx->parent_encoding = s->encoding;
   s->encoding = ENC_OCTET;
   ctx->cgi_stream = s2;
