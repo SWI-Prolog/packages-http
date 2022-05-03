@@ -97,8 +97,8 @@ profile :-
 
 :- http_handler('/ping', ping, []).
 :- http_handler('/wait', wait, [chunked]).
-:- http_handler(prefix('/spawn/'), spawn, [spawn(single)]).
-:- http_handler(prefix('/spawn2/'), spawn, [spawn(single)]).
+:- http_handler(prefix('spawn/'), spawn, [spawn(single)]).
+:- http_handler(prefix('spawn2/'), spawn, [spawn(single)]).
 
 ping(_Request) :-
     format('Content-type: text/plain~n~n'),
