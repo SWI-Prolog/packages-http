@@ -1099,6 +1099,17 @@ http_post_data(atom(Type, Atom), Out, HdrExtra) :-
         set_stream(Out, encoding(utf8)),
         write(Out, Atom),
         set_stream(Out, encoding(octet))).
+http_post_data(string(String), Out, HdrExtra) :-
+    !,
+    http_post_data(atom(text/plain, String), Out, HdrExtra).
+http_post_data(string(Type, String), Out, HdrExtra) :-
+    !,
+    phrase(post_header(string(Type, String), HdrExtra), Header),
+    send_request_header(Out, Header),
+    setup_call_cleanup(
+        set_stream(Out, encoding(utf8)),
+        write(Out, String),
+        set_stream(Out, encoding(octet))).
 http_post_data(cgi_stream(In, _Len), Out, HdrExtra) :-
     !,
     debug(obsolete, 'Obsolete 2nd argument in cgi_stream(In,Len)', []),
@@ -1210,6 +1221,11 @@ post_header(bytes(Type, Bytes), HdrExtra) -->
 post_header(atom(Type, Atom), HdrExtra) -->
     header_fields(HdrExtra, Len),
     content_length(atom(Atom, utf8), Len),
+    content_type(Type, utf8),
+    "\r\n".
+post_header(string(Type, String), HdrExtra) -->
+    header_fields(HdrExtra, Len),
+    content_length(string(String, utf8), Len),
     content_type(Type, utf8),
     "\r\n".
 
@@ -1614,6 +1630,8 @@ content_length(Reply, Len) -->
 length_of(_, Len) :-
     nonvar(Len),
     !.
+length_of(string(String, Encoding), Len) :-
+    length_of(codes(String, Encoding), Len).
 length_of(codes(String, Encoding), Len) :-
     !,
     setup_call_cleanup(
