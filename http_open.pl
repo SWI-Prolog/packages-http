@@ -191,7 +191,7 @@ Title = 'Free Online Version - Learn Prolog
                        final_url(-atom),
                        header(+atom, -atom),
                        headers(-list),
-                       raw_headers(-list),
+                       raw_headers(-list(string)),
                        connection(+atom),
                        method(oneof([delete,get,put,head,post,patch,options])),
                        size(-integer),
@@ -1249,7 +1249,7 @@ rest_(Atom, L, []) :-
 %   reply_headers(-Headers).
 
 reply_header(Lines, Options) :-
-    option(reply_headers(Headers), Options),
+    option(raw_headers(Headers), Options),
     !,
     maplist(string_codes, Headers, Lines).
 reply_header(_, _).
