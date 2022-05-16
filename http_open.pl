@@ -313,6 +313,11 @@ user_agent('SWI-Prolog').
 %     to   ask   for    bytes    1000-1999,     use    the    option
 %     range(bytes(1000,1999))
 %
+%     * raw_encoding(+Encoding)
+%     Do not install a decoding filter for Encoding.  For example,
+%     using raw_encoding('applocation/gzip') the system will not
+%     decompress the stream if it is compressed using `gzip`.
+
 %     * raw_headers(-Lines)
 %     Unify Lines with a list of strings that represents the complete
 %     reply header returned by the server.  See also headers(-List).
@@ -819,7 +824,7 @@ do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
     return_fields(Options, Headers),
     return_headers(Options, Headers),
     consider_keep_alive(Lines, Parts, Host, In0, In1, Options),
-    transfer_encoding_filter(Lines, In1, In),
+    transfer_encoding_filter(Lines, In1, In, Options),
                                     % properly re-initialise the stream
     set_stream(In, file_name(URI)),
     set_stream(In, record_position(true)).
@@ -1002,7 +1007,7 @@ return_final_url(Options) :-
 return_final_url(_).
 
 
-%!  transfer_encoding_filter(+Lines, +In0, -In) is det.
+%!  transfer_encoding_filter(+Lines, +In0, -In, +Options) is det.
 %
 %   Install filters depending on the transfer  encoding. If In0 is a
 %   stream-pair, we close the output   side. If transfer-encoding is
@@ -1011,19 +1016,23 @@ return_final_url(_).
 %   on  this.  Exceptions  to  this   are  content-types  for  which
 %   disable_encoding_filter/1 holds.
 
-transfer_encoding_filter(Lines, In0, In) :-
+transfer_encoding_filter(Lines, In0, In, Options) :-
     transfer_encoding(Lines, Encoding),
     !,
-    transfer_encoding_filter_(Encoding, In0, In).
-transfer_encoding_filter(Lines, In0, In) :-
+    transfer_encoding_filter_(Encoding, In0, In, Options).
+transfer_encoding_filter(Lines, In0, In, Options) :-
     content_encoding(Lines, Encoding),
     content_type(Lines, Type),
     \+ http:disable_encoding_filter(Type),
     !,
-    transfer_encoding_filter_(Encoding, In0, In).
-transfer_encoding_filter(_, In, In).
+    transfer_encoding_filter_(Encoding, In0, In, Options).
+transfer_encoding_filter(_, In, In, _Options).
 
-transfer_encoding_filter_(Encoding, In0, In) :-
+transfer_encoding_filter_(Encoding, In0, In, Options) :-
+    option(raw_encoding(Encoding), Options),
+    !,
+    In = In0.
+transfer_encoding_filter_(Encoding, In0, In, _Options) :-
     stream_pair(In0, In1, Out),
     (   nonvar(Out)
     ->  close(Out)
