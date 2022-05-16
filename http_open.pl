@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2020, University of Amsterdam
+    Copyright (c)  2002-2022, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -190,6 +191,7 @@ Title = 'Free Online Version - Learn Prolog
                        final_url(-atom),
                        header(+atom, -atom),
                        headers(-list),
+                       raw_headers(-list),
                        connection(+atom),
                        method(oneof([delete,get,put,head,post,patch,options])),
                        size(-integer),
@@ -282,7 +284,8 @@ user_agent('SWI-Prolog').
 %     If provided, List is unified with  a list of Name(Value) pairs
 %     corresponding to fields in the reply   header.  Name and Value
 %     follow the same conventions  used   by  the header(Name,Value)
-%     option.
+%     option.  See also raw_headers(-List) which provides the entire
+%     HTTP reply header in unparsed representation.
 %
 %     * method(+Method)
 %     One of =get= (default), =head=, =delete=, =post=,   =put=   or
@@ -309,6 +312,10 @@ user_agent('SWI-Prolog').
 %     the atom `end`. HTTP 1.1 only   supports Unit = `bytes`. E.g.,
 %     to   ask   for    bytes    1000-1999,     use    the    option
 %     range(bytes(1000,1999))
+%
+%     * raw_headers(-Lines)
+%     Unify Lines with a list of strings that represents the complete
+%     reply header returned by the server.  See also headers(-List).
 %
 %     * redirect(+Boolean)
 %     If `false` (default `true`), do _not_ automatically redirect
@@ -633,6 +640,7 @@ guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
                                     % read the reply header
     read_header(StreamPair, Parts, ReplyVersion, Code, Comment, Lines),
     update_cookies(Lines, Parts, Options),
+    reply_header(Lines, Options),
     do_open(ReplyVersion, Code, Comment, Lines, Options, Parts, Host,
             StreamPair, Stream).
 
@@ -1224,6 +1232,18 @@ rest(Atom) --> call(rest_(Atom)).
 
 rest_(Atom, L, []) :-
     atom_codes(Atom, L).
+
+
+%!  reply_header(+Lines, +Options) is det.
+%
+%   Return the entire reply header as  a   list  of strings to te option
+%   reply_headers(-Headers).
+
+reply_header(Lines, Options) :-
+    option(reply_headers(Headers), Options),
+    !,
+    maplist(string_codes, Headers, Lines).
+reply_header(_, _).
 
 
                  /*******************************
