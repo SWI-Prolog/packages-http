@@ -46,7 +46,7 @@ set(HTTP_PL_FILES
     js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl yadis.pl ax.pl html_quasiquotations.pl
     http_load.pl http_multipart_plugin.pl http_digest.pl
-    http_redis_plugin.pl
+    http_redis_plugin.pl graphql.pl
     README.md ${HTTP_PLATFORM_FILES})
 if(MULTI_THREADED)
     set(HTTP_PL_FILES ${HTTP_PL_FILES}
@@ -115,7 +115,7 @@ swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
 	       SUBDIR pwp)
 
-test_libs(cgi_stream http json multipart proxy websocket
+test_libs(cgi_stream http json multipart proxy websocket graphql
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
 
