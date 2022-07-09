@@ -115,7 +115,7 @@ swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
 	       SUBDIR pwp)
 
-test_libs(cgi_stream http json multipart proxy websocket
+test_libs(cgi_stream http json multipart proxy websocket graphql
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
 

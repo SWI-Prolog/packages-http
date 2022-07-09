@@ -31,21 +31,30 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(graphql,
-          [ graphql_read_document/3,      % +Source, -Document, +Options
-            graphql_execute_document/4,   % +URI, +Document, -Result, +Options
-            graphql_document_to_string/3, % +Document, -String, +Options
-            graphql_document_to_codes/3,  % +Document, -Codes, +Options
-            graphql/4                     % Quasi-quotation syntax
+:- module(test_graphql,
+          [ test_graphql/0
           ]).
+:- asserta(user:file_search_path(foreign, '.')).
+:- asserta(user:file_search_path(library, '../plunit')).
+:- asserta(user:file_search_path(library, '..')).
 
-/** <module> GraphQL
+:- use_module(library(plunit)).
+:- use_module(graphql).
 
-This module re-exports predicates from the internal modules
-implementing th SWI-Prolog GraphQL public interface.
+test_graphql :-
+    run_tests([ graphql_round_trip
+              ]).
 
-*/
+:- begin_tests(graphql_round_trip).
 
-:- use_module(graphql/read).
-:- use_module(graphql/write).
-:- use_module(graphql/exec).
+test(round_trip) :-
+    Var = [_{key:"string"}, true, variable("foo")],
+    Doc = {| graphql(Var) ||
+             query($foo: [some_type!]!) {
+                 spam(field: [<Var>, true, false, null])
+             }
+           |},
+    graphql_document_to_codes(Doc, Codes, []),
+    graphql_read_document(codes(Codes), Doc, []).
+
+:- end_tests(graphql_round_trip).
