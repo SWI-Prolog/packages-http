@@ -42,6 +42,14 @@
 :- use_module(library(dcg/high_order)).
 
 
+/** <module> GraphQL Reader
+
+This module provides a lexer and a parser for GraphQL, as well as a
+definition of the _graphql_ quasi-quotation syntax.
+
+*/
+
+
 %! graphql(+Content, +Args, -VariableNames, -Result) is det.
 %
 %  Quasi-quotation syntax for embedding GraphQL in Prolog text.
