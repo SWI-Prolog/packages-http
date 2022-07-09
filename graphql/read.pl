@@ -45,6 +45,11 @@
 %! graphql(+Content, +Args, -VariableNames, -Result) is det.
 %
 %  Quasi-quotation syntax for embedding GraphQL in Prolog text.
+%  Prolog variables can be incorporated in the quasi-quotation using
+%  the special lexical construct "<VarName>" where VarName is the name
+%  of a variable that is an elements of Args. See also option
+%  variable_names(+VarNames) in graphql_read_document/3.
+%
 %  Result is a term representing the given GraphQL document in the
 %  same format as used by graphql_read_document/3.
 
@@ -173,6 +178,10 @@ qq_var(Vars, _=Var) :- member(V, Vars), V == Var, !.
 %      Source are expanded in Document to the _GraphQL value_ Value.
 %      This option can be used to interpolate GraphQL documents with
 %      values given in Prolog representation.
+
+:- predicate_options(graphql_read_document/3, 3,
+                     [variable_names(list)]).
+
 graphql_read_document(codes(Codes, Rest), Document, Options) =>
     phrase(graphql_tokens(Tokens, Options), Codes, Rest),
     phrase(graphql_executable_document(Document), Tokens).
