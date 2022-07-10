@@ -1182,6 +1182,10 @@ graphql_write_pair(N-V, Options) -->
     graphql_write_value(V, Options).
 
 
+%! graphql_write_string(+Codes, +Options)// is det.
+%
+%  Generates Codes, except that codes in Codes that are not allowed in
+%  GraphQL string values are replaced by their escape sequences.
 graphql_write_string([], _Options) --> !, [].
 graphql_write_string([0'\"|T], Options) -->
     !,
@@ -1190,6 +1194,14 @@ graphql_write_string([0'\"|T], Options) -->
 graphql_write_string([0'\\|T], Options) -->
     !,
     "\\\\",
+    graphql_write_string(T, Options).
+graphql_write_string([0'\n|T], Options) -->
+    !,
+    "\\n",
+    graphql_write_string(T, Options).
+graphql_write_string([0'\r|T], Options) -->
+    !,
+    "\\r",
     graphql_write_string(T, Options).
 graphql_write_string([H|T], Options) -->
     [H],
