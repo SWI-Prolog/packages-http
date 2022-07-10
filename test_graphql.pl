@@ -54,3 +54,24 @@ test(round_trip) :-
     graphql_read_document(codes(Codes), Doc, []).
 
 :- end_tests(graphql_round_trip).
+
+
+:- begin_tests(graphql_strings).
+
+test(escape_line_terminators) :-
+    String = "Hello,\r\nnewline!",
+    graphql_document_to_string(
+        {| graphql(String) ||
+           query { foo(bar: <String>
+                       baz: """
+                            Hello,
+                            multi-
+                            lines!
+                            """
+                      ) } |},
+        Text,
+        []
+    ),
+    string_lines(Text, [_]).
+
+:- end_tests(graphql_strings).
