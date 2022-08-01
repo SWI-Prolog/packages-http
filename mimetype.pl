@@ -164,6 +164,7 @@ ext_mimetype(class, application/'octet-stream').
 ext_mimetype(jar,  application/'x-java-archive').
                                         % JavaScript
 ext_mimetype(js,   text/javascript).
+ext_mimetype(wasm, application/wasm).
                                         % Visual Basic Script :-(
 ext_mimetype(vbs,  text/vbscript).
                                         % Some image formats
