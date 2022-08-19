@@ -35,8 +35,11 @@ if(UNIX AND MULTI_THREADED)
   set(HTTP_PLATFORM_FILES http_unix_daemon.pl)
 endif()
 
+set(HTML_PL_FILES
+    html_write.pl)
+
 set(HTTP_PL_FILES
-    html_write.pl http_client.pl http_header.pl
+    http_client.pl http_header.pl
     http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl
     http_wrapper.pl
     http_open.pl http_proxy.pl http_error.pl
@@ -52,6 +55,11 @@ if(MULTI_THREADED)
     set(HTTP_PL_FILES ${HTTP_PL_FILES}
 	thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
         http_openid.pl )
+endif()
+
+set(JSON_PL_FILES json.pl)
+if(NOT EMSCRIPTEN)
+list(APPEND JSON_PL_FILES json_convert.pl http_json.pl)
 endif()
 
 set(HTTP_EXAMPLE_FILES
@@ -72,20 +80,29 @@ set(ICONS back.png compressed.png c.png folder.png generic.png
 prepend(ICONS web/icons/ ${ICONS})
 
 swipl_plugin(
-    http_libs
+    html_libs
     PL_LIB_SUBDIR http
-    PL_LIBS ${HTTP_PL_FILES})
-
+    PL_LIBS ${HTML_PL_FILES})
+swipl_plugin(
+    json
+    C_SOURCES json.c
+    PL_LIB_SUBDIR http
+    PL_LIBS ${JSON_PL_FILES})
 swipl_plugin(
     http_stream
     C_SOURCES http_stream.c THREADED
     PL_LIB_SUBDIR http
     PL_LIBS http_stream.pl)
+
+add_custom_target(http)
+add_dependencies(http html_libs json http_stream)
+
+if(NOT EMSCRIPTEN)
 swipl_plugin(
-    json
-    C_SOURCES json.c
+    http_libs
     PL_LIB_SUBDIR http
-    PL_LIBS json.pl json_convert.pl http_json.pl)
+    PL_LIBS ${HTTP_PL_FILES})
+
 swipl_plugin(
     websocket
     C_SOURCES websocket.c
@@ -108,8 +125,8 @@ if(NOT IS_ABSOLUTE ${JQUERYDIR})
 	      DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
 endif()
 
-add_custom_target(http)
-add_dependencies(http http_libs http_stream json websocket http_css http_icons)
+add_dependencies(http http_libs websocket http_css http_icons)
+endif(NOT EMSCRIPTEN)
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
