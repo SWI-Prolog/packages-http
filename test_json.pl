@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2014, University of Amsterdam
+    Copyright (c)  2007-2022, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,13 +36,6 @@
 :- module(test_json,
           [ test_json/0
           ]).
-:- asserta(user:file_search_path(foreign, '.')).
-:- asserta(user:file_search_path(foreign, '../clib')).
-:- asserta(user:file_search_path(foreign, '../sgml')).
-:- asserta(user:file_search_path(library, '../plunit')).
-:- asserta(user:file_search_path(library, '../clib')).
-:- asserta(user:file_search_path(library, '../sgml')).
-:- asserta(user:file_search_path(library, '..')).
 
 :- use_module(library(plunit)).
 :- use_module(library(http/json)).
@@ -128,6 +122,8 @@ test(json2pt, X == tpoint(25,50)) :-
 :- end_tests(json_convert).
 
 
+:- if(exists_source(library(http/thread_httpd))).
+
                  /*******************************
                  *             HTTP             *
                  *******************************/
@@ -193,3 +189,8 @@ test(control, X == Atom) :-
     user:message_hook/3.
 
 user:message_hook(httpd_stopped_worker(_, true), _Kind, _Lines).
+
+:- else.                                % have HTTP server
+:- begin_tests(json_http).
+:- end_tests(json_http).
+:- endif.

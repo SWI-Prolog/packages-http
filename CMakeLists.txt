@@ -57,9 +57,9 @@ if(MULTI_THREADED)
         http_openid.pl )
 endif()
 
-set(JSON_PL_FILES json.pl)
+set(JSON_PL_FILES json.pl json_convert.pl)
 if(NOT EMSCRIPTEN)
-list(APPEND JSON_PL_FILES json_convert.pl http_json.pl)
+list(APPEND JSON_PL_FILES http_json.pl)
 endif()
 
 set(HTTP_EXAMPLE_FILES
@@ -94,6 +94,8 @@ swipl_plugin(
     PL_LIB_SUBDIR http
     PL_LIBS http_stream.pl)
 
+test_libs(json)
+
 add_custom_target(http)
 add_dependencies(http html_libs json http_stream)
 
@@ -126,15 +128,15 @@ if(NOT IS_ABSOLUTE ${JQUERYDIR})
 endif()
 
 add_dependencies(http http_libs websocket http_css http_icons)
-endif(NOT EMSCRIPTEN)
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
 	       SUBDIR pwp)
 
-test_libs(cgi_stream http json multipart proxy websocket graphql
+test_libs(cgi_stream http multipart proxy websocket graphql
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
+endif(NOT EMSCRIPTEN)
 
 has_package(ssl HAVE_SSL_PACKAGE)
 if(HAVE_SSL_PACKAGE)
