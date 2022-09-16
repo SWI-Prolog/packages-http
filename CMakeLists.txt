@@ -36,7 +36,7 @@ if(UNIX AND MULTI_THREADED)
 endif()
 
 set(HTML_PL_FILES
-    html_write.pl)
+    html_write.pl html_quasiquotations.pl term_html.pl)
 
 set(HTTP_PL_FILES
     http_client.pl http_header.pl
@@ -47,9 +47,8 @@ set(HTTP_PL_FILES
     http_path.pl http_hook.pl html_head.pl http_exception.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     js_write.pl js_grammar.pl http_cookie.pl http_files.pl
-    http_cors.pl yadis.pl ax.pl html_quasiquotations.pl
-    http_load.pl http_multipart_plugin.pl http_digest.pl
-    http_redis_plugin.pl graphql.pl
+    http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl
+    http_digest.pl http_redis_plugin.pl graphql.pl
     README.md ${HTTP_PLATFORM_FILES})
 if(MULTI_THREADED)
     set(HTTP_PL_FILES ${HTTP_PL_FILES}
@@ -95,6 +94,8 @@ swipl_plugin(
     PL_LIBS http_stream.pl)
 
 test_libs(json)
+test_libs(term_html
+	  PACKAGES clib sgml http)
 
 add_custom_target(http)
 add_dependencies(http html_libs json http_stream)
