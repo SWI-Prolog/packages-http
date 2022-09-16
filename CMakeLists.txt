@@ -36,15 +36,16 @@ if(UNIX AND MULTI_THREADED)
 endif()
 
 set(HTML_PL_FILES
-    html_write.pl html_quasiquotations.pl term_html.pl)
+    html_write.pl html_quasiquotations.pl term_html.pl html_head.pl
+    http_path.pl mimetype.pl)
 
 set(HTTP_PL_FILES
     http_client.pl http_header.pl
-    http_sgml_plugin.pl mimepack.pl mimetype.pl dcg_basics.pl
+    http_sgml_plugin.pl mimepack.pl dcg_basics.pl
     http_wrapper.pl
     http_open.pl http_proxy.pl http_error.pl
     http_parameters.pl http_dispatch.pl http_authenticate.pl http_log.pl
-    http_path.pl http_hook.pl html_head.pl http_exception.pl
+    http_hook.pl http_exception.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
     js_write.pl js_grammar.pl http_cookie.pl http_files.pl
     http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl

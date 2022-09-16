@@ -34,10 +34,13 @@
 */
 
 :- module(http_path,
-          [ http_absolute_uri/2,        % +Spec, -URI
-            http_absolute_location/3,   % +Spec, -Path, +Options
+          [ http_absolute_location/3,   % +Spec, -Path, +Options
             http_clean_location_cache/0
           ]).
+:- if(exists_source(library(http/http_host))).
+:- autoload(library(http/http_host),[http_current_host/4]).
+:- export(http_absolute_uri/2).         % +Spec, -URI
+:- endif.
 :- autoload(library(apply),[exclude/3]).
 :- autoload(library(broadcast),[listen/2]).
 :- autoload(library(debug),[debug/3]).
@@ -50,7 +53,6 @@
 	    [ uri_authority_data/3, uri_authority_components/2,
 	      uri_data/3, uri_components/2, uri_normalized/3
 	    ]).
-:- autoload(library(http/http_host),[http_current_host/4]).
 :- use_module(library(settings),[setting/4,setting/2]).
 
 :- predicate_options(http_absolute_location/3, 3, [relative_to(atom)]).
@@ -131,7 +133,7 @@ http:location(root, Root, [priority(-100)]) :-
     ;   Root = (/)
     ).
 
-
+:- if(current_predicate(http_current_host/4)).
 %!  http_absolute_uri(+Spec, -URI) is det.
 %
 %   URI is the absolute (i.e., starting   with  =|http://|=) URI for
@@ -155,6 +157,7 @@ http_absolute_uri(Spec, URI) :-
     uri_data(scheme, Components, http),
     uri_data(authority, Components, Authority),
     uri_components(URI, Components).
+:- endif.
 
 
 %!  http_absolute_location(+Spec, -Path, +Options) is det.
