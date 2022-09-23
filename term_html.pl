@@ -380,6 +380,8 @@ op2(Term, xfy, LeftPri, RightPri, Options) -->
     { functor(Term, Functor, 2),
       quote_op(Functor, S, Options),
       xfy_list(Term, Functor, List),
+      List \== [],
+      !,
       arg_options(Options, DepthOptions),
       ArgOptions  = DepthOptions.put(#{priority:LeftPri, quoted_op:S}),
       extra_classes(Term, Classes, Attrs, Options.put(op, infix))
