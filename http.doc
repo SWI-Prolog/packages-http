@@ -323,13 +323,13 @@ handle_request(Request) :-
 \end{code}
 
 
-\input{httpdispatch.tex}
-\input{httpdirindex.tex}
-\input{httpfiles.tex}
+\InputIfFileExists{httpdispatch.tex}{}{}
+\InputIfFileExists{httpdirindex.tex}{}{}
+\InputIfFileExists{httpfiles.tex}{}{}
 \InputIfFileExists{httpsession.tex}{}{}
-\input{httpcors.tex}
-\input{httpauthenticate.tex}
-\input{httpdigest.tex}
+\InputIfFileExists{httpcors.tex}{}{}
+\InputIfFileExists{httpauthenticate.tex}{}{}
+\InputIfFileExists{httpdigest.tex}{}{}
 \InputIfFileExists{httpdynworkers.tex}{}{}
 
 \subsection{Custom Error Pages}
@@ -1119,9 +1119,8 @@ If ---for whatever reason--- the conversion is not possible it simply
 unifies \arg{RelPath} to \arg{AbsPath}.
 \end{description}
 
-\input{httphost}
-
-\input{httplog}
+\InputIfFileExists{httphost}{}{}
+\InputIfFileExists{httplog}{}{}
 
 \subsection{Debugging HTTP servers}			\label{sec:http-debug}
 
@@ -1559,7 +1558,7 @@ that can be done at compile-time.
 \input{jswrite}
 \input{httppath}
 \input{htmlhead}
-\input{httppwp}
+\InputIfFileExists{httppwp}{}{}
 
 
 \section{Transfer encodings}
@@ -1597,8 +1596,8 @@ on another stream.  See online documentation at
 \url{http://www.swi-prolog.org/} for details.
 \end{description}
 
-\input{websocket.tex}
-\input{hub.tex}
+\InputIfFileExists{websocket.tex}{}{}
+\InputIfFileExists{hub.tex}{}{}
 \input{json.tex}
 
 

@@ -3,6 +3,18 @@ project(swipl-http)
 
 include("../cmake/PrologPackage.cmake")
 
+if(MULTI_THREADED)
+set(SWIPL_WITH_HTTP_SERVER ON)
+endif()
+if(NOT EMSCRIPTEN)
+set(SWIPL_WITH_HTTP_CLIENT ON)
+endif()
+
+#
+# HTTP SERVER CONFIG
+#
+
+if(SWIPL_WITH_HTTP_SERVER)
 if(NOT DEFINED JQUERYDIR)
   message("-- Searching for jQuery")
   if(NOT CMAKE_CROSSCOMPILING)
@@ -27,40 +39,22 @@ if(NOT DEFINED JQUERYDIR)
   set(JQUERYFILE ${JQUERYFILE} CACHE INTERNAL "File for jquery.js")
 endif()
 
-configure_file(config.h.cmake config.h)
 configure_file(jquery.pl.in jquery.pl)
 
 set(HTTP_PLATFORM_FILES)
-if(UNIX AND MULTI_THREADED)
+if(UNIX)
   set(HTTP_PLATFORM_FILES http_unix_daemon.pl)
 endif()
 
-set(HTML_PL_FILES
-    html_write.pl html_quasiquotations.pl term_html.pl html_head.pl
-    http_path.pl mimetype.pl)
-
-set(HTTP_PL_FILES
-    http_client.pl http_header.pl
-    http_sgml_plugin.pl mimepack.pl dcg_basics.pl
-    http_wrapper.pl
-    http_open.pl http_proxy.pl http_error.pl
+set(HTTP_SERVER_PL_FILES
     http_parameters.pl http_dispatch.pl http_authenticate.pl http_log.pl
-    http_hook.pl http_exception.pl
+    http_hook.pl http_exception.pl http_wrapper.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
-    js_write.pl js_grammar.pl http_cookie.pl http_files.pl
+    http_cookie.pl http_files.pl
     http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl
-    http_digest.pl http_redis_plugin.pl graphql.pl
+    http_digest.pl http_redis_plugin.pl graphql.pl http_openid.pl
+    thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
     README.md ${HTTP_PLATFORM_FILES})
-if(MULTI_THREADED)
-    set(HTTP_PL_FILES ${HTTP_PL_FILES}
-	thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
-        http_openid.pl )
-endif()
-
-set(JSON_PL_FILES json.pl json_convert.pl)
-if(MULTI_THREADED)
-list(APPEND JSON_PL_FILES http_json.pl)
-endif()
 
 set(HTTP_EXAMPLE_FILES
     README.md
@@ -78,6 +72,24 @@ prepend(PWP_FILES examples/pwp/ ${PWP_FILES})
 set(ICONS back.png compressed.png c.png folder.png generic.png
     layout.png openid-logo-square.png openid-logo-tiny.png)
 prepend(ICONS web/icons/ ${ICONS})
+
+endif(SWIPL_WITH_HTTP_SERVER)
+
+configure_file(config.h.cmake config.h)
+
+set(HTML_PL_FILES
+    html_write.pl html_quasiquotations.pl term_html.pl html_head.pl
+    http_path.pl mimetype.pl)
+
+set(HTTP_CLIENT_PL_FILES
+    http_client.pl http_header.pl js_write.pl js_grammar.pl 
+    http_sgml_plugin.pl mimepack.pl dcg_basics.pl
+    http_open.pl http_proxy.pl http_error.pl)
+
+set(JSON_PL_FILES json.pl json_convert.pl)
+if(SWIPL_WITH_HTTP_SERVER)
+list(APPEND JSON_PL_FILES http_json.pl)
+endif()
 
 swipl_plugin(
     html_libs
@@ -101,11 +113,20 @@ test_libs(term_html
 add_custom_target(http)
 add_dependencies(http html_libs json http_stream)
 
-if(MULTI_THREADED)
+if(SWIPL_WITH_HTTP_CLIENT)
 swipl_plugin(
-    http_libs
+    http_client_libs
     PL_LIB_SUBDIR http
-    PL_LIBS ${HTTP_PL_FILES})
+    PL_LIBS ${HTTP_CLIENT_PL_FILES})
+
+add_dependencies(http http_client_libs)
+endif()
+
+if(SWIPL_WITH_HTTP_SERVER)
+swipl_plugin(
+    http_server_libs
+    PL_LIB_SUBDIR http
+    PL_LIBS ${HTTP_SERVER_PL_FILES})
 
 swipl_plugin(
     websocket
@@ -129,7 +150,7 @@ if(NOT IS_ABSOLUTE ${JQUERYDIR})
 	      DESTINATION ${SWIPL_INSTALL_LIBRARY}/http/web/js)
 endif()
 
-add_dependencies(http http_libs websocket http_css http_icons)
+add_dependencies(http http_server_libs websocket http_css http_icons)
 
 swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
@@ -138,23 +159,26 @@ swipl_examples(${PWP_FILES}
 test_libs(cgi_stream http multipart proxy websocket graphql
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
-endif(MULTI_THREADED)
+endif(SWIPL_WITH_HTTP_SERVER)
 
 has_package(ssl HAVE_SSL_PACKAGE)
 if(HAVE_SSL_PACKAGE)
   set(doc_depends ssl)
 endif()
 
+if(SWIPL_WITH_HTTP_SERVER)
+  set(HTTP_SECTION_FILES
+    websocket.pl hub.pl)
+endif()
+
 set(HTTP_PLDOC_FILES
-    http_log.pl http_path.pl html_head.pl
-    http_dispatch.pl http_dirindex.pl http_pwp.pl
-    http_open.pl http_host.pl js_write.pl
-    http_files.pl http_cors.pl mimepack.pl
-    http_authenticate.pl http_client.pl
-    http_header.pl http_digest.pl)
-if(MULTI_THREADED)
-set(HTTP_PLDOC_FILES ${HTTP_PLDOC_FILES}
-    http_session.pl http_openid.pl http_dyn_workers.pl)
+    js_write.pl http_path.pl html_head.pl
+    http_open.pl mimepack.pl http_client.pl http_header.pl)
+if(SWIPL_WITH_HTTP_SERVER)
+  set(HTTP_PLDOC_FILES ${HTTP_PLDOC_FILES}
+      http_log.pl http_dispatch.pl http_dirindex.pl http_digest.pl
+      http_session.pl http_openid.pl http_dyn_workers.pl http_pwp.pl
+      http_files.pl http_cors.pl http_authenticate.pl http_host.pl)
 endif()
 
 pkg_doc(http
@@ -167,7 +191,7 @@ pkg_doc(http
 	DEPENDS
 	    ${doc_depends}
 	SECTION
-	    websocket.pl hub.pl
+	    ${HTTP_SECTION_FILES}
 	SUBSECTION
 	    ${HTTP_PLDOC_FILES}
 	SUBSUBSECTION
