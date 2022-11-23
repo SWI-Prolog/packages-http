@@ -58,7 +58,7 @@ if(MULTI_THREADED)
 endif()
 
 set(JSON_PL_FILES json.pl json_convert.pl)
-if(NOT EMSCRIPTEN)
+if(MULTI_THREADED)
 list(APPEND JSON_PL_FILES http_json.pl)
 endif()
 
@@ -101,7 +101,7 @@ test_libs(term_html
 add_custom_target(http)
 add_dependencies(http html_libs json http_stream)
 
-if(NOT EMSCRIPTEN)
+if(MULTI_THREADED)
 swipl_plugin(
     http_libs
     PL_LIB_SUBDIR http
@@ -138,7 +138,7 @@ swipl_examples(${PWP_FILES}
 test_libs(cgi_stream http multipart proxy websocket graphql
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
-endif(NOT EMSCRIPTEN)
+endif(MULTI_THREADED)
 
 has_package(ssl HAVE_SSL_PACKAGE)
 if(HAVE_SSL_PACKAGE)
