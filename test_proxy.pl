@@ -1,6 +1,6 @@
 :- module(test_proxy,
-          [ test_proxy/0
-          ]).
+	  [ test_proxy/0
+	  ]).
 :- asserta(user:file_search_path(foreign, '.')).
 :- asserta(user:file_search_path(foreign, '../clib')).
 :- asserta(user:file_search_path(foreign, '../ssl')).
@@ -34,7 +34,7 @@ test_https(false).
 test_proxy :-
     assign_ports,
     run_tests([ proxy
-              ]).
+	      ]).
 
 test_input(Name, Path) :-
     source_file(test_proxy, MyFile),
@@ -94,7 +94,7 @@ start_http_proxy(Port):-
     pipe(ControlRead, ControlWrite),
     format(atom(Alias), 'http-proxy@~w', [Port]),
     thread_create(http_proxy_server(Socket, ControlRead), ThreadId,
-                  [alias(Alias)]),
+		  [alias(Alias)]),
     assert(http_proxy_control(Port, ThreadId, ControlWrite)).
 
 stop_http_proxy_server(Port):-
@@ -102,41 +102,41 @@ stop_http_proxy_server(Port):-
     retract(http_proxy_control(Port, ThreadId, ControlWrite)),
     close(ControlWrite),
     catch(setup_call_cleanup(
-              tcp_connect(localhost:Port, Tmp,
-                          [ bypass_proxy(true)
-                          ]),
-              true,
-              close(Tmp)),
-          E, print_message(warning, stop(http_proxy_server, E))),
+	      tcp_connect(localhost:Port, Tmp,
+			  [ bypass_proxy(true)
+			  ]),
+	      true,
+	      close(Tmp)),
+	  E, print_message(warning, stop(http_proxy_server, E))),
     thread_join(ThreadId, _),
     debug(stop, 'ok', []).
 
 http_proxy_server(Socket, ControlRead):-
     setup_call_cleanup(
-        true,
-        http_proxy_accept_loop(Socket, ControlRead),
-        ( tcp_close_socket(Socket),
-          close(ControlRead, [force(true)])
-        )).
+	true,
+	http_proxy_accept_loop(Socket, ControlRead),
+	( tcp_close_socket(Socket),
+	  close(ControlRead, [force(true)])
+	)).
 
 :- det(http_proxy_accept_loop/2).
 http_proxy_accept_loop(ServerFd, Control) :-
     thread_self(Self),
     http_proxy_control(_, Self, _),
     setup_call_cleanup(
-        ( tcp_accept(ServerFd, ClientFd, _Peer),
-          tcp_open_socket(ClientFd, Stream)
-        ),
-        catch(do_http_proxy_request(Stream, Control),
-              Error,
-              (   (   expect_failure
-                  ->  true
-                  ;   print_message(warning,
-                                    stop(http_proxy_accept_client, Error))
-                  ),
-                  format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', [])
-              )),
-        close(Stream, [force(true)])),
+	( tcp_accept(ServerFd, ClientFd, _Peer),
+	  tcp_open_socket(ClientFd, Stream)
+	),
+	catch(do_http_proxy_request(Stream, Control),
+	      Error,
+	      (   (   expect_failure
+		  ->  true
+		  ;   print_message(warning,
+				    stop(http_proxy_accept_client, Error))
+		  ),
+		  format(Stream, 'HTTP/1.0 500 Something smells bad~n~n', [])
+	      )),
+	close(Stream, [force(true)])),
     http_proxy_accept_loop(ServerFd, Control).
 http_proxy_accept_loop(_, _).
 
@@ -159,7 +159,7 @@ read_headers(Read, Tail):-
     ->  Tail = []
     ;   http_parse_header(Codes, Header)
     ->  append(Header, NewTail, Tail),
-        read_headers(Read, NewTail)
+	read_headers(Read, NewTail)
     ;   read_headers(Read, Tail)
     ).
 
@@ -173,39 +173,39 @@ do_http_proxy_request(Stream, Control) :-
     parse_http_proxy_request(Verb, Target, Codes, []),
     (   Verb == connect
     ->  atomic_list_concat([Hostname, PortAtom], ':', Target),
-        atom_number(PortAtom, Port),
-        (   test_http_connect_mapping(
-                Hostname:Port, MappedHostname:MappedPort)
-        ->  true
-        ;   MappedHostname = Hostname,
-            MappedPort = Port
-        ),
-        assert(http_proxy_connection_attempt(
-                   connect(MappedHostname:MappedPort))),
-        tcp_connect(MappedHostname:MappedPort, SlaveStream,
-                    [bypass_proxy(true)]),
-        debug(proxy, 'Connected via CONNECT to ~w', [Hostname:Port]),
-        format(Stream, 'HTTP/1.1 200 Connection established~n~n', []),
-        flush_output(Stream),
-        stream_pair(SlaveStream, SlaveRead, SlaveWrite),
-        shovel_loop(Stream, SlaveRead, SlaveWrite, Control)
+	atom_number(PortAtom, Port),
+	(   test_http_connect_mapping(
+		Hostname:Port, MappedHostname:MappedPort)
+	->  true
+	;   MappedHostname = Hostname,
+	    MappedPort = Port
+	),
+	assert(http_proxy_connection_attempt(
+		   connect(MappedHostname:MappedPort))),
+	tcp_connect(MappedHostname:MappedPort, SlaveStream,
+		    [bypass_proxy(true)]),
+	debug(proxy, 'Connected via CONNECT to ~w', [Hostname:Port]),
+	format(Stream, 'HTTP/1.1 200 Connection established~n~n', []),
+	flush_output(Stream),
+	stream_pair(SlaveStream, SlaveRead, SlaveWrite),
+	shovel_loop(Stream, SlaveRead, SlaveWrite, Control)
     ;   Verb == get
     ->  setup_call_cleanup(
-            http_open(Target, Slave,
-                      [ bypass_proxy(true),
-                        headers(Headers),
-                        version(Version),
-                        status_code(Code)
-                      ]),
-            http_get_proxy(Code, Version, Headers, Slave, Stream),
-            close(Slave)),
-        (   memberchk(proxy_authorization(_), ReadHeaders)
-        ->  assert(http_proxy_connection_attempt(
-                       authenticated_get(Target)))
-        ;   assert(http_proxy_connection_attempt(get(Target)))
-        ),
-        flush_output(Stream),
-        close(Stream, [force(true)])
+	    http_open(Target, Slave,
+		      [ bypass_proxy(true),
+			headers(Headers),
+			version(Version),
+			status_code(Code)
+		      ]),
+	    http_get_proxy(Code, Version, Headers, Slave, Stream),
+	    close(Slave)),
+	(   memberchk(proxy_authorization(_), ReadHeaders)
+	->  assert(http_proxy_connection_attempt(
+		       authenticated_get(Target)))
+	;   assert(http_proxy_connection_attempt(get(Target)))
+	),
+	flush_output(Stream),
+	close(Stream, [force(true)])
     ).
 
 http_get_proxy(Code, (Major-Minor), _Headers, Slave, Write):-
@@ -214,8 +214,8 @@ http_get_proxy(Code, (Major-Minor), _Headers, Slave, Write):-
 
 
 :-dynamic
-        test_socks_mapping/2,
-        test_http_connect_mapping/2.
+	test_socks_mapping/2,
+	test_http_connect_mapping/2.
 
 start_socks_server(Port):-
     tcp_socket(Socket),
@@ -226,7 +226,7 @@ start_socks_server(Port):-
     format(atom(Alias), 'socks@~w', [Port]),
     thread_self(Me),
     thread_create(socks_server(Me, Socket, ControlRead), ThreadId,
-                  [ alias(Alias) ]),
+		  [ alias(Alias) ]),
     assert(socks_control(Port, ThreadId, ControlWrite)),
     thread_get_message(started).
 
@@ -239,13 +239,13 @@ stop_socks_server(Port) :-
     thread_property(ThreadId, id(_0Id)),
     debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
     catch_with_backtrace(
-        setup_call_cleanup(
-            tcp_connect(localhost:Port, Tmp,
-                        [ bypass_proxy(true)
-                        ]),
-            true,
-            close(Tmp)),
-        E, print_message(warning, stop(socks_server, E))),
+	setup_call_cleanup(
+	    tcp_connect(localhost:Port, Tmp,
+			[ bypass_proxy(true)
+			]),
+	    true,
+	    close(Tmp)),
+	E, print_message(warning, stop(socks_server, E))),
     thread_join(ThreadId, _),
     close(ControlWrite),
     debug(stop, 'ok', []).
@@ -256,12 +256,12 @@ socks_server(Initiator, Socket, ControlRead) :-
     thread_property(Me, id(Id)),
     debug(start, 'Started SOCKS server in thread ~p', [Id]),
     catch_with_backtrace(
-        call_cleanup(socks_server_loop(Socket, ControlRead),
-                     ( tcp_close_socket(Socket),
-                       close(ControlRead)
-                     )),
-        E,
-        print_message(warning, E)).
+	call_cleanup(socks_server_loop(Socket, ControlRead),
+		     ( tcp_close_socket(Socket),
+		       close(ControlRead)
+		     )),
+	E,
+	print_message(warning, E)).
 
 socks_server_loop(_, _) :-
     thread_self(Self),
@@ -271,14 +271,14 @@ socks_server_loop(_, _) :-
 socks_server_loop(ServerFd, Control) :-
     thread_self(Me),
     setup_call_cleanup(
-        ( setup_call_cleanup(
-              asserta(socks_waiting(Me), Ref),
-              tcp_accept(ServerFd, Socket, _Peer),
-              erase(Ref)),
-          tcp_open_socket(Socket, Stream)
-        ),
-        handle_socks_client(Control, Stream),
-        close(Stream)),
+	( setup_call_cleanup(
+	      asserta(socks_waiting(Me), Ref),
+	      tcp_accept(ServerFd, Socket, _Peer),
+	      erase(Ref)),
+	  tcp_open_socket(Socket, Stream)
+	),
+	handle_socks_client(Control, Stream),
+	close(Stream)),
     socks_server_loop(ServerFd, Control).
 
 :- det(handle_socks_client/2).
@@ -290,10 +290,10 @@ handle_socks_client(Control, Stream) :-
     get_byte(Stream, _Version),
     get_byte(Stream, AuthCount),
     findall(AuthMethod,
-            ( between(1, AuthCount, _),
-              get_byte(Stream, AuthMethod)
-            ),
-            _AuthMethods),
+	    ( between(1, AuthCount, _),
+	      get_byte(Stream, AuthMethod)
+	    ),
+	    _AuthMethods),
     format(Stream, '~s', [[0x5, 0x0]]),
     flush_output(Stream),
     do_socks_request(Stream, Control).
@@ -304,43 +304,43 @@ do_socks_request(Stream, Control):-
     get_byte(Stream, _Reserved),
     (   Action =:= 1
     ->  get_byte(Stream, AddressType),
-        (   AddressType =:= 1
-        ->  get_byte(Stream, A),
-            get_byte(Stream, B),
-            get_byte(Stream, C),
-            get_byte(Stream, D),
-            format(atom(Hostname), '~w.~w.~w.~w', [A, B, C, D]),
-            AddressBytes = [A,B,C,D]
-        ;   AddressType =:= 3
-        ->  get_byte(Stream, Length),
-            findall(Code,
-                    ( between(1, Length, _),
-                      get_byte(Stream, Code)
-                    ),
-                    Codes),
-            AddressBytes = [Length|Codes],
-            atom_codes(Hostname, Codes)
-        ),
-        get_byte(Stream, PortHi),
-        get_byte(Stream, PortLo),
-        Port is (PortHi << 8) \/ PortLo
+	(   AddressType =:= 1
+	->  get_byte(Stream, A),
+	    get_byte(Stream, B),
+	    get_byte(Stream, C),
+	    get_byte(Stream, D),
+	    format(atom(Hostname), '~w.~w.~w.~w', [A, B, C, D]),
+	    AddressBytes = [A,B,C,D]
+	;   AddressType =:= 3
+	->  get_byte(Stream, Length),
+	    findall(Code,
+		    ( between(1, Length, _),
+		      get_byte(Stream, Code)
+		    ),
+		    Codes),
+	    AddressBytes = [Length|Codes],
+	    atom_codes(Hostname, Codes)
+	),
+	get_byte(Stream, PortHi),
+	get_byte(Stream, PortLo),
+	Port is (PortHi << 8) \/ PortLo
     ;   format(Stream, '~s', [0x1]),
-        fail
+	fail
     ),
     assert(socks_proxy_connection_attempt(Hostname:Port)),
     (   test_socks_mapping(Hostname:Port, MappedHostname:MappedPort)
     ->  true
     ;   MappedHostname = Hostname,
-        MappedPort = Port
+	MappedPort = Port
     ),
     tcp_connect(MappedHostname:MappedPort, SlaveStream,
-                [bypass_proxy(true)]),
+		[bypass_proxy(true)]),
     debug(proxy, 'Connected via SOCKS to ~w:~w', [Hostname, Port]),
     format(Stream, '~s~s~s',
-           [ [0x5, 0x0, 0x0, AddressType],
-             AddressBytes,
-             [PortHi, PortLo]
-           ]),
+	   [ [0x5, 0x0, 0x0, AddressType],
+	     AddressBytes,
+	     [PortHi, PortLo]
+	   ]),
     flush_output(Stream),
     stream_pair(SlaveStream, SlaveRead, SlaveWrite),
     shovel_loop(Stream, SlaveRead, SlaveWrite, Control).
@@ -360,21 +360,21 @@ shovel_dispatch(_, _SlaveRead, _SlaveWrite, _Control, [], _) :- !.
 shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More], Done) :-
     (   at_end_of_stream(Stream)
     ->  close(Pair),
-        close(SlaveWrite),
-        close(SlaveRead),
-        Done = true
+	close(SlaveWrite),
+	close(SlaveRead),
+	Done = true
     ;   (   Stream == Pair
-        ->  read_pending_codes(Stream, Bytes, []),
-            format(SlaveWrite, '~s', [Bytes]),
-            flush_output(SlaveWrite)
-        ;   Stream == SlaveRead
-        ->  read_pending_codes(Stream, Bytes, []),
-            format(Pair, '~s', [Bytes]),
-            flush_output(Pair)
-        ;   Stream == Control
-        ->  true
-        ),
-        shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, More, Done)
+	->  read_pending_codes(Stream, Bytes, []),
+	    format(SlaveWrite, '~s', [Bytes]),
+	    flush_output(SlaveWrite)
+	;   Stream == SlaveRead
+	->  read_pending_codes(Stream, Bytes, []),
+	    format(Pair, '~s', [Bytes]),
+	    flush_output(Pair)
+	;   Stream == Control
+	->  true
+	),
+	shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, More, Done)
     ).
 
 
@@ -393,25 +393,25 @@ start_servers :-
     port(socks, SOCKS_port),
     start_socks_server(SOCKS_port),
     http_server(http_endpoint,
-                [ port(HTTP_port),
-                  workers(2)
-                ]),
+		[ port(HTTP_port),
+		  workers(2)
+		]),
     (   port(https_endpoint, HTTPS_port)
     ->  test_input('../ssl/etc/server/server-cert.pem', ServerCert),
-        test_input('../ssl/etc/server/server-key.pem', ServerKey),
-        http_server(http_endpoint,
-                    [ port(HTTPS_port),
-                      workers(2),
-                      ssl([ certificate_file(ServerCert),
-                            key_file(ServerKey),
-                            password("apenoot1")
-                          ])
-                    ])
+	test_input('../ssl/etc/server/server-key.pem', ServerKey),
+	http_server(http_endpoint,
+		    [ port(HTTPS_port),
+		      workers(2),
+		      ssl([ certificate_file(ServerCert),
+			    key_file(ServerKey),
+			    password("apenoot1")
+			  ])
+		    ])
     ;   true
     ),
     start_http_proxy(HTTP_PROXY_port),
     debug(start, 'Started servers (SOCKS@~w, HTTP@~w, HTTPS@~w, PROXY@~w)',
-          [SOCKS_port, HTTP_port, HTTPS_port, HTTP_PROXY_port]).
+	  [SOCKS_port, HTTP_port, HTTPS_port, HTTP_PROXY_port]).
 
 stop_servers :-
     port(socks, SOCKS_port),
@@ -432,21 +432,21 @@ proxy_test(Goal, Cleanup, SocksAttempts, HTTPAttempts) :-
     retractall(socks_proxy_connection_attempt(_)),
     retractall(http_proxy_connection_attempt(_)),
     setup_call_cleanup(start_servers,
-                       setup_call_cleanup(Goal,
-                                          true,
-                                          Cleanup),
-                       stop_servers),
+		       setup_call_cleanup(Goal,
+					  true,
+					  Cleanup),
+		       stop_servers),
     findall(SocksInfo,
-            retract(socks_proxy_connection_attempt(SocksInfo)),
-            SocksAttempts),
+	    retract(socks_proxy_connection_attempt(SocksInfo)),
+	    SocksAttempts),
     findall(HTTPInfo,
-            retract(http_proxy_connection_attempt(HTTPInfo)),
-            HTTPAttempts).
+	    retract(http_proxy_connection_attempt(HTTPInfo)),
+	    HTTPAttempts).
 
 
-                 /*******************************
-                 *           THE TESTS          *
-                 *******************************/
+		 /*******************************
+		 *           THE TESTS          *
+		 *******************************/
 
 test('Direct connection for TCP'):-
     debug(proxy, 'Test ~p', ['Direct connection for TCP']),
@@ -454,9 +454,9 @@ test('Direct connection for TCP'):-
     retractall(test_proxy(_,_,_)),
     retractall(test_socks_mapping(_,_)),
     proxy_test(tcp_connect(localhost:Port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == []).
 
@@ -468,9 +468,9 @@ test('All connections via SOCKS'):-
     retractall(test_socks_mapping(_,_)),
     assert(test_proxy(_, _, [socks(localhost, SOCKS_port)])),
     proxy_test(tcp_connect(localhost:HTTP_port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == [localhost:HTTP_port]),
     assertion(HTTPProxyAttempts == []).
 
@@ -484,12 +484,12 @@ test('Some TCP connections via SOCKS'):-
     retractall(test_proxy(_,_,_)),
     retractall(test_socks_mapping(_,_)),
     assert(test_proxy(UNUSED_URL, _,
-                      [socks(localhost, SOCKS_port)])),
+		      [socks(localhost, SOCKS_port)])),
     assert(test_proxy(HTTP_socket_URL, _, [direct])),
     proxy_test(tcp_connect(localhost:HTTP_port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == []).
 
@@ -500,17 +500,17 @@ test('First try SOCKS then fall back to direct'):-
     format(atom(HTTP_socket_URL), 'socket://localhost:~w', [HTTP_port]),
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(HTTP_socket_URL, _,
-                      [socks(localhost, UNUSED_port), direct])),
+		      [socks(localhost, UNUSED_port), direct])),
     proxy_test(tcp_connect(localhost:HTTP_port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == []).
 
 test('First try direct to a nonexistent-host then fall back to SOCKS'):-
     debug(proxy, 'Test ~p',
-          ['First try direct to a nonexistent-host then fall back to SOCKS']),
+	  ['First try direct to a nonexistent-host then fall back to SOCKS']),
     port(http_endpoint, HTTP_port),
     port(socks, SOCKS_port),
     port(unused, UNUSED_port),
@@ -519,9 +519,9 @@ test('First try direct to a nonexistent-host then fall back to SOCKS'):-
     assert(test_socks_mapping(localhost:UNUSED_port, localhost:HTTP_port)),
     assert(test_proxy(_, _, [direct, socks(localhost, SOCKS_port)])),
     proxy_test(tcp_connect(localhost:UNUSED_port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == [localhost:UNUSED_port]),
     assertion(HTTPProxyAttempts == []).
 
@@ -533,27 +533,27 @@ test('All TCP connections via HTTP'):-
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [proxy(localhost, HTTP_PROXY_port)])),
     proxy_test(tcp_connect(localhost:HTTP_port, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     SocksProxyAttempts == [],
     HTTPProxyAttempts == [connect(localhost:HTTP_port)].
 
 test('All TCP connections via HTTP but to a non-existent server',
      [cleanup(retractall(expect_failure))]) :-
     debug(proxy, 'Test ~p',
-          ['All TCP connections via HTTP but to a non-existent server']),
+	  ['All TCP connections via HTTP but to a non-existent server']),
     port(unused, UNUSED_port),
     port(http_proxy, HTTP_PROXY_port),
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [proxy(localhost, HTTP_PROXY_port)])),
     assert(expect_failure),
     catch(proxy_test(tcp_connect(localhost:UNUSED_port, StreamPair, []),
-                     close(StreamPair),
-                     _SocksProxyAttempts,
-                     _HTTPProxyAttempts),
-          Exception,
-          true),
+		     close(StreamPair),
+		     _SocksProxyAttempts,
+		     _HTTPProxyAttempts),
+	  Exception,
+	  true),
     assertion(nonvar(Exception)).
 
 test('Request URL directly'):-
@@ -563,9 +563,9 @@ test('Request URL directly'):-
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [direct])),
     proxy_test(http_open(URL, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == []).
 
@@ -577,9 +577,9 @@ test('Request URL when all connections go via SOCKS'):-
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [socks(localhost, SOCKS_port)])),
     proxy_test(http_open(URL, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == [localhost:HTTP_port]),
     assertion(HTTPProxyAttempts == []).
 
@@ -591,43 +591,44 @@ test('Request URL when all connections go via HTTP'):-
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [proxy(localhost, HTTP_PROXY_port)])),
     proxy_test(http_open(URL, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == [get(URL)]).
 
 test('Request invalid URL directly and expect exception rather than failure'):-
     debug(proxy, 'Test ~p',
-          ['Request invalid URL directly and expect exception \c
-            rather than failure']),
+	  ['Request invalid URL directly and expect exception \c
+	    rather than failure']),
     port(unused, UNUSED_port),
     format(atom(URL), 'http://localhost:~w', [UNUSED_port]),
     retractall(test_proxy(_,_,_)),
     catch(proxy_test(http_open(URL, StreamPair, []),
-                     close(StreamPair),
-                     _SocksProxyAttempts,
-                     _HTTPProxyAttempts),
-          Exception,
-          true),
+		     close(StreamPair),
+		     _SocksProxyAttempts,
+		     _HTTPProxyAttempts),
+	  Exception,
+	  true),
     assertion(nonvar(Exception)).
 
 test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET',
-     condition(port(https_endpoint, HTTPS_port))) :-
+     condition(test_https(true))) :-
+    port(https_endpoint, HTTPS_port),
     debug(proxy, 'Test ~p',
-          ['Request HTTPS url via proxy - should get HTTP CONNECT \c
-            and not HTTP GET']),
+	  ['Request HTTPS url via proxy - should get HTTP CONNECT \c
+	    and not HTTP GET']),
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'https://localhost:~w', [HTTPS_port]),
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [proxy(localhost, HTTP_PROXY_port)])),
     proxy_test(http_open(URL,
-                         StreamPair,
-                         [ cert_verify_hook(cert_accept_any)
-                         ]),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+			 StreamPair,
+			 [ cert_verify_hook(cert_accept_any)
+			 ]),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(HTTPProxyAttempts == [connect(localhost:HTTPS_port)]),
     assertion(SocksProxyAttempts == []).
 
@@ -635,13 +636,13 @@ test('Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET',
     http:http_connection_over_proxy/6.
 
 http:http_connection_over_proxy(
-         proxy(ProxyHost, ProxyPort, User, Pass),
-         _Parts, _, StreamPair, Options,
-         [proxy_authorization(basic(User, Pass))|Options]) :-
+	 proxy(ProxyHost, ProxyPort, User, Pass),
+	 _Parts, _, StreamPair, Options,
+	 [proxy_authorization(basic(User, Pass))|Options]) :-
     tcp_connect(ProxyHost:ProxyPort, StreamPair,
-                [ bypass_proxy(true)
-                | Options
-                ]),
+		[ bypass_proxy(true)
+		| Options
+		]),
     stream_pair(StreamPair, In, _Out),
     set_stream(In, record_position(false)),
     (   option(timeout(Timeout), Options)
@@ -651,26 +652,26 @@ http:http_connection_over_proxy(
 
 test('Test an exotic application-level proxy - http with authentication'):-
     debug(proxy, 'Test ~p',
-          ['Test an exotic application-level proxy - http with authentication']),
+	  ['Test an exotic application-level proxy - http with authentication']),
     port(http_endpoint, HTTP_port),
     port(http_proxy, HTTP_PROXY_port),
     format(atom(URL), 'http://localhost:~w', [HTTP_port]),
     retractall(test_proxy(_,_,_)),
     assert(test_proxy(_, _, [ proxy(localhost, HTTP_PROXY_port,
-                                    username, password)
-                            ])),
+				    username, password)
+			    ])),
     proxy_test(http_open(URL, StreamPair, []),
-               close(StreamPair),
-               SocksProxyAttempts,
-               HTTPProxyAttempts),
+	       close(StreamPair),
+	       SocksProxyAttempts,
+	       HTTPProxyAttempts),
     assertion(SocksProxyAttempts == []),
     assertion(HTTPProxyAttempts == [authenticated_get(URL)]).
 
 :- end_tests(proxy).
 
-                 /*******************************
-                 *        MESSAGE TRICKS        *
-                 *******************************/
+		 /*******************************
+		 *        MESSAGE TRICKS        *
+		 *******************************/
 
 :- meta_predicate
     catch_messages(0, -).
@@ -679,10 +680,10 @@ catch_messages(Goal, Messages) :-
     nb_setval(messages, []),
     thread_self(Me),
     setup_call_cleanup(assert((user:message_hook(Msg, _, _) :-
-                                    catch_message(Me, Msg)),
-                              Ref),
-                       once(Goal),
-                       collect_messages(Messages, Ref)).
+				    catch_message(Me, Msg)),
+			      Ref),
+		       once(Goal),
+		       collect_messages(Messages, Ref)).
 
 catch_message(Me, Msg) :-
     thread_self(Me),
