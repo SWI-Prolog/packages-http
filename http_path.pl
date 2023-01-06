@@ -134,7 +134,7 @@ http:location(root, Root, [priority(-100)]) :-
     ;   Root = (/)
     ).
 
-:- if(current_predicate(http_current_host/4)).
+:- if(current_predicate(http_public_host/4)).
 %!  http_absolute_uri(+Spec, -URI) is det.
 %
 %   URI is the absolute (i.e., starting   with  =|http://|=) URI for
