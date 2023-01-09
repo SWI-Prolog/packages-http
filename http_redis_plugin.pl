@@ -250,6 +250,11 @@ gc_sessions :-
     forall(member(SessionID, TimedOut),
            gc_session(SessionID)).
 
+gc_session(_) :-
+    prolog_current_frame(Frame),
+    prolog_frame_attribute(Frame, parent, PFrame),
+    prolog_frame_attribute(PFrame, parent_goal, gc_session(_)),
+    !.
 gc_session(SessionID) :-
     debug(http_session(gc), 'GC session ~p', [SessionID]),
     session_db(SessionID, DB, SessionKey),
