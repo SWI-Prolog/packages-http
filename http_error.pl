@@ -95,7 +95,10 @@ reply_status(Status, Reply) :-
     map_exception(Status, Reply),
     !.
 reply_status(Status, Message) :-
+    Status = error(_,_),
+    !,
     message_to_string(Status, Message).
+reply_status(Status, Status).
 
 map_exception(http_reply(bytes(ContentType,Bytes),_), bytes(ContentType,L)) :-
     string_length(Bytes, L).        % also does lists
