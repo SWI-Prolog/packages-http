@@ -164,7 +164,7 @@ static ssize_t				/* encode */
 chunked_write(void *handle, char *buf, size_t size)
 { chunked_context *ctx = handle;
 
-  if ( Sfprintf(ctx->stream, "%x\r\n", size) >= 0 &&
+  if ( Sfprintf(ctx->stream, "%zx\r\n", size) >= 0 &&
        Sfwrite(buf, sizeof(char), size, ctx->stream) == size &&
        Sfprintf(ctx->stream, "\r\n") >= 0 )
     return size;

@@ -550,7 +550,7 @@ find_data(cgi_context *ctx, size_t start)
 
 static ssize_t				/* encode */
 cgi_chunked_write(cgi_context *ctx, char *buf, size_t size)
-{ if ( Sfprintf(ctx->stream, "%x\r\n", size) < 0 )
+{ if ( Sfprintf(ctx->stream, "%zx\r\n", size) < 0 )
     return -1;
   if ( size > 0 &&
        Sfwrite(buf, sizeof(char), size, ctx->stream) != size )
