@@ -227,6 +227,18 @@ tcp_address(Port) :-
     !.
 tcp_address(_Iface:_Port).
 
+address_domain(localhost:_Port, Domain) =>
+    Domain = inet.
+address_domain(Iface:_Port, Domain) =>
+    (   catch(ip_name(IP, Iface), error(_,_), fail),
+        functor(IP, ip, 8)
+    ->  Domain = inet6
+    ;   Domain = inet
+    ).
+address_domain(_, Domain) =>
+    Domain = inet.
+
+
 %!  make_socket(+Address, :OptionsIn, -OptionsOut) is det.
 %
 %   Create the HTTP server socket and  worker pool queue. OptionsOut
@@ -249,7 +261,8 @@ make_socket(Address, _:Options0, Options) :-
 make_socket(Address, _:Options0, Options) :-
     tcp_address(Address),
     !,
-    tcp_socket(Socket),
+    address_domain(Address, Domain),
+    socket_create(Socket, [domain(Domain)]),
     tcp_setopt(Socket, reuseaddr),
     tcp_bind(Socket, Address),
     tcp_listen(Socket, 64),
