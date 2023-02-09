@@ -802,7 +802,7 @@ setup_signals(Options) :-
 
 quit(Signal) :-
     debug(daemon, 'Dying on signal ~w', [Signal]),
-    thread_send_message(main, quit).
+    thread_send_message(main, quit(Signal)).
 
 reload(Signal) :-
     debug(daemon, 'Reload on signal ~w', [Signal]),
@@ -839,10 +839,10 @@ wait(Options) :-
                         long)
         ->  catch(ignore(handle_message(Msg)), E,
                   print_message(error, E)),
-            Msg == quit,
+            Msg = quit(Signal),
             catch(broadcast(http(shutdown)), E,
                   print_message(error, E)),
-            halt(0)
+            halt(Signal)
         ;   Count1 is Count + 1,
             nb_setarg(1, State, Count1),
             catch(broadcast(maintenance(Interval, Deadline)), E,
