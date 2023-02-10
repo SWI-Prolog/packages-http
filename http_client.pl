@@ -293,7 +293,7 @@ http_read_data(In, Fields, Data, Options) :-                    % call hook
     ;   http_convert_data(In, Fields, Data, Options)
     ),
     !.
-http_read_data(In, Fields, Data, Options) :-
+http_read_data(_In, _Fields, Data, Options) :-
     option(method(Method), Options),
     no_content_method(Method),
     !,
