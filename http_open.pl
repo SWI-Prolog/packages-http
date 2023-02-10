@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2022, University of Amsterdam
+    Copyright (c)  2002-2023, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -281,11 +281,13 @@ user_agent('SWI-Prolog').
 %     AtomValue is unified to the empty atom ('').
 %
 %     * headers(-List)
-%     If provided, List is unified with  a list of Name(Value) pairs
-%     corresponding to fields in the reply   header.  Name and Value
-%     follow the same conventions  used   by  the header(Name,Value)
-%     option.  See also raw_headers(-List) which provides the entire
-%     HTTP reply header in unparsed representation.
+%     If provided,  List is unified  with a list of  Name(Value) pairs
+%     corresponding to  fields in  the reply  header.  Name  and Value
+%     follow  the  same  conventions used  by  the  header(Name,Value)
+%     option.  A  pseudo header status_code(Code) is  added to provide
+%     the  HTTP status  as  an integer.   See also  raw_headers(-List)
+%     which  provides  the  entire   HTTP  reply  header  in  unparsed
+%     representation.
 %
 %     * method(+Method)
 %     One of =get= (default), =head=, =delete=, =post=,   =put=   or
@@ -822,7 +824,7 @@ do_open(Version, Code, _, Lines, Options, Parts, Host, In0, In) :-
     return_version(Options, Version),
     return_size(Options, Headers),
     return_fields(Options, Headers),
-    return_headers(Options, Headers),
+    return_headers(Options, [status_code(Code)|Headers]),
     consider_keep_alive(Lines, Parts, Host, In0, In1, Options),
     transfer_encoding_filter(Lines, In1, In, Options),
                                     % properly re-initialise the stream
@@ -1245,8 +1247,8 @@ rest_(Atom, L, []) :-
 
 %!  reply_header(+Lines, +Options) is det.
 %
-%   Return the entire reply header as  a   list  of strings to te option
-%   reply_headers(-Headers).
+%   Return the entire reply header as  a list of strings to the option
+%   raw_headers(-Headers).
 
 reply_header(Lines, Options) :-
     option(raw_headers(Headers), Options),
