@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2016, University of Amsterdam,
+    Copyright (c)  2002-2023, University of Amsterdam,
                               VU University Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -293,6 +294,11 @@ http_read_data(In, Fields, Data, Options) :-                    % call hook
     ),
     !.
 http_read_data(In, Fields, Data, Options) :-
+    option(method(Method), Options),
+    no_content_method(Method),
+    !,
+    Data = ''.
+http_read_data(In, Fields, Data, Options) :-
     http_read_data(In, Fields, Data, [to(atom)|Options]).
 
 memory_file_to(atom, MemFile, Encoding, Data) :-
@@ -321,6 +327,18 @@ is_content_type(ContentType, Check) :-
     ->  true
     ;   sub_atom(ContentType, Len, 1, _, ';')
     ).
+
+%!  no_content_method(+Method) is semidet.
+%
+%   The ``OPTIONS`` method  has no content type.  Some  servers do not
+%   add a ``Content-length: 0`` to  the headers, causing the client to
+%   read up to end-of-file.  Unfortunately some servers also do not do
+%   the HTTPS end-of-file handshake correctly, which results in an SSL
+%   error on recent SSL versions.
+%
+%   @see Issue#157
+
+no_content_method(options).
 
 %!  http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
