@@ -248,6 +248,14 @@ http_read_data(Fields, Data, QOptions) :-
 
 is_meta(on_filename).
 
+http_read_data(_In, Fields, Data, _Options) :-
+    option(status_code(Code), Fields),
+    no_content_status(Code),
+    \+ ( option(content_length(Len), Fields),
+	 Len > 0
+       ),
+    !,
+    Data = ''.
 http_read_data(In, Fields, Data, Options) :-    % Transfer-encoding: chunked
     select(transfer_encoding(chunked), Fields, RestFields),
     !,
@@ -293,11 +301,6 @@ http_read_data(In, Fields, Data, Options) :-                    % call hook
     ;   http_convert_data(In, Fields, Data, Options)
     ),
     !.
-http_read_data(_In, _Fields, Data, Options) :-
-    option(method(Method), Options),
-    no_content_method(Method),
-    !,
-    Data = ''.
 http_read_data(In, Fields, Data, Options) :-
     http_read_data(In, Fields, Data, [to(atom)|Options]).
 
@@ -328,17 +331,16 @@ is_content_type(ContentType, Check) :-
     ;   sub_atom(ContentType, Len, 1, _, ';')
     ).
 
-%!  no_content_method(+Method) is semidet.
+%!  no_content_status(+Code) is semidet.
 %
-%   The ``OPTIONS`` method  has no content type.  Some  servers do not
-%   add a ``Content-length: 0`` to  the headers, causing the client to
-%   read up to end-of-file.  Unfortunately some servers also do not do
-%   the HTTPS end-of-file handshake correctly, which results in an SSL
-%   error on recent SSL versions.
+%   True when Code is an HTTP status code that carries no content.
 %
 %   @see Issue#157
 
-no_content_method(options).
+no_content_status(Code) :-
+    between(100, 199, Code),
+    !.
+no_content_status(204).
 
 %!  http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
