@@ -1249,7 +1249,8 @@ write_html([nl(N)|T], Out) :-
     write_html(T2, Out).
 write_html([mailbox(_, Box)|T], Out) :-
     !,
-    (   Box = accept(_, Accepted)
+    (   Box = accept(_, Accepted),
+        nonvar(Accepted)
     ->  write_html(Accepted, Out)
     ;   true
     ),
