@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2013-2022, University of Amsterdam
+    Copyright (c)  2013-2023, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -37,7 +37,10 @@
 
 :- module(http_unix_daemon,
           [ http_daemon/0,
-            http_daemon/1                       % +Options
+            http_daemon/1,                  % +Options
+            http_opt_type/3,                % ?Flag, ?Option, ?Type
+            http_opt_help/2,                % ?Option, ?Help
+            http_opt_meta/2                 % ?Option, ?Meta
           ]).
 :- use_module(library(error)).
 :- use_module(library(apply)).
@@ -287,7 +290,10 @@ events:
 %
 %   http_daemon/0 is defined as below.  The   start  code for a specific
 %   server can use this as a starting  point, for example for specifying
-%   defaults.
+%   defaults  or  additional  options.  This    uses   _guided_  options
+%   processing  from  argv_options/3  from   library(main).  The  option
+%   definitions are available as   http_opt_type/3,  http_opt_help/2 and
+%   http_opt_meta/2
 %
 %   ```
 %   http_daemon :-
@@ -302,6 +308,89 @@ http_daemon :-
     current_prolog_flag(argv, Argv),
     argv_options(Argv, _RestArgv, Options),
     http_daemon(Options).
+
+% Option declarations for argv_options/3 from library(main).
+
+opt_type(port,               port,               nonneg).
+opt_type(p,                  port,               nonneg).
+opt_type(ip,                 ip,                 atom).
+opt_type(debug,              debug,              term).
+opt_type(syslog,             syslog,             atom).
+opt_type(user,               user,               atom).
+opt_type(group,              group,              atom).
+opt_type(pidfile,            pidfile,            file(write)).
+opt_type(output,             output,             file(write)).
+opt_type(fork,               fork,               boolean).
+opt_type(http,               http,               nonneg|boolean).
+opt_type(https,              https,              nonneg|boolean).
+opt_type(certfile,           certfile,           file(read)).
+opt_type(keyfile,            keyfile,            file(read)).
+opt_type(pwfile,             pwfile,             file(read)).
+opt_type(password,           password,           string).
+opt_type(cipherlist,         cipherlist,         string).
+opt_type(redirect,           redirect,           string).
+opt_type(interactive,        interactive,        boolean).
+opt_type(i,                  interactive,        boolean).
+opt_type(gtrace,             gtrace,             boolean).
+opt_type(sighup,             sighup,             oneof([reload,quit])).
+opt_type(workers,            workers,            natural).
+opt_type(timeout,            timeout,            number).
+opt_type(keep_alive_timeout, keep_alive_timeout, number).
+
+opt_help(port,               "HTTP port to listen to").
+opt_help(ip,                 "Only listen to this ip (--ip=localhost)").
+opt_help(debug,              "Print debug message for topic").
+opt_help(syslog,             "Send output to syslog daemon as ident").
+opt_help(user,               "Run server under this user").
+opt_help(group,              "Run server under this group").
+opt_help(pidfile,            "Write PID to path").
+opt_help(output,             "Send output to file (instead of syslog)").
+opt_help(fork,               "Do (default) or do not fork").
+opt_help(http,               "Create HTTP server").
+opt_help(https,              "Create HTTPS server").
+opt_help(certfile,           "The server certificate").
+opt_help(keyfile,            "The server private key").
+opt_help(pwfile,             "File holding password for the private key").
+opt_help(password,           "Password for the private key").
+opt_help(cipherlist,         "Cipher strings separated by colons").
+opt_help(redirect,           "Redirect all requests to a URL or port").
+opt_help(interactive,        "Enter Prolog toplevel after starting server").
+opt_help(gtrace,             "Start (graphical) debugger").
+opt_help(sighup,             "Action on SIGHUP: reload (default) or quit").
+opt_help(workers,            "Number of HTTP worker threads").
+opt_help(timeout,            "Time to wait for client to complete request").
+opt_help(keep_alive_timeout, "Time to wait for a new request").
+
+opt_meta(port,               'PORT').
+opt_meta(ip,                 'IP').
+opt_meta(debug,              'TERM').
+opt_meta(http,               'PORT').
+opt_meta(https,              'PORT').
+opt_meta(syslog,             'IDENT').
+opt_meta(user,               'NAME').
+opt_meta(group,              'NAME').
+opt_meta(redirect,           'URL').
+opt_meta(sighup,             'ACTION').
+opt_meta(workers,            'COUNT').
+opt_meta(timeout,            'SECONDS').
+opt_meta(keep_alive_timeout, 'SECONDS').
+
+%!  http_opt_type(?Flag, ?Option, ?Type).
+%!  http_opt_help(?Option, ?Help).
+%!  http_opt_meta(?Option, ?Meta).
+%
+%   Allow reusing http option processing
+
+http_opt_type(Flag, Option, Type) :-
+    opt_type(Flag, Option, Type).
+
+http_opt_help(Option, Help) :-
+    opt_help(Option, Help),
+    Option \= help(_).
+
+http_opt_meta(Option, Meta) :-
+    opt_meta(Option, Meta).
+
 
 %!  http_daemon(+Options)
 %
@@ -329,11 +418,6 @@ start_failed(Error) :-
 %   Helper that is started from http_daemon/1. See http_daemon/1 for
 %   options that are processed.
 
-http_daemon_guarded(Options) :-
-    option(help(true), Options),
-    !,
-    print_message(information, http_daemon(help)),
-    halt.
 http_daemon_guarded(Options) :-
     setup_debug(Options),
     kill_x11(Options),
@@ -898,39 +982,6 @@ first_deadline(Interval, Deadline) :-
 :- multifile
     prolog:message//1.
 
-prolog:message(http_daemon(help)) -->
-    [ 'Usage: <program> option ...'-[], nl,
-      'Options:'-[], nl, nl,
-      '  --port=port        HTTP port to listen to'-[], nl,
-      '  --ip=IP            Only listen to this ip (--ip=localhost)'-[], nl,
-      '  --debug=topic      Print debug message for topic'-[], nl,
-      '  --syslog=ident     Send output to syslog daemon as ident'-[], nl,
-      '  --user=user        Run server under this user'-[], nl,
-      '  --group=group      Run server under this group'-[], nl,
-      '  --pidfile=path     Write PID to path'-[], nl,
-      '  --output=file      Send output to file (instead of syslog)'-[], nl,
-      '  --fork=bool        Do/do not fork'-[], nl,
-      '  --http[=Address]   Create HTTP server'-[], nl,
-      '  --https[=Address]  Create HTTPS server'-[], nl,
-      '  --certfile=file    The server certificate'-[], nl,
-      '  --keyfile=file     The server private key'-[], nl,
-      '  --pwfile=file      File holding password for the private key'-[], nl,
-      '  --password=pw      Password for the private key'-[], nl,
-      '  --cipherlist=cs    Cipher strings separated by colons'-[], nl,
-      '  --redirect=to      Redirect all requests to a URL or port'-[], nl,
-      '  --interactive=bool Enter Prolog toplevel after starting server'-[], nl,
-      '  --gtrace=bool      Start (graphical) debugger'-[], nl,
-      '  --sighup=action    Action on SIGHUP: reload (default) or quit'-[], nl,
-      '  --workers=count    Number of HTTP worker threads'-[], nl,
-      '  --timeout=sec      Time to wait for client to complete request'-[], nl,
-      '  --keep_alive_timeout=sec'-[], nl,
-      '                     Time to wait for a new request'-[], nl,
-      nl,
-      'Boolean options may be written without value (true) or as --no-name (false)'-[], nl,
-      'Address is a port number or host:port, e.g., 8080 or localhost:8080'-[], nl,
-      'Multiple servers can be started by repeating --http and --https'-[], nl,
-      'Each server merges the options before the first --http(s) and up the next'-[]
-    ].
 prolog:message(http_daemon(no_root(switch_user(User)))) -->
     [ 'Program must be started as root to use --user=~w.'-[User] ].
 prolog:message(http_daemon(no_root(open_port(Port)))) -->
