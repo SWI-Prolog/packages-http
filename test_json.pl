@@ -60,6 +60,10 @@ test(string, X == '\\\b\f\n\r\t') :-
 test(string, X == '\u1234') :-
     atom_json_term('"\\u1234"', X, []).
 
+% surrogate pair (an emoji)
+test(string, X == '\U0001F495') :-
+    atom_json_term('"\\ud83d\\udc95"', X, []).
+
 test(int, X == 42) :-
     atom_json_term('42', X, []).
 test(int, X == -42) :-
