@@ -469,39 +469,49 @@ following additional arguments:
     * An input stream pointing to the collected data
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+static void
+set_stream_error(cgi_context *ctx, atom_t event, qid_t qid)
+{ term_t ex;
+
+  if ( (ex = PL_exception(qid)) )
+  { Sset_exception(ctx->cgi_stream, ex);
+
+  } else
+  { char buf[256];
+    Ssprintf(buf, "CGI Hook %s failed", PL_atom_chars(event));
+
+    Sseterr(ctx->cgi_stream, SIO_WARN, buf);
+  }
+}
+
 static int
 call_hook(cgi_context *ctx, atom_t event)
-{ fid_t fid = PL_open_foreign_frame();
-  term_t av = PL_new_term_refs(3);
-  qid_t qid;
-  int rc;
+{ fid_t fid;
 
-  PL_recorded(ctx->hook, av+0);
-  PL_put_atom(av+1, event);
-  PL_unify_stream(av+2, ctx->cgi_stream);
-  qid = PL_open_query(ctx->module, PL_Q_CATCH_EXCEPTION, PREDICATE_call3, av);
-  rc = PL_next_solution(qid);
+  if ( (fid=PL_open_foreign_frame()) )
+  { term_t av = PL_new_term_refs(3);
+    qid_t qid;
+    int rc;
 
-  if ( !rc )
-  { term_t ex;
+    PL_recorded(ctx->hook, av+0);
+    PL_put_atom(av+1, event);
+    PL_unify_stream(av+2, ctx->cgi_stream);
+    qid = PL_open_query(ctx->module, PL_Q_CATCH_EXCEPTION, PREDICATE_call3, av);
+    rc = PL_next_solution(qid);
 
-    if ( (ex = PL_exception(qid)) )
-    { Sset_exception(ctx->cgi_stream, ex);
+    if ( !rc )
+    { set_stream_error(ctx, event, qid);
+      PL_cut_query(qid);
+      PL_close_foreign_frame(fid);
 
-    } else
-    { char buf[256];
-      Ssprintf(buf, "CGI Hook %s failed", PL_atom_chars(event));
-
-      Sseterr(ctx->cgi_stream, SIO_WARN, buf);
+      return FALSE;
     }
-
-    PL_cut_query(qid);
-    PL_close_foreign_frame(fid);
-
+    PL_close_query(qid);
+    PL_discard_foreign_frame(fid);
+  } else
+  { set_stream_error(ctx, event, 0);
     return FALSE;
   }
-  PL_close_query(qid);
-  PL_discard_foreign_frame(fid);
 
   return TRUE;
 }
