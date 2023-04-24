@@ -269,6 +269,8 @@ http_log(Format, Args) :-
 %   @param  Filled with sequence identifier for the request
 
 log_started(Request, Id, Stream) :-
+    is_stream(Stream),
+    !,
     get_time(Now),
     add_post_data(Request, Request1),
     log_request(Request1, LogRequest),
@@ -276,6 +278,7 @@ log_started(Request, Id, Stream) :-
     format(Stream,
            '/*~s*/ request(~q, ~3f, ~q).~n',
            [HDate, Id, Now, LogRequest]).
+log_started(_, _, _).
 
 %!  log_request(+Request, -Log)
 %
