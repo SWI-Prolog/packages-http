@@ -338,7 +338,8 @@ reply_json(Dict) :-
     !,
     reply_json_dict(Dict).
 reply_json(Term) :-
-    format('Content-type: application/json; charset=UTF-8~n~n'),
+    default_json_content_type(Type),
+    format('Content-type: ~w~n~n', [Type]),
     json_write(current_output, Term).
 
 reply_json(Dict, Options) :-
@@ -358,7 +359,8 @@ reply_json(Term, Options) :-
 %   http_read_json_dict/2 and friends.
 
 reply_json_dict(Dict) :-
-    format('Content-type: application/json; charset=UTF-8~n~n'),
+    default_json_content_type(Type),
+    format('Content-type: ~w~n~n', [Type]),
     json_write_dict(current_output, Dict).
 
 reply_json_dict(Dict, Options) :-
@@ -366,13 +368,16 @@ reply_json_dict(Dict, Options) :-
     reply_json2(Dict, Options1).
 
 reply_json2(Term, Options) :-
-    select_option(content_type(Type), Options, Rest0, 'application/json'),
+    default_json_content_type(DefType),
+    select_option(content_type(Type), Options, Rest0, DefType),
     (   select_option(status(Code), Rest0, Rest)
     ->  format('Status: ~d~n', [Code])
     ;   Rest = Rest0
     ),
     format('Content-type: ~w~n~n', [Type]),
     json_write_to(current_output, Term, Rest).
+
+default_json_content_type('application/json; charset=UTF-8').
 
 
 		 /*******************************
