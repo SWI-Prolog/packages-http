@@ -779,9 +779,7 @@ http_update_encoding(Header0, utf8, [content_type(Type)|Header]) :-
     atom_concat(B, '; charset=UTF-8', Type).
 http_update_encoding(Header, Encoding, Header) :-
     memberchk(content_type(Type), Header),
-    (   (   sub_atom(Type, _, _, _, 'UTF-8')
-        ;   sub_atom(Type, _, _, _, 'utf-8')
-        )
+    (   sub_atom_icasechk(Type, _, 'utf-8')
     ->  Encoding = utf8
     ;   http:mime_type_encoding(Type, Encoding)
     ->  true
