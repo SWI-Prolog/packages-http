@@ -487,8 +487,8 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
               [ Host:Port, StreamPair ]),
         catch(send_rec_header(StreamPair, Stream, HostPort,
                               RequestURI, Parts, Options),
-              error(E,_),
-              keep_alive_error(E))
+              Error,
+              keep_alive_error(Error, StreamPair))
     ->  true
     ;   http:http_connection_over_proxy(Method, Parts, Host:Port,
                                         SocketStreamPair, Options, Options1),
@@ -1668,22 +1668,26 @@ http_close_keep_alive(Address) :-
     forall(get_from_pool(Address, StreamPair),
            close(StreamPair, [force(true)])).
 
-%!  keep_alive_error(+Error)
+%!  keep_alive_error(+Error, +StreamPair)
 %
-%   Deal with an error from reusing  a keep-alive connection. If the
-%   error is due to an I/O error   or end-of-file, fail to backtrack
-%   over get_from_pool/2. Otherwise it is a   real error and we thus
-%   re-raise it.
+%   Deal with an error from  reusing   a  keep-alive  connection. If the
+%   error is due to an I/O error  or end-of-file, fail to backtrack over
+%   get_from_pool/2. Otherwise it is a real   error and we thus re-raise
+%   it. In all cases we close StreamPair rather than returning it to the
+%   pool as we may have done a partial read and thus be out of sync wrt.
+%   the HTTP protocol.
 
-keep_alive_error(keep_alive(closed)) :-
+keep_alive_error(error(keep_alive(closed), _), _) :-
     !,
     debug(http(connection), 'Keep-alive connection was closed', []),
     fail.
-keep_alive_error(io_error(_,_)) :-
+keep_alive_error(error(io_error(_,_), _), StreamPair) :-
     !,
+    close(StreamPair, [force(true)]),
     debug(http(connection), 'IO error on Keep-alive connection', []),
     fail.
-keep_alive_error(Error) :-
+keep_alive_error(Error, StreamPair) :-
+    close(StreamPair, [force(true)]),
     throw(Error).
 
 
