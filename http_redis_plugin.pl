@@ -180,6 +180,7 @@ http_session:hook(session_data(SessionID, Data)) :-
 http_session:hook(current_session(SessionID, Data)) :-
     session_db(SessionID, DB, Key),
     redis(DB, hget(Key, last_used), Time as number),
+    number(Time),
     get_time(Now),
     Idle is Now - Time,
     (   Data = peer(Peer),
