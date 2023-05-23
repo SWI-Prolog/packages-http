@@ -51,7 +51,6 @@
             atom_json_dict/3            % ?Atom, ?JSONDict, +Options
           ]).
 :- use_module(library(record)).
-:- use_module(library(memfile)).
 :- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
@@ -143,16 +142,14 @@ default_json_dict_options(
 %   _write_ mode (JSONTerm to Atom), the option
 %
 %       * as(Type)
-%       defines the output type, which is one of =atom= (default),
-%       =string=, =codes= or =chars=.
+%       defines the output type, which is one of `atom` (default),
+%       `string`, `codes` or `chars`.
 
 atom_json_term(Atom, Term, Options) :-
     ground(Atom),
     !,
     setup_call_cleanup(
-        ( atom_to_memory_file(Atom, MF),
-          open_memory_file(MF, read, In, [free_on_close(true)])
-        ),
+        open_string(Atom, In),
         json_read(In, Term, Options),
         close(In)).
 atom_json_term(Result, Term, Options) :-
