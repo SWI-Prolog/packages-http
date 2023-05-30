@@ -792,13 +792,15 @@ http_update_encoding(Header, octet, Header).
 %   Encoding is the (default) character encoding for MimeType. Hooked by
 %   http:mime_type_encoding/2.
 
-mime_type_encoding('application/json',         utf8).
-mime_type_encoding('application/jsonrequest',  utf8).
-mime_type_encoding('application/x-prolog',     utf8).
-mime_type_encoding('application/n-quads',      utf8).
-mime_type_encoding('application/n-triples',    utf8).
-mime_type_encoding('application/sparql-query', utf8).
-mime_type_encoding('application/trig',         utf8).
+mime_type_encoding('application/json',                utf8).
+mime_type_encoding('application/jsonrequest',         utf8).
+mime_type_encoding('application/x-prolog',            utf8).
+mime_type_encoding('application/n-quads',             utf8).
+mime_type_encoding('application/n-triples',           utf8).
+mime_type_encoding('application/sparql-query',        utf8).
+mime_type_encoding('application/trig',                utf8).
+mime_type_encoding('application/sparql-results+json', utf8).
+mime_type_encoding('application/sparql-results+xml',  utf8).
 
 %!  http:mime_type_encoding(+MimeType, -Encoding) is semidet.
 %
