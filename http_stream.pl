@@ -35,6 +35,9 @@
 
 :- module(http_stream,
           [ http_chunked_open/3,        % +Stream, -DataStream, +Options
+	    http_is_chunked/1,		% +DataStream
+	    http_chunked_flush/2,	% +DataStream, +Extensions
+	    http_chunked_add_trailer/3, % +DataStream, +Key, +Value
             stream_range_open/3,        % +Stream, -DataStream, +Options
             multipart_open/3,           % +Stream, +DataStream, +Options)
             multipart_open_next/1,      % +DataStream
@@ -75,61 +78,93 @@ filtering stream claims end-of-file after reading  a specified number of
 bytes, dispite the fact that the underlying stream may be longer.
 
 @see    The HTTP 1.1 protocol http://www.w3.org/Protocols/rfc2616/rfc2616.html
-@author Jan Wielemaker
 */
 
 %!  http_chunked_open(+RawStream, -DataStream, +Options) is det.
 %
-%   Create a stream to realise HTTP   chunked  encoding or decoding.
-%   The technique is similar to library(zlib), using a Prolog stream
-%   as a filter on another stream.  Options:
+%   Create a stream to realise HTTP   chunked  encoding or decoding. The
+%   technique is similar to library(zlib), using   a  Prolog stream as a
+%   filter on another streQam. Options:
 %
-%           * close_parent(+Bool)
-%           If =true= (default =false=), the parent stream is closed
-%           if DataStream is closed.
+%     - close_parent(+Bool)
+%       If `true` (default `false`), the parent stream is closed
+%       if DataStream is closed.
 %
-%           * max_chunk_size(+PosInt)
-%           Define the maximum size of a chunk.  Default is the
-%           default buffer size of fully buffered streams (4096).
-%           Larger values may improve throughput.  It is also
-%           allowed to use =|set_stream(DataStream, buffer(line))|=
-%           on the data stream to get line-buffered output. See
-%           set_stream/2 for details. Switching buffering to =false=
-%           is supported.
+%     - max_chunk_size(+PosInt)
+%       Define the maximum size of a chunk. Default is the default
+%       buffer size of fully buffered streams (4096). Larger values may
+%       improve throughput. It is also allowed to use
+%       set_stream(DataStream, buffer(line)) on the data stream to
+%       get line-buffered output. See set_stream/2 for details.
+%       Switching buffering to `false` is supported.
 %
 %   Here is example code to write a chunked data to a stream
 %
-%   ==
-%           http_chunked_open(Out, S, []),
-%           format(S, 'Hello world~n', []),
-%           close(S).
-%   ==
+%   ```
+%       http_chunked_open(Out, S, []),
+%       format(S, 'Hello world~n', []),
+%       close(S).
+%   ```
 %
 %   If a stream is known to contain chunked data, we can extract
 %   this data using
 %
-%   ==
-%           http_chunked_open(In, S, []),
-%           read_stream_to_codes(S, Codes),
-%           close(S).
-%   ==
+%   ```
+%       http_chunked_open(In, S, []),
+%       read_stream_to_codes(S, Codes),
+%       close(S).
+%   ```
 %
-%   The current implementation does not  generate chunked extensions
-%   or an HTTP trailer. If such extensions  appear on the input they
-%   are silently ignored. This  is  compatible   with  the  HTTP 1.1
-%   specifications. Although a filtering  stream   is  an  excellent
-%   mechanism for encoding and decoding   the core chunked protocol,
-%   it does not well support out-of-band data.
+%   The chunked protocol allows for two  types   of  _out of band_ data.
+%   Each chunk may be  associated  with   additional  metadata.  That is
+%   achieved using http_chunked_flush/2. The last  chunk may be followed
+%   by  HTTP  header  lines.   That   can    be   achieved   by  calling
+%   http_chunked_add_trailer/3 before closing the chunked stream.
 %
-%   After http_chunked_open/3, the encoding  of   DataStream  is the
-%   same as the  encoding  of  RawStream,   while  the  encoding  of
-%   RawStream is =octet=, the only value   allowed  for HTTP chunked
-%   streams. Closing the DataStream  restores   the  old encoding on
-%   RawStream.
+%   After http_chunked_open/3, the encoding of DataStream is the same as
+%   the encoding of RawStream,  while  the   encoding  of  RawStream  is
+%   =octet=, the only value allowed for   HTTP  chunked streams. Closing
+%   the DataStream restores the old encoding on RawStream.
 %
 %   @error  io_error(read, Stream) where the message context provides
 %           an indication of the problem.  This error is raised if
 %           the input is not valid HTTP chunked data.
+
+%!  http_is_chunked(+DataStream) is semidet.
+%
+%   True if DataStream is created using http_chunked_open/3.
+
+%!  http_chunked_flush(+DataStream, +Extensions) is det.
+%
+%   Emits the next chunk flush_output/1 on DataStream, but in addition
+%   adds extension parameters  to the chunk.  Extensions is  a list of
+%   `Key=Value` terms.  For example, to close a chunked stream with an
+%   error chunk  we something  like below.  First,  we flush  the last
+%   pending  data,  next  we  fill  a new  chunk  and  flush  it  with
+%   extensions.
+%
+%   ```
+%       flush_output(current_output),
+%       format("Sorry, something went wrong!\n"),
+%       http_chunked_flush(current_output, [error=true])
+%   ```
+%
+%   @compat It turns out that few  clients accept chunked extensions and
+%   while the specification requires a client to silently ignore chunked
+%   extensions if they  cannot  be  processed,   many  clients  claim  a
+%   protocol error.
+
+%!  http_chunked_add_trailer(+DataStream, +Key:atom, +Value:atom) is det.
+%
+%   Add a trailer  key/value to DataStream.  If the  stream is closed,
+%   each  call adds  a line  ``Key:  Value\r\n`` to  the output.   The
+%   strings  for Key  and Value  need to  be compliant  with the  HTTP
+%   header syntax.
+%
+%   @compat It turns out that few clients accept trailer lines and while
+%   the specification requires a client to silently ignore trailer lines
+%   if they cannot be processed, many clients claim a protocol error.
+
 
 
                  /*******************************
@@ -339,4 +374,3 @@ cgi_statistics(requests(Requests)) :-
     cgi_statistics_(Requests, _).
 cgi_statistics(bytes_sent(Bytes)) :-
     cgi_statistics_(_, Bytes).
-
