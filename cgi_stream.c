@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2016, University of Amsterdam
+    Copyright (c)  2008-2023, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -99,7 +100,6 @@ static atom_t ATOM_data;		/* data */
 static atom_t ATOM_discarded;		/* discarded */
 static atom_t ATOM_request;		/* request */
 static atom_t ATOM_client;		/* client */
-static atom_t ATOM_chunked;		/* chunked */
 static atom_t ATOM_none;		/* none */
 static atom_t ATOM_state;		/* state */
 static atom_t ATOM_transfer_encoding;	/* transfer_encoding */
@@ -130,41 +130,9 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define BUFSIZE SIO_BUFSIZE		/* raw I/O buffer */
 
-typedef enum
-{ CGI_HDR  = 0,
-  CGI_DATA,
-  CGI_DISCARDED
-} cgi_state;
-
 #define CGI_MAGIC 0xa85ce042
 
-typedef struct cgi_context
-{ IOSTREAM	   *stream;		/* Original stream */
-  IOSTREAM	   *cgi_stream;		/* Stream I'm handle of */
-  IOENC		    parent_encoding;	/* Saved encoding of parent */
-					/* Prolog attributes */
-  module_t	    module;		/* Calling module */
-  record_t	    hook;		/* Hook called on action */
-  record_t	    request;		/* Associated request term */
-  record_t	    header;		/* Associated reply header term */
-  atom_t	    transfer_encoding;	/* Current transfer encoding */
-  atom_t	    connection;		/* Keep alive? */
-  atom_t	    method;		/* method of the request */
-					/* state */
-  cgi_state	    state;		/* Current state */
-					/* data buffering */
-  size_t	    data_offset;	/* Start of real data */
-  char		   *data;		/* Buffered data */
-  size_t	    datasize;		/* #bytes buffered */
-  size_t	    dataallocated;	/* #bytes allocated */
-  size_t	    chunked_written;	/* #bytes written in chunked encoding */
-  int64_t	    id;			/* Identifier */
-  unsigned int	    magic;		/* CGI_MAGIC */
-} cgi_context;
-
-
 static int start_chunked_encoding(cgi_context *ctx);
-static ssize_t cgi_chunked_write(cgi_context *ctx, char *buf, size_t size);
 
 static int64_t current_id = 0;
 static int64_t bytes_sent = 0;
@@ -202,6 +170,7 @@ free_cgi_context(cgi_context *ctx)
   if ( ctx->request )    PL_erase(ctx->request);
   if ( ctx->header )     PL_erase(ctx->header);
   if ( ctx->connection ) PL_unregister_atom(ctx->connection);
+  if ( ctx->metadata )   free_chunked_metadata(ctx->metadata);
 
   ctx->magic = 0;
   PL_free(ctx);
@@ -248,8 +217,6 @@ silent_release_stream(IOSTREAM *s)
 		 /*******************************
 		 *	     PROPERTIES		*
 		 *******************************/
-
-static IOFUNCTIONS cgi_functions;
 
 static int
 get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
@@ -521,9 +488,10 @@ static int
 start_chunked_encoding(cgi_context *ctx)
 { if ( call_hook(ctx, ATOM_send_header) )
   { if ( ctx->datasize > ctx->data_offset )
-    { ssize_t rc = cgi_chunked_write(ctx,
-				     &ctx->data[ctx->data_offset],
-				     ctx->datasize - ctx->data_offset);
+    { ssize_t rc = chunked_write_chunk(ctx->stream,
+				       ctx->metadata,
+				       &ctx->data[ctx->data_offset],
+				       ctx->datasize - ctx->data_offset);
       if ( rc == -1 )
 	return FALSE;
     }
@@ -558,24 +526,6 @@ find_data(cgi_context *ctx, size_t start)
 		 *	   IO FUNCTIONS		*
 		 *******************************/
 
-static ssize_t				/* encode */
-cgi_chunked_write(cgi_context *ctx, char *buf, size_t size)
-{ if ( Sfprintf(ctx->stream, "%zx\r\n", size) < 0 )
-    return -1;
-  if ( size > 0 &&
-       Sfwrite(buf, sizeof(char), size, ctx->stream) != size )
-    return -1;
-  if ( Sfprintf(ctx->stream, "\r\n") < 0 )
-    return -1;
-  if ( Sflush(ctx->stream) < 0 )
-    return -1;
-
-  ctx->chunked_written += size;
-
-  return size;
-}
-
-
 static ssize_t
 cgi_write(void *handle, char *buf, size_t size)
 { cgi_context *ctx = handle;
@@ -588,7 +538,7 @@ cgi_write(void *handle, char *buf, size_t size)
   }
 
   if ( ctx->transfer_encoding == ATOM_chunked )
-  { return cgi_chunked_write(ctx, buf, size);
+  { return chunked_write_chunk(ctx->stream, ctx->metadata, buf, size);
   } else
   { size_t osize = ctx->datasize;
     size_t dstart;
@@ -670,27 +620,24 @@ cgi_close(void *handle)
   switch( ctx->state )
   { case CGI_DATA:
     { if ( ctx->transfer_encoding == ATOM_chunked )
-      { if ( cgi_chunked_write(ctx, NULL, 0) < 0 )
-	{ rc = -1;
-	  goto out;
-	}
+      { rc = chunked_write_trailer(ctx->stream, ctx->metadata);
       } else
       { size_t clen = ctx->datasize - ctx->data_offset;
 	const char *dstart = &ctx->data[ctx->data_offset];
 
 	if ( !call_hook(ctx, ATOM_send_header) )
 	{ rc = -1;
-	  goto out;
+	  break;
 	}
 	if ( ctx-> method != ATOM_head )
 	{ if ( Sfwrite(dstart, sizeof(char), clen, ctx->stream) != clen )
 	  { rc = -1;
-	    goto out;
+	    break;
 	  }
 	}
 	if ( Sflush(ctx->stream) < 0 )
 	{ rc = -1;
-	  goto out;
+	  break;
 	}
       }
 
@@ -699,13 +646,14 @@ cgi_close(void *handle)
     case CGI_HDR:
       break;
     case CGI_DISCARDED:
-      goto out;
+      break;
   }
 
-  if ( !call_hook(ctx, ATOM_close) )	/* what if we had no header sofar? */
+  if ( rc == 0 &&
+       ctx->state != CGI_DISCARDED &&
+       !call_hook(ctx, ATOM_close) )	/* what if we had no header sofar? */
     rc = -1;				/* TBD: pass error kindly */
 
-out:
   update_sent(ctx);
   ctx->stream->encoding = ctx->parent_encoding;
   if ( free_cgi_context(ctx) < 0 )
@@ -850,9 +798,9 @@ install_cgi_stream()
   ATOM_keep_alive        = PL_new_atom("keep_alive");
   ATOM_connection        = PL_new_atom("connection");
   ATOM_content_length    = PL_new_atom("content_length");
-  ATOM_id	         = PL_new_atom("id");
-  ATOM_get	         = PL_new_atom("get");
-  ATOM_head	         = PL_new_atom("head");
+  ATOM_id		 = PL_new_atom("id");
+  ATOM_get		 = PL_new_atom("get");
+  ATOM_head		 = PL_new_atom("head");
   FUNCTOR_method1	 = PL_new_functor(PL_new_atom("method"), 1);
 
   PREDICATE_call3   = PL_predicate("call", 3, "system");

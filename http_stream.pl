@@ -149,10 +149,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 %       http_chunked_flush(current_output, [error=true])
 %   ```
 %
-%   @compat It turns out that few  clients accept chunked extensions and
-%   while the specification requires a client to silently ignore chunked
-%   extensions if they  cannot  be  processed,   many  clients  claim  a
-%   protocol error.
+%   @compat It turns out that most clients ignore chunked extensions.
 
 %!  http_chunked_add_trailer(+DataStream, +Key:atom, +Value:atom) is det.
 %
@@ -161,10 +158,9 @@ bytes, dispite the fact that the underlying stream may be longer.
 %   strings  for Key  and Value  need to  be compliant  with the  HTTP
 %   header syntax.
 %
-%   @compat It turns out that few clients accept trailer lines and while
-%   the specification requires a client to silently ignore trailer lines
-%   if they cannot be processed, many clients claim a protocol error.
-
+%   @compat It turns out that  most   clients  ignore trailer lines. The
+%   JavaScript  fetch()  method  should   make    these   available   as
+%   ``response.trailer''.
 
 
                  /*******************************
@@ -323,7 +319,11 @@ bytes, dispite the fact that the underlying stream may be longer.
 %       switching to =chunked= from the =header= hook, it calls the
 %       =send_header= hook and if there is data queed this is send
 %       as first chunk.  Each subsequent write to the CGI stream
-%       emits a chunk.
+%       emits a chunk.  The implementation does __not__ use the
+%       chunked stream filter defined by http_chunked_open/3.  It
+%       shares most of the implementation though and CGI streams
+%       do support http_is_chunked/1, http_chunked_flush/2 and
+%       http_chunked_add_trailer/3.
 
 %!  cgi_discard(+CGIStream) is det.
 %

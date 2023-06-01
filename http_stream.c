@@ -34,6 +34,67 @@
 */
 
 #include <config.h>
+#include <SWI-Stream.h>
+#include <SWI-Prolog.h>
+
+static IOFUNCTIONS cgi_functions;
+
+typedef struct chunked_trailer
+{ struct chunked_trailer *next;
+  atom_t key;
+  atom_t value;
+} chunked_trailer;
+
+typedef struct chunked_metadata
+{ term_t	    chunk_ext;		/* Chunk extensions */
+  chunked_trailer  *trailer;		/* Reply trailer fields */
+  chunked_trailer  *trailer_tail;
+} chunked_metadata;
+
+typedef struct chunked_context
+{ IOSTREAM	   *stream;		/* Original stream */
+  IOSTREAM	   *chunked_stream;	/* Stream I'm handle of */
+  int		    close_parent;	/* close parent on close */
+  int		    eof_seen;		/* We saw end-of-file */
+  IOENC		    parent_encoding;	/* Saved encoding of parent */
+  size_t	    avail;		/* data available */
+  chunked_metadata *metadata;		/* Trailer and chunk extensions */
+} chunked_context;
+
+typedef enum
+{ CGI_HDR  = 0,
+  CGI_DATA,
+  CGI_DISCARDED
+} cgi_state;
+
+typedef struct cgi_context
+{ IOSTREAM	   *stream;		/* Original stream */
+  IOSTREAM	   *cgi_stream;		/* Stream I'm handle of */
+  IOENC		    parent_encoding;	/* Saved encoding of parent */
+  chunked_metadata *metadata;		/* Chunked extensions support */
+					/* Prolog attributes */
+  module_t	    module;		/* Calling module */
+  record_t	    hook;		/* Hook called on action */
+  record_t	    request;		/* Associated request term */
+  record_t	    header;		/* Associated reply header term */
+  atom_t	    transfer_encoding;	/* Current transfer encoding */
+  atom_t	    connection;		/* Keep alive? */
+  atom_t	    method;		/* method of the request */
+					/* state */
+  cgi_state	    state;		/* Current state */
+					/* data buffering */
+  size_t	    data_offset;	/* Start of real data */
+  char		   *data;		/* Buffered data */
+  size_t	    datasize;		/* #bytes buffered */
+  size_t	    dataallocated;	/* #bytes allocated */
+  size_t	    chunked_written;	/* #bytes written in chunked encoding */
+  int64_t	    id;			/* Identifier */
+  unsigned int	    magic;		/* CGI_MAGIC */
+} cgi_context;
+
+
+static atom_t ATOM_chunked;		/* chunked */
+
 #include "http_error.c"
 #include "http_chunked.c"
 #include "cgi_stream.c"
