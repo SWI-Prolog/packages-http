@@ -204,7 +204,7 @@ chunked_write_chunk(IOSTREAM *s, const chunked_metadata *md, char *buf, size_t s
 	   !PL_get_chars(arg, &k, CVT_ATOMIC|CVT_EXCEPTION|REP_ISO_LATIN_1) ||
 	   !PL_get_arg(2, head, arg) ||
 	   !PL_get_chars(arg, &v, CVT_ATOMIC|CVT_EXCEPTION|REP_ISO_LATIN_1) ||
-	   Sfprintf(s, "; %s=%s", k, v) < 0 )
+	   Sfprintf(s, ";%s=%s", k, v) < 0 )
       { term_t ex;
 
 	if ( (ex=PL_exception(0)) )
