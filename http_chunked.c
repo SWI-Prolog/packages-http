@@ -281,7 +281,7 @@ chunked_write_trailer(IOSTREAM *s, const chunked_metadata *md)
 	PL_STRINGS_MARK();
 	if ( !PL_atom_mbchars(tr->key, NULL, &k, REP_UTF8) ||
 	     !PL_atom_mbchars(tr->value, NULL, &v, REP_UTF8) ||
-	     Sfprintf(s, "%Us: %Us\r\n", k, v) < 0 )
+	     SfprintfX(s, "%Us: %Us\r\n", k, v) < 0 )
 	  rc = -1;
 	PL_STRINGS_RELEASE();
       }
