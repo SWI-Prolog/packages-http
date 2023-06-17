@@ -97,13 +97,25 @@ paths that begin with the registed location of the handler.
 %   @see    The hookable predicate file_mime_type/2 is used to
 %           determine the ``Content-type`` from the file name.
 
+remove_leading_slash(Atom, Res) :-
+    sub_atom(Atom, 0, 1, _, /),
+    !,
+    sub_atom(Atom, 1, _, 0, Res).
+remove_leading_slash(Atom, Atom).
+
 http_reply_from_files(Dir, Options, Request) :-
     (   memberchk(path_info(PathInfo), Request)
     ->  true
     ;   PathInfo = ''
     ),
-    http_safe_file(PathInfo, []),
-    locate_file(Dir, PathInfo, Result, ResultType, Options),
+    remove_leading_slash(PathInfo, UrlPath),
+    /*
+        FIXME: http_safe_file should check for the entire path
+        that is directory_file_path(Dir, UrlPath, This).
+        But was left for backward compatibility
+    */
+    http_safe_file(UrlPath, []),
+    locate_file(Dir, UrlPath, Result, ResultType, Options),
     !,
     reply(ResultType, Result, Options, Request).
 
@@ -116,13 +128,13 @@ reply(redirect, _, _, Request) :-
     atom_concat(Path, /, NewLocation),
     http_redirect(moved_temporary, NewLocation, Request).
 
-locate_file(Dir, PathInfo, Result, ResultType, Options) :-
+locate_file(Dir, UrlPath, Result, ResultType, Options) :-
     absolute_file_name(Dir, DirPath,
                        [ file_type(directory),
                          access(read),
                          solutions(all)
                        ]),
-    directory_file_path(DirPath, PathInfo, Path),
+    directory_file_path(DirPath, UrlPath, Path),
     (   exists_file(Path)
     ->  ResultType = file,
         Result = Path
