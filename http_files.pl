@@ -87,6 +87,15 @@ paths that begin with the registed location of the handler.
 %   it is possible to  override  more   specific  locations  in  the
 %   hierarchy using http_handler/3 with a longer path-specifier.
 %
+%   When  using  http_handler/3  to  bind  this  predicate  to  an  HTTP
+%   location, make sure it is bound to a   location  that ends in a `/`.
+%   When  using  http:location/3  to  define   symbolic  names  to  HTTP
+%   locations this is written as
+%
+%      :- http_handler(aliasname(.),
+%                      http_reply_from_files(srcdir, []),
+%                      [prefix]).
+%
 %   @param  Dir is either a directory or an path-specification as
 %           used by absolute_file_name/3.  This option provides
 %           great flexibility in (re-)locating the physical files
