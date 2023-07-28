@@ -950,6 +950,12 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %     Post the result of xml_write/3 using the given Mime-type
 %     and an empty option list to xml_write/3.
 %
+%     * =|json(+Atom)|= Posting a JSON query and processing the JSON reply (or any other reply 
+%     understood by http_read_data/3) is simple as =|http_post(URL, json(Term), Reply, [])|= , 
+%     where Term is a JSON term as described in json.pl and reply is of the same format if
+%     the server replies with JSON, when using module =|:- use_module(library(http/http_json))|=. 
+%     Note that the module is used in both http server and http client, see the [module docs](library(http/http_json)).
+%
 %     * xml(+Type, +Term, +Options)
 %     Post the result of xml_write/3 using the given Mime-type
 %     and option list for xml_write/3.
@@ -982,7 +988,7 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %
 %     * atom(+Type, +Atom)
 %     Send Atom using the indicated MIME-type.
-%
+%     
 %     * cgi_stream(+Stream, +Len) Read the input from Stream which,
 %     like CGI data starts with a partial HTTP header. The fields of
 %     this header are merged with the provided HdrExtra fields. The
