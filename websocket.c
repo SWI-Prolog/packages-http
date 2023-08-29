@@ -436,7 +436,7 @@ ws_next_header(ws_context *ctx, int c)
   }
 
   if ( masked )
-    mask = read_int(ctx->stream, 4);
+    mask = (int)read_int(ctx->stream, 4);
   else
     mask = 0;
 
@@ -511,7 +511,7 @@ ws_read(void *handle, char *buf, size_t bsize)
 
 continuation:
   left = ctx->payload_len - ctx->payload_read;
-  size = (left < bsize ? left : bsize);
+  size = (left < (int64_t)bsize ? left : bsize);
 
   if ( size == 0 )
   { if ( ctx->fin )
