@@ -230,11 +230,11 @@ http_upgrade_to_websocket(Goal, Options, Request) :-
     debug(websocket(open), 'Subprotocol: ~p', [SubProtocol]),
     http_switch_protocol(
         open_websocket(Goal, SubProtocol, Options),
-        [ header([ upgrade(websocket),
-                   connection('Upgrade'),
-                   sec_websocket_accept(AcceptKey)
-                 | ExtraHeaders
-                 ])
+        [ headers([ upgrade(websocket),
+                    connection('Upgrade'),
+                    sec_websocket_accept(AcceptKey)
+                  | ExtraHeaders
+                  ])
         ]).
 
 choose_subprotocol(Info, Options, SubProtocol, ExtraHeaders) :-

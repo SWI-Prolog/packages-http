@@ -96,7 +96,9 @@
                        headers(list)
                      ]).
 :- predicate_options(http_safe_file/2, 2, [unsafe(boolean)]).
-:- predicate_options(http_switch_protocol/2, 2, []).
+:- predicate_options(http_switch_protocol/2, 2,
+                     [ headers(list)
+                     ]).
 
 /** <module> Dispatch requests in the HTTP server
 

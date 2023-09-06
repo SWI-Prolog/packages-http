@@ -66,8 +66,9 @@
     http:post_data_hook/3.
 
 :- predicate_options(http_get/3, 3,
-                     [ pass_to(http_open/3, 3),
-                       pass_to(http_read_data/3, 3)
+                     [ pass_to(http_open:http_open/3, 3),
+                       pass_to(http_open:http_read_data/3, 3),
+                       pass_to(http_json:http_read_json/3, 3)
                      ]).
 :- predicate_options(http_delete/3, 3, [pass_to(http_get/3, 3)]).
 :- predicate_options(http_post/4, 4, [pass_to(http_get/3, 3)]).
