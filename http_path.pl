@@ -38,13 +38,13 @@
           [ http_absolute_location/3,   % +Spec, -Path, +Options
             http_clean_location_cache/0
           ]).
+:- use_module(library(debug),[debug/3]).
 :- if(exists_source(library(http/http_host))).
 :- autoload(library(http/http_host),[http_public_host/4]).
 :- export(http_absolute_uri/2).         % +Spec, -URI
 :- endif.
 :- autoload(library(apply),[exclude/3]).
 :- autoload(library(broadcast),[listen/2]).
-:- autoload(library(debug),[debug/3]).
 :- autoload(library(error),
 	    [must_be/2,existence_error/2,instantiation_error/1]).
 :- autoload(library(lists),[reverse/2,append/3]).
