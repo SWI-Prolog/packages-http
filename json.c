@@ -128,7 +128,7 @@ json_read_number(term_t stream, term_t c0, term_t number)
     }
 
     rc = ( (tmp = PL_new_term_ref()) &&
-	   PL_chars_to_term(t.t, tmp) &&
+	   PL_put_term_from_chars(tmp, REP_ISO_LATIN_1|CVT_EXCEPTION, t.o-t.t-1, t.t) &&
 	   PL_is_number(tmp) &&
 	   PL_unify(tmp, number) );
 
@@ -136,10 +136,8 @@ json_read_number(term_t stream, term_t c0, term_t number)
   }
   free_text(&t);
 
-  if ( !rc )
-  { PL_clear_exception();
+  if ( !rc && !PL_exception(0) )
     rc = PL_syntax_error("illegal_number", in);
-  }
 
   PL_release_stream(in);
 
