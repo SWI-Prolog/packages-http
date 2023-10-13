@@ -69,7 +69,7 @@
 :- autoload(mimetype,[file_mime_type/2]).
 :- autoload(library(apply),[maplist/2]).
 :- autoload(library(base64),[base64/2]).
-:- autoload(library(debug),[debug/3,debugging/1]).
+:- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),[syntax_error/1,domain_error/2]).
 :- autoload(library(lists),[append/3,member/2,select/3,delete/3]).
 :- autoload(library(memfile),

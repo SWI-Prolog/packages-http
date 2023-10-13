@@ -37,7 +37,7 @@
             cookie_remove_all_clients/0,
             cookie_current_cookie/4     % ?ClientId, ?Name, ?Value, ?Options
           ]).
-:- autoload(library(debug),[debug/3]).
+:- use_module(library(debug),[debug/3]).
 :- autoload(library(option),[option/3]).
 :- autoload(library(http/http_header),[http_parse_header_value/3]).
 

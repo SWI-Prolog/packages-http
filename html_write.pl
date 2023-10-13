@@ -73,7 +73,7 @@
           ]).
 :- use_module(html_quasiquotations, [html/4]).
 :- autoload(library(apply),[maplist/3,maplist/4]).
-:- autoload(library(debug),[debug/3]).
+:- use_module(library(debug),[debug/3]).
 :- autoload(library(error),
 	    [must_be/2,domain_error/2,instantiation_error/1]).
 :- autoload(library(lists),

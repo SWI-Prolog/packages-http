@@ -43,7 +43,7 @@
 :- autoload(library(aggregate),[aggregate_all/3]).
 :- autoload(library(apply),[foldl/4,include/3]).
 :- autoload(library(base64),[base64/3]).
-:- autoload(library(debug),[debug/3,debugging/1]).
+:- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),
 	    [ domain_error/2, must_be/2, existence_error/2, instantiation_error/1
 	    ]).
