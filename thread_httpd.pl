@@ -450,12 +450,14 @@ http_current_worker(Port, ThreadID) :-
 %   posting them to the queue of workers.
 
 accept_server(Goal, Initiator, Options) :-
-    catch(accept_server2(Goal, Initiator, Options), http_stop, true),
+    Ex = http_stop(Stopper),
+    catch(accept_server2(Goal, Initiator, Options), Ex, true),
     thread_self(Thread),
-    debug(http(stop), '[~p]: accept server received http_stop', [Thread]),
+    debug(http(stop), '[~p]: accept server received ~p', [Thread, Ex]),
     retract(current_server(_Port, _, Thread, Queue, _Scheme, _StartTime)),
     close_pending_accepts(Queue),
-    close_server_socket(Options).
+    close_server_socket(Options),
+    thread_send_message(Stopper, http_stopped).
 
 accept_server2(Goal, Initiator, Options) :-
     thread_send_message(Initiator, server_started),
@@ -488,7 +490,7 @@ send_to_worker(Queue, Client, Goal, Peer) :-
     debug(http(connection), 'New HTTP connection from ~p', [Peer]),
     thread_send_message(Queue, tcp_client(Client, Goal, Peer)).
 
-accept_rethrow_error(http_stop).
+accept_rethrow_error(http_stop(_)).
 accept_rethrow_error('$aborted').
 
 
@@ -539,8 +541,12 @@ http_stop_server(Port, _Options) :-
     current_server(Port, _, Thread, Queue, _Scheme, _Start),
     retractall(queue_options(Queue, _)),
     debug(http(stop), 'Signalling HTTP server thread ~p to stop', [Thread]),
-    thread_signal(Thread, throw(http_stop)),
-    catch(connect(localhost:Port), _, true),
+    thread_self(Stopper),
+    thread_signal(Thread, throw(http_stop(Stopper))),
+    (   thread_get_message(Stopper, http_stopped, [timeout(0.1)])
+    ->  true
+    ;   catch(connect(localhost:Port), _, true)
+    ),
     thread_join(Thread, _0Status),
     debug(http(stop), 'Joined HTTP server thread ~p (~p)', [Thread, _0Status]),
     message_queue_destroy(Queue).
