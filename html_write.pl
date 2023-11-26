@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2020, University of Amsterdam
+    Copyright (c)  2002-2023, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,7 @@
 :- module(html_write,
           [ reply_html_page/2,          % :Head, :Body
             reply_html_page/3,          % +Style, :Head, :Body
+            reply_html_partial/1,       % +HTML
 
                                         % Basic output routines
             page//1,                    % :Content
@@ -1348,9 +1350,12 @@ html_print_length([H|T], L0, L) :-
 %!  reply_html_page(:Head, :Body) is det.
 %!  reply_html_page(+Style, :Head, :Body) is det.
 %
-%   Provide the complete reply as required  by http_wrapper.pl for a
-%   page constructed from Head and   Body. The HTTP =|Content-type|=
-%   is provided by html_current_option/1.
+%   Provide the complete reply as required by http_wrapper.pl for a page
+%   constructed  from  Head  and  Body.  The  HTTP  =|Content-type|=  is
+%   provided by html_current_option/1.
+%
+%   @see  reply_html_partial/1  to  avoid  adding   a  ``DOCTYPE``,  and
+%   required outer HTML elements such as ``<html>``.
 
 reply_html_page(Head, Body) :-
     reply_html_page(default, Head, Body).
@@ -1360,6 +1365,24 @@ reply_html_page(Style, Head, Body) :-
     forall(html_header_hook(Style), true),
     format('Content-type: ~w~n~n', [Type]),
     print_html(HTML).
+
+
+%!  reply_html_partial(+HTML) is det.
+%
+%   Reply with partial HTML  document.  The   reply  only  contains  the
+%   element from HTML, i.e., this predicate   does not add a ``DOCTYPE``
+%   header, ``<html>``, ``<head>`` or  ``<body>``.   It  is intended for
+%   JavaScript handlers that request a partial  document and insert that
+%   somewhere into the existing page DOM.
+%
+%   @see reply_html_page/3 to reply with a complete (valid) HTML page.
+%   @since 9.1.20
+
+reply_html_partial(HTML) :-
+    html_current_option(content_type(Type)),
+    phrase(html(HTML), Tokens),
+    format('Content-type: ~w~n~n', [Type]),
+    print_html(Tokens).
 
 
 %!  html_header_hook(+Style) is nondet.

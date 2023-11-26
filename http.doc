@@ -1397,6 +1397,14 @@ Redefining the \elem{head} can be used to pull in scripts, but
 typically html_requires//1 provides a more modular approach for
 pulling scripts and CSS-files.
 
+    \predicate{reply_html_partial}{1}{+HTML}
+Reply with partial HTML document. The reply only contains the element
+from HTML, i.e., this predicate does not add a \const{DOCTYPE} header,
+\elem{html}, \elem{head} or \elem{body}. It is intended for JavaScript
+handlers that request a partial document and insert that somewhere into
+the existing page DOM. See reply_html_page/3 to reply with a complete
+(valid) HTML page.
+
     \predicate{print_html}{1}{+List}
 Print the token list to the Prolog current output stream.
 
