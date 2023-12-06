@@ -689,7 +689,7 @@ The functionality of the server should be defined in one Prolog file (of
 course this file is allowed to load other files). Depending on the
 wanted server setup this `body' is wrapped into a small Prolog file
 combining the body with the appropriate server interface. There are
-three supported server-setups. For most applications we advice the
+three supported server-setups. For most applications we advise the
 multi-threaded server. Examples of this server architecture are the
 \href{http://www.swi-prolog.org/packages/pldoc.html}{PlDoc} documentation
 system and the \href{http://www.swi-prolog.org/packages/SeRQL/}{SeRQL}
@@ -1712,7 +1712,7 @@ and \arg{Arg} as \const{/bin/sh} and he has an uncontrolled shell!
     \item [URL Locations]
 With an application in mind, it is tempting to make all URL
 locations short and directly connected to the root (\const{/}). This is
-\emph{not} a good idea. It is adviced to have all locations in a server
+\emph{not} a good idea. It is advised to have all locations in a server
 below a directory with an informative name. Consider to make the root
 location something that can be changed using a global setting.
 
@@ -1730,6 +1730,11 @@ location something that can be changed using a global setting.
 Debugging multi-threaded applications is possible using the graphical
 debugger. This implies requires that the xpce extension package must be
 installed.  Spy-points may be placed using tspy/1.
+
+    \item [URL/URI manipulation]
+Sometimes an http_handler/3 needs to inspect or normalize the URL.
+There are various utility predicates in \pllib{uri}, such as uri_components/2,
+uri_data/4, uri_edit/3, uri_nomalized/2, etc.
 \end{itemlist}
 
 \section{Status}
