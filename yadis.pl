@@ -40,6 +40,7 @@
 :- use_module(library(xpath)).
 :- use_module(library(uri)).
 :- use_module(library(sgml)).
+:- use_module(library(debug)).
 
 /** <module> Yadis discovery
 
