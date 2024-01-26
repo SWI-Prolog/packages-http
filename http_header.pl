@@ -64,7 +64,9 @@
 	    [ print_html/2, print_html/1, page/4, html/3,
 	      html_print_length/2
 	    ]).
+:- if(exists_source(http_exception)).
 :- autoload(http_exception,[map_exception_to_http_status/4]).
+:- endif.
 :- autoload(mimepack,[mime_pack/3]).
 :- autoload(mimetype,[file_mime_type/2]).
 :- autoload(library(apply),[maplist/2]).
@@ -248,11 +250,17 @@ http_reply(Data, Out, HdrExtra, _Context, Request, Code) :-
         throw(error(http_write_short(Data, Sent), _))
     ;   E = error(timeout_error(write, _), _)
     ->  throw(E)
-    ;   map_exception_to_http_status(E, Status, NewHdr, NewContext),
-        http_status_reply(Status, Out, NewHdr, NewContext, Request, Code)
+    ;   map_exception_to_http_status(E, Status, NewHdr, NewContext)
+    ->  http_status_reply(Status, Out, NewHdr, NewContext, Request, Code)
+    ;   throw(E)
     ).
 http_reply(Status, Out, HdrExtra, Context, Request, Code) :-
     http_status_reply(Status, Out, HdrExtra, Context, Request, Code).
+
+:- if(\+current_predicate(map_exception_to_http_status/4)).
+map_exception_to_http_status(_E, _Status, _NewHdr, _NewContext) :-
+    fail.
+:- endif.
 
 :- meta_predicate
     if_no_head(0, +).
