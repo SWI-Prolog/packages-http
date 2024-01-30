@@ -41,7 +41,11 @@
 :- use_module(library(lists)).
 :- use_module(library(option)).
 
-:- predicate_options(http_reply_from_files/3, 2, [indexes(list(atom))]).
+:- predicate_options(http_reply_from_files/3, 2,
+                     [ indexes(list(atom)),
+                       pass_to(http_dispatch:http_reply_file/3, 2),
+                       pass_to(http_dirindex:http_reply_dirindex/3, 2)
+                     ]).
 
 /** <module> Serve plain files from a hierarchy
 
