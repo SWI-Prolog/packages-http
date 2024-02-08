@@ -205,19 +205,17 @@ session_option(samesite, oneof([none,lax,strict])).
 %       Prefix to use for all HTTP session related keys.  Default is
 %       `'swipl:http:session'`
 
-http_set_session_options([]).
-http_set_session_options([H|T]) :-
+http_set_session_options([]) => true.
+http_set_session_options([H|T]) =>
     http_set_session_option(H),
     http_set_session_options(T).
 
-http_set_session_option(Option) :-
-    functor(Option, Name, Arity),
-    arg(1, Option, Value),
+http_set_session_option(Option), Option =.. [Name,Value] =>
     (   session_option(Name, Type)
     ->  must_be(Type, Value)
     ;   domain_error(http_session_option, Option)
     ),
-    functor(Free, Name, Arity),
+    functor(Free, Name, 1),
     (   clause(session_setting(Free), _, Ref)
     ->  (   Free \== Value
         ->  asserta(session_setting(Option)),
