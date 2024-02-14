@@ -1694,6 +1694,10 @@ keep_alive_error(error(io_error(_,_), _), StreamPair) :-
     close(StreamPair, [force(true)]),
     debug(http(connection), 'IO error on Keep-alive connection', []),
     fail.
+keep_alive_error(error(existence_error(http_reply, _URL), _), _) :-
+    !,
+    debug(http(connection), 'Got empty reply on Keep-alive connection', []),
+    fail.
 keep_alive_error(Error, StreamPair) :-
     close(StreamPair, [force(true)]),
     throw(Error).
