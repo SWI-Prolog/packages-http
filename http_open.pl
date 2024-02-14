@@ -1555,6 +1555,13 @@ http_scheme(https).
 %!  consider_keep_alive(+HeaderLines, +Parts, +Host,
 %!                      +Stream0, -Stream,
 %!                      +Options) is det.
+%
+%   If we have agree on a Keep-alive   connection, return a range stream
+%   rather than the original stream. We also  use the content length and
+%   a range stream if we are dealing   with an HTTPS connection. This is
+%   because not all servers seem to  complete the TLS closing handshake.
+%   If the server does not complete  this   we  receive  a TLS handshake
+%   error on end-of-file, causing the read to fail.
 
 consider_keep_alive(Lines, Parts, Host, StreamPair, In, Options) :-
     option(connection(Asked), Options),
@@ -1570,6 +1577,15 @@ consider_keep_alive(Lines, Parts, Host, StreamPair, In, Options) :-
     stream_range_open(In0, In,
                       [ size(Bytes),
                         onclose(keep_alive(StreamPair, HostPort))
+                      ]).
+consider_keep_alive(Lines, Parts, _Host, StreamPair, In, _Options) :-
+    memberchk(scheme(https), Parts),
+    content_length(Lines, Bytes),
+    !,
+    stream_pair(StreamPair, In0, _),
+    stream_range_open(In0, In,
+                      [ size(Bytes),
+                        onclose(close_range(StreamPair))
                       ]).
 consider_keep_alive(_, _, _, Stream, Stream, _).
 
@@ -1603,6 +1619,10 @@ keep_alive(StreamPair, _, _, _) :-
               print_message(warning, E))
     ;   close(StreamPair, [force(true)])
     ).
+
+:- public close_range/3.
+close_range(StreamPair, _Raw, _BytesLeft) :-
+    close(StreamPair, [force(true)]).
 
 %!  read_incomplete(+In, +Left) is semidet.
 %
