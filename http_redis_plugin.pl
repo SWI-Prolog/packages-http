@@ -183,12 +183,21 @@ http_session:hook(current_session(SessionID, Data)) :-
     number(Time),
     get_time(Now),
     Idle is Now - Time,
-    (   Data = peer(Peer),
-        redis(DB, hget(Key, peer), PeerS),
-        peer_string(Peer, PeerS)
-    ;   Data = idle(Idle)
-    ;   non_reserved_property(Data),
-        http_session:hook(session_data(SessionID, Data))
+    (   nonvar(Data)
+    ->  (   Data = peer(Peer)
+        ->  redis(DB, hget(Key, peer), PeerS),
+            peer_string(Peer, PeerS)
+        ;   Data = idle(Idle0)
+        ->  Idle0 = Idle
+        ;   http_session:hook(session_data(SessionID, Data))
+        )
+    ;   (   Data = peer(Peer),
+            redis(DB, hget(Key, peer), PeerS),
+            peer_string(Peer, PeerS)
+        ;   Data = idle(Idle)
+        ;   non_reserved_property(Data),
+            http_session:hook(session_data(SessionID, Data))
+        )
     ).
 http_session:hook(close_session(SessionID)) :-
     gc_session(SessionID).
