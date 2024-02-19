@@ -223,6 +223,35 @@ json_put_code(IOSTREAM *out, int pc, int c)
 #undef TRYPUTC
 #define TRYPUTC(c, s) if ( Sputcode(c, s) < 0 ) { rc = FALSE; goto out; }
 
+#define IS_UTF16_LEAD(c)      ((c) >= 0xD800 && (c) <= 0xDBFF)
+#define IS_UTF16_TRAIL(c)     ((c) >= 0xDC00 && (c) <= 0xDFFF)
+
+static inline int
+utf16_decode(int lead, int trail)
+{ int l = (lead-0xD800) << 10;
+  int t = (trail-0xDC00);
+
+  return l+t+0x10000;
+}
+
+static inline const wchar_t*
+get_wchar(const wchar_t *in, int *chr)
+{
+#if SIZEOF_WCHAR_T == 2
+  int c = *in++;
+  if ( IS_UTF16_LEAD(c) && IS_UTF16_TRAIL(in[0]) )
+  { *chr = utf16_decode(c, in[0]);
+    in++;
+  } else
+  { *chr = c;
+  }
+  return in;
+#else
+  *chr = *in++;
+  return in;
+#endif
+}
+
 static foreign_t
 json_write_string(term_t stream, term_t text)
 { IOSTREAM *out;
@@ -250,15 +279,12 @@ json_write_string(term_t stream, term_t text)
     }
     TRYPUTC('"', out);
   } else if ( PL_get_wchars(text, &len, &w, CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
-  { const pl_wchar_t *wp;
-    size_t todo;
-    int pc = 0;
+  { const wchar_t *wp=w, *we=w+len;
+    int pc=0, c;
 
     TRYPUTC('"', out);
-    for(todo=len, wp=w; todo-- > 0; wp++)
-    { int c = *wp;
-
-      if ( json_put_code(out, pc, c) < 0 )
+    while((wp = get_wchar(wp, &c)) <= we)
+    { if ( json_put_code(out, pc, c) < 0 )
       { rc = FALSE; goto out;
       }
       pc = c;
