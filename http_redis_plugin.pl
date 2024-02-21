@@ -34,12 +34,12 @@
 
 :- module(http_redis_plugin, []).
 :- use_module(library(http/http_session)).
-:- autoload(library(apply), [maplist/3]).
 :- autoload(library(error), [must_be/2]).
 :- autoload(library(lists), [member/2]).
-:- autoload(library(redis), [redis/3]).
+:- autoload(library(redis), [redis/3, redis/2, redis_get_list/4, redis_zscan/4]).
 :- autoload(library(broadcast), [broadcast/1]).
 :- use_module(library(debug), [debug/3]).
+:- autoload(library(socket), [ip_name/2]).
 
 /** <module> Hook session management to use Redis
 
