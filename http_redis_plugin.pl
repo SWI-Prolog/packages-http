@@ -90,6 +90,7 @@ find:
     http_session:session_option/2.
 
 http_session:session_option(redis_db, atom).
+http_session:session_option(redis_ro, atom).
 http_session:session_option(redis_prefix, atom).
 
 http_session:hooked :-
@@ -115,17 +116,17 @@ http_session:hooked :-
 
 
 http_session:hook(assert_session(SessionID, Peer)) :-
-    session_db(SessionID, DB, Key),
+    session_db(rw, SessionID, DB, Key),
     http_session:session_setting(timeout(Timeout)),
     asserta(peer(SessionID, Peer)),
-    peer_string(Peer, PeerS),
+    ip_name(Peer, PeerS),
     get_time(Now),
     redis(DB, hset(Key,
                    peer, PeerS,
                    last_used, Now)),
     expire(SessionID, Timeout).
 http_session:hook(set_session_option(SessionID, Setting)) :-
-    session_db(SessionID, DB, Key),
+    session_db(rw, SessionID, DB, Key),
     Setting =.. [Name,Value],
     redis(DB, hset(Key, Name, Value as prolog)),
     (   Setting = timeout(Timeout)
@@ -133,7 +134,7 @@ http_session:hook(set_session_option(SessionID, Setting)) :-
     ;   true
     ).
 http_session:hook(get_session_option(SessionID, Setting)) :-
-    session_db(SessionID, DB, Key),
+    session_db(ro, SessionID, DB, Key),
     Setting =.. [Name,Value],
     redis(DB, hget(Key, Name), Value).
 http_session:hook(active_session(SessionID, Peer, LastUsed)) :-
@@ -141,9 +142,9 @@ http_session:hook(active_session(SessionID, Peer, LastUsed)) :-
         peer(SessionID, Peer0)
     ->  LastUsed = LastUsed0,
         Peer = Peer0
-    ;   session_db(SessionID, DB, Key),
+    ;   session_db(ro, SessionID, DB, Key),
         redis(DB, hget(Key, peer), PeerS),
-        peer_string(Peer, PeerS),
+        ip_name(Peer, PeerS),
         redis(DB, hget(Key, last_used), LastUsed as number),
         update_session(SessionID, LastUsed, _, Peer)
     ).
@@ -151,7 +152,7 @@ http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
     LastUsed is floor(Now/10)*10,
     update_session(SessionID, LastUsed, Updated, _Peer),
     (   Updated == true
-    ->  session_db(SessionID, DB, Key),
+    ->  session_db(rw, SessionID, DB, Key),
         redis(DB, hset(Key, last_used, Now)),
         Expire is Now+Timeout,
         expire(SessionID, Expire)
@@ -159,14 +160,14 @@ http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
     ).
 http_session:hook(asserta(session_data(SessionID, Data))) :-
     must_be(ground, Data),
-    session_data_db(SessionID, DB, Key),
+    session_data_db(rw, SessionID, DB, Key),
     redis(DB, lpush(Key, Data as prolog)).
 http_session:hook(assertz(session_data(SessionID, Data))) :-
     must_be(ground, Data),
-    session_data_db(SessionID, DB, Key),
+    session_data_db(rw, SessionID, DB, Key),
     redis(DB, rpush(Key, Data as prolog)).
 http_session:hook(retract(session_data(SessionID, Data))) :-
-    session_data_db(SessionID, DB, Key),
+    session_data_db(rw, SessionID, DB, Key),
     redis_get_list(DB, Key, 10, List),
     member(Data, List),
     redis(DB, lrem(Key, 1, Data as prolog)).
@@ -174,11 +175,11 @@ http_session:hook(retractall(session_data(SessionID, Data))) :-
     forall(http_session:hook(retract(session_data(SessionID, Data))),
            true).
 http_session:hook(session_data(SessionID, Data)) :-
-    session_data_db(SessionID, DB, Key),
+    session_data_db(rw, SessionID, DB, Key),
     redis_get_list(DB, Key, 10, List),
     member(Data, List).
 http_session:hook(current_session(SessionID, Data)) :-
-    session_db(SessionID, DB, Key),
+    session_db(ro, SessionID, DB, Key),
     redis(DB, hget(Key, last_used), Time as number),
     number(Time),
     get_time(Now),
@@ -186,14 +187,14 @@ http_session:hook(current_session(SessionID, Data)) :-
     (   nonvar(Data)
     ->  (   Data = peer(Peer)
         ->  redis(DB, hget(Key, peer), PeerS),
-            peer_string(Peer, PeerS)
+            ip_name(Peer, PeerS)
         ;   Data = idle(Idle0)
         ->  Idle0 = Idle
         ;   http_session:hook(session_data(SessionID, Data))
         )
     ;   (   Data = peer(Peer),
             redis(DB, hget(Key, peer), PeerS),
-            peer_string(Peer, PeerS)
+            ip_name(Peer, PeerS)
         ;   Data = idle(Idle)
         ;   non_reserved_property(Data),
             http_session:hook(session_data(SessionID, Data))
@@ -250,11 +251,11 @@ update_peer(_, _) =>
 expire(SessionID, Timeout) :-
     get_time(Now),
     Time is Now+Timeout,
-    session_expire_db(DB, Key),
+    session_expire_db(rw, DB, Key),
     redis(DB, zadd(Key, Time, SessionID)).
 
 gc_sessions :-
-    session_expire_db(DB, Key),
+    session_expire_db(ro, DB, Key),
     get_time(Now),
     redis(DB, zrangebyscore(Key, "-inf", Now), TimedOut as atom),
     forall(member(SessionID, TimedOut),
@@ -267,15 +268,16 @@ gc_session(_) :-
     !.
 gc_session(SessionID) :-
     debug(http_session(gc), 'GC session ~p', [SessionID]),
-    session_db(SessionID, DB, SessionKey),
-    session_expire_db(DB, TMOKey),
+    session_db(ro, SessionID, DB, SessionKey),
+    session_expire_db(rw, DB, TMOKey),
     redis(DB, zrem(TMOKey, SessionID)),
     redis(DB, hget(SessionKey, peer), PeerS),
-    peer_string(Peer, PeerS),
+    ip_name(Peer, PeerS),
     broadcast(http_session(end(SessionID, Peer))),
-    redis(DB, del(SessionKey)),
-    session_data_db(SessionID, DB, DataKey),
-    redis(DB, del(DataKey)),
+    session_db(rw, SessionID, DBw, SessionKey),
+    redis(DBw, del(SessionKey)),
+    session_data_db(rw, SessionID, DBw, DataKey),
+    redis(DBw, del(DataKey)),
     retractall(peer(SessionID, _)),
     retractall(last_used(SessionID, _)).
 
@@ -284,35 +286,29 @@ gc_session(SessionID) :-
 		 *             UTIL		*
 		 *******************************/
 
-peer_string(ip(A,B,C,D), String) :-
-    nonvar(String),
-    !,
-    split_string(String, ".", "", List),
-    maplist(number_string, [A,B,C,D], List).
-peer_string(ip(A,B,C,D), String) :-
-    atomics_to_string([A,B,C,D], ".", String).
+%!  session_db(+RW, ?SessionID, -DB, -Key) is det.
 
-session_db(SessionID, DB, Key) :-
+session_db(RW, SessionID, DB, Key) :-
     nonvar(SessionID),
     !,
-    http_session:session_setting(redis_db(DB)),
+    redis_db(RW, DB),
     key_prefix(Prefix),
     atomics_to_string([Prefix,session,SessionID], :, Key).
-session_db(SessionID, DB, Key) :-
-    session_expire_db(DB, TMOKey),
+session_db(RW, SessionID, DB, Key) :-
+    session_expire_db(RW, DB, TMOKey),
     redis_zscan(DB, TMOKey, Pairs, []),
     member(SessionIDS-_Timeout, Pairs),
     atom_string(SessionID, SessionIDS),
     key_prefix(Prefix),
     atomics_to_string([Prefix,session,SessionID], :, Key).
 
-session_expire_db(DB, Key) :-
-    http_session:session_setting(redis_db(DB)),
+session_expire_db(RW, DB, Key) :-
+    redis_db(RW, DB),
     key_prefix(Prefix),
     atomics_to_string([Prefix,expire], :, Key).
 
-session_data_db(SessionID, DB, Key) :-
-    http_session:session_setting(redis_db(DB)),
+session_data_db(RW, SessionID, DB, Key) :-
+    redis_db(RW, DB),
     key_prefix(Prefix),
     atomics_to_string([Prefix,data,SessionID], :, Key).
 
@@ -320,3 +316,10 @@ key_prefix(Prefix) :-
     http_session:session_setting(redis_prefix(Prefix)),
     !.
 key_prefix('swipl:http:sessions').
+
+redis_db(ro, DB) :-
+    http_session:session_setting(redis_ro(DB0)),
+    !,
+    DB = DB0.
+redis_db(_, DB) :-
+    http_session:session_setting(redis_db(DB)).

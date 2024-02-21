@@ -201,6 +201,9 @@ session_option(samesite, oneof([none,lax,strict])).
 %
 %     - redis_db(+DB)
 %       Alias name of the redis database to access.  See redis_server/3.
+%     - redis_ro(+DB)
+%       Alias name of the redis database for read-only access. See
+%       redis_server/3.
 %     - redis_prefix(+Atom)
 %       Prefix to use for all HTTP session related keys.  Default is
 %       `'swipl:http:session'`
