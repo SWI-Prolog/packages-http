@@ -154,8 +154,7 @@ http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
     (   Updated == true
     ->  session_db(rw, SessionID, DB, Key),
         redis(DB, hset(Key, last_used, Now)),
-        Expire is Now+Timeout,
-        expire(SessionID, Expire)
+        expire(SessionID, Timeout)
     ;   true
     ).
 http_session:hook(asserta(session_data(SessionID, Data))) :-
@@ -250,14 +249,15 @@ update_peer(_, _) =>
 
 expire(SessionID, Timeout) :-
     get_time(Now),
-    Time is Now+Timeout,
+    Time is integer(Now+Timeout),
     session_expire_db(rw, DB, Key),
     redis(DB, zadd(Key, Time, SessionID)).
 
 gc_sessions :-
     session_expire_db(ro, DB, Key),
     get_time(Now),
-    redis(DB, zrangebyscore(Key, "-inf", Now), TimedOut as atom),
+    End is integer(Now),
+    redis(DB, zrangebyscore(Key, "-inf", End), TimedOut as atom),
     forall(member(SessionID, TimedOut),
            gc_session(SessionID)).
 
