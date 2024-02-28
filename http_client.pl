@@ -242,7 +242,9 @@ http_patch(URL, In, Out, Options) :-
 http_read_data(Fields, Data, QOptions) :-
     meta_options(is_meta, QOptions, Options),
     memberchk(input(In), Fields),
-    (   http_read_data(In, Fields, Data, Options)
+    (   catch(http_read_data(In, Fields, Data, Options),
+              error(Formal,_),
+              throw(error(Formal, context(_, in_http_request))))
     ->  true
     ;   throw(error(failed(http_read_data), _))
     ).
