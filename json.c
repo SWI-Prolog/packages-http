@@ -223,6 +223,7 @@ json_put_code(IOSTREAM *out, int pc, int c)
 #undef TRYPUTC
 #define TRYPUTC(c, s) if ( Sputcode(c, s) < 0 ) { rc = FALSE; goto out; }
 
+#if SIZEOF_WCHAR_T == 2
 #define IS_UTF16_LEAD(c)      ((c) >= 0xD800 && (c) <= 0xDBFF)
 #define IS_UTF16_TRAIL(c)     ((c) >= 0xDC00 && (c) <= 0xDFFF)
 
@@ -233,6 +234,7 @@ utf16_decode(int lead, int trail)
 
   return l+t+0x10000;
 }
+#endif
 
 static inline const wchar_t*
 get_wchar(const wchar_t *in, int *chr)
