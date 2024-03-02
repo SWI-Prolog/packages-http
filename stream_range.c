@@ -291,5 +291,6 @@ install_stream_range()
 { ATOM_size    = PL_new_atom("size");
   ATOM_onclose = PL_new_atom("onclose");
 
-  PL_register_foreign("stream_range_open",  3, pl_stream_range_open,  0);
+  PL_register_foreign("stream_range_open", 3, pl_stream_range_open,
+		      PL_FA_META, "+-:");
 }
