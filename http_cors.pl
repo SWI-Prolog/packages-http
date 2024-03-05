@@ -35,7 +35,7 @@
 
 :- module(http_cors,
           [ cors_enable/0,
-            cors_enable/2                       % +Requesy, +Options
+            cors_enable/2                       % +Request, +Options
           ]).
 :- use_module(library(settings)).
 
