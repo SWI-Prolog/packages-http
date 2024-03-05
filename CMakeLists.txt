@@ -50,7 +50,7 @@ set(HTTP_SERVER_PL_FILES
     http_parameters.pl http_dispatch.pl http_authenticate.pl http_log.pl
     http_hook.pl http_exception.pl http_wrapper.pl
     http_dirindex.pl http_server_files.pl http_pwp.pl http_host.pl
-    http_cookie.pl http_files.pl
+    http_cookie.pl http_files.pl http_server_health.pl
     http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl
     http_digest.pl http_redis_plugin.pl graphql.pl http_openid.pl
     thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
@@ -82,7 +82,7 @@ set(HTML_PL_FILES
     http_path.pl mimetype.pl)
 
 set(HTTP_CLIENT_PL_FILES
-    http_client.pl http_header.pl js_write.pl js_grammar.pl 
+    http_client.pl http_header.pl js_write.pl js_grammar.pl
     http_sgml_plugin.pl mimepack.pl dcg_basics.pl
     http_open.pl http_proxy.pl http_error.pl)
 
@@ -178,7 +178,8 @@ if(SWIPL_WITH_HTTP_SERVER)
   set(HTTP_PLDOC_FILES ${HTTP_PLDOC_FILES}
       http_log.pl http_dispatch.pl http_dirindex.pl http_digest.pl
       http_session.pl http_openid.pl http_dyn_workers.pl http_pwp.pl
-      http_files.pl http_cors.pl http_authenticate.pl http_host.pl)
+      http_files.pl http_cors.pl http_authenticate.pl http_host.pl
+      http_server_health.pl)
 endif()
 
 pkg_doc(http

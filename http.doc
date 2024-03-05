@@ -1121,6 +1121,7 @@ unifies \arg{RelPath} to \arg{AbsPath}.
 
 \InputIfFileExists{httphost}{}{}
 \InputIfFileExists{httplog}{}{}
+\InputIfFileExists{httpserverhealth}{}{}
 
 \subsection{Debugging HTTP servers}			\label{sec:http-debug}
 
