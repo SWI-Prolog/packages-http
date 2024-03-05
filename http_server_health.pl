@@ -34,6 +34,8 @@
 :- use_module(library(http/http_json)).
 :- use_module(library(aggregate)).
 :- use_module(library(apply)).
+:- use_module(library(http/http_cors)).
+:- use_module(library(option)).
 
 :- http_handler(root(health), server_health, [id(server_health), priority(-10)]).
 
@@ -54,7 +56,14 @@ information presented.
 %   HTTP handler that replies with  the   overall  health of the server.
 %   Returns a JSON object from all solutions of health/2.
 
+server_health(Request) :-
+    option(method(options), Request), !,
+    cors_enable(Request,
+                [ methods([get])
+                ]),
+    format('~n').
 server_health(_Request) :-
+    cors_enable,
     get_server_health(Health),
     reply_json(Health).
 
