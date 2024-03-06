@@ -27,7 +27,9 @@
     the GNU General Public License.
 */
 
-:- module(http_server_health, []).
+:- module(http_server_health,
+          [ server_health/1             % +Request
+          ]).
 :- autoload(library(lists), [member/2]).
 :- autoload(library(aggregate), [aggregate_all/3, aggregate_all/4]).
 :- autoload(library(apply), [maplist/3]).
@@ -48,9 +50,8 @@ a JSON document  with  elementary  health   statistics  on  the  running
 instance. The location can be changed  using http_handler/3. Keys may be
 added using additional clauses for health/2 or hidden using hide/1.
 
-This library exports no predicates. It only  defines an HTTP handler and
-defines two multifile predicates (health/2 and   hide/1)  to control the
-information presented.
+This  library  defines  an  HTTP  handler   and  defines  two  multifile
+predicates (health/2 and hide/1) to control the information presented.
 */
 
 %!  server_health(+Request)
