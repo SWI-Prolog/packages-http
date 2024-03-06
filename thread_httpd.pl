@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2022, University of Amsterdam
+    Copyright (c)  2002-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -58,6 +59,7 @@
 :- use_module(http_path).
 
 :- autoload(library(uri), [uri_resolve/3]).
+:- autoload(library(aggregate), [aggregate_all/3]).
 
 :- predicate_options(http_server/2, 2,
                      [ port(any),
@@ -390,24 +392,27 @@ server_property(start_time(Time), Port) :-
     current_server(Port, _, _, _, _, Time).
 
 
-%!  http_workers(+Port, -Workers) is det.
+%!  http_workers(?Port, -Workers) is nondet.
 %!  http_workers(+Port, +Workers:int) is det.
 %
-%   Query or set the number of workers  for the server at this port.
-%   The number of workers is dynamically   modified. Setting it to 1
-%   (one) can be used to profile the worker using tprofile/1.
+%   Query or set the number of workers for  the server at this port. The
+%   number of workers is dynamically modified. Setting it to 1 (one) can
+%   be used to profile the worker using tprofile/1.
+%
+%   @see library(http/http_dyn_workers) implements dynamic management of
+%   the worker pool depending on usage.
 
 http_workers(Port, Workers) :-
-    must_be(ground, Port),
-    current_server(Port, _, _, Queue, _, _),
+    integer(Workers),
     !,
-    (   integer(Workers)
+    must_be(ground, Port),
+    (   current_server(Port, _, _, Queue, _, _)
     ->  resize_pool(Queue, Workers)
-    ;   findall(W, queue_worker(Queue, W), WorkerIDs),
-        length(WorkerIDs, Workers)
+    ;   existence_error(http_server, Port)
     ).
-http_workers(Port, _) :-
-    existence_error(http_server, Port).
+http_workers(Port, Workers) :-
+    current_server(Port, _, _, Queue, _, _),
+    aggregate_all(count, queue_worker(Queue, _Worker), Workers).
 
 
 %!  http_add_worker(+Port, +Options) is det.
