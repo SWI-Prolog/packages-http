@@ -82,10 +82,12 @@ server_health(Request) :-
     reply_json(Health).
 
 get_server_health(Health, Fields) :-
-    (   var(Fields)
-    ;   member(Key, Fields)
-    ),
+    var(Fields),
+    !,
     findall(Key-Value, health(Key, Value), Pairs),
+    dict_pairs(Health, health, Pairs).
+get_server_health(Health, Fields) :-
+    findall(Key-Value, (member(Key,Fields),health(Key, Value)), Pairs),
     dict_pairs(Health, health, Pairs).
 
 %!  health(-Key, -Value) is nondet.
