@@ -28,14 +28,16 @@
 */
 
 :- module(http_server_health, []).
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(http/http_stream)).
-:- use_module(library(http/thread_httpd)).
-:- use_module(library(http/http_json)).
-:- use_module(library(aggregate)).
-:- use_module(library(apply)).
-:- use_module(library(http/http_cors)).
-:- use_module(library(option)).
+:- autoload(library(lists), [member/2]).
+:- autoload(library(aggregate), [aggregate_all/3, aggregate_all/4]).
+:- autoload(library(apply), [maplist/3]).
+:- autoload(library(option), [option/2]).
+:- autoload(library(http/http_dispatch), [http_handler/3]).
+:- autoload(library(http/http_json), [reply_json/1]).
+:- autoload(library(http/http_parameters), [http_parameters/2]).
+:- autoload(library(http/thread_httpd), [http_server_property/2, http_workers/2]).
+:- autoload(library(http/http_stream), [cgi_statistics/1]).
+:- use_module(library(http/http_cors), [cors_enable/2, cors_enable/0]).
 
 :- http_handler(root(health), server_health, [id(server_health), priority(-10)]).
 
@@ -55,6 +57,10 @@ information presented.
 %
 %   HTTP handler that replies with  the   overall  health of the server.
 %   Returns a JSON object from all solutions of health/2.
+%
+%   Processes an optional parameter `fields` to  specify the fields that
+%   should be returned.  The  fields  content   is  ","  or  white space
+%   delimited.
 
 server_health(Request) :-
     option(method(options), Request), !,
@@ -62,12 +68,23 @@ server_health(Request) :-
                 [ methods([get])
                 ]),
     format('~n').
-server_health(_Request) :-
+server_health(Request) :-
+    http_parameters(Request,
+                    [ fields(FieldSpec, [ optional(true) ])
+                    ]),
     cors_enable,
-    get_server_health(Health),
+    (   var(FieldSpec)
+    ->  true
+    ;   split_string(FieldSpec, ", \t\r\n", " \t\r\n", Strings),
+        maplist(atom_string, Fields, Strings)
+    ),
+    get_server_health(Health, Fields),
     reply_json(Health).
 
-get_server_health(Health) :-
+get_server_health(Health, Fields) :-
+    (   var(Fields)
+    ;   member(Key, Fields)
+    ),
     findall(Key-Value, health(Key, Value), Pairs),
     dict_pairs(Health, health, Pairs).
 
@@ -82,6 +99,12 @@ get_server_health(Health) :-
 %       Defined to be `true`.
 %     - epoch
 %       Starting time of the server in seconds after Jan 1, 1970 UTC.
+%     - cpu_time
+%       Total process CPU usage in seconds.
+%     - threads
+%       Number of active threads
+%     - workers
+%       Number of HTTP _worker_ threads.
 %     - requests
 %       Number of HTTP requests processed.
 %     - bytes_sent
@@ -106,9 +129,19 @@ get_server_health(Health) :-
 
 :- multifile health/2.
 
-health(up, true).
+term_expansion((health(Key,Value) :- Body),
+               (health(Key,Value) :- \+ hide(Key), Body)).
+
+health(up, true) :-
+    true.
 health(epoch, Epoch) :-
     http_server_property(_, start_time(Epoch)).
+health(cpu_time, Time) :-
+    statistics(process_cputime, Time).
+health(threads, Count) :-
+    statistics(threads, Count).
+health(workers, Count) :-
+    aggregate_all(sum(N), http_workers(_,N), Count).
 health(requests, RequestCount) :-
     cgi_statistics(requests(RequestCount)).
 health(bytes_sent, BytesSent) :-
