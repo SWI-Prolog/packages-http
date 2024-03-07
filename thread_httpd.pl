@@ -154,7 +154,8 @@ self-signed SSL certificate.
 %     * tcp_socket(+Socket)
 %     If provided, use this socket instead of the creating one and
 %     binding it to an address.  The socket must be bound to an
-%     address.
+%     address.  Note that this also allows binding an HTTP server to
+%     a Unix domain socket (``AF_UNIX``).  See socket_create/2.
 %
 %     * workers(+Count)
 %     Determine the number of worker threads.  Default is 5.  This
