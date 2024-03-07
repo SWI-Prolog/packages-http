@@ -114,7 +114,9 @@ get_server_health(Health, Fields) :-
 %       Number of bytes send in reply to HTTP requests.
 %     - open_files
 %       Number of open file streams.  This includes physical files as
-%       well as sockets (except for Windows).
+%       well as sockets (except for Windows).  On Linux we count the
+%       file handles in ``/proc/self/fd``.  Otherwise we use
+%       stream_property/2 with the file_no(Fd) property.
 %     - loadavg
 %       An array holding the load average over the last [1,5,15]
 %       minutes.  This key is only supported on Linux machines.  It
@@ -149,8 +151,17 @@ health(requests, RequestCount) :-
     cgi_statistics(requests(RequestCount)).
 health(bytes_sent, BytesSent) :-
     cgi_statistics(bytes_sent(BytesSent)).
+:- if(exists_directory('/proc/self/fd')).
 health(open_files, Streams) :-
-    aggregate_all(count, N, stream_property(_, file_no(N)), Streams).
+    directory_files('/proc/self/fd', FDs),
+    length(FDs, Files),
+    Streams is Files - 2.               % Ignore . and ..
+:- else.
+health(open_files, Streams) :-
+    findall(N, stream_property(_, file_no(N)), FDs),
+    sort(FDs, Unique),
+    length(Unique, Streams).
+:- endif.
 health(loadavg, LoadAVG) :-
     access_file('/proc/loadavg', exist),
     catch(setup_call_cleanup(
