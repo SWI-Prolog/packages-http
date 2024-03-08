@@ -183,11 +183,13 @@ add_subprotocols(Options, Options).
 %   where WebSocket is a socket-pair.  Options:
 %
 %     * guarded(+Boolean)
-%     If =true= (default), guard the execution of Goal and close
+%     If `true` (default), guard the execution of Goal and close
 %     the websocket on both normal and abnormal termination of Goal.
-%     If =false=, Goal itself is responsible for the created
-%     websocket.  This can be used to create a single thread that
-%     manages multiple websockets using I/O multiplexing.
+%     If `false`, Goal itself is responsible for the created
+%     websocket if Goal succeeds. The websocket is closed if Goal
+%     fails or raises an exception.  This can be used to create a single
+%     thread that manages multiple websockets using I/O multiplexing.
+%     See library(http/hub).
 %
 %     * subprotocols(+List)
 %     List of acceptable subprotocols.
@@ -255,22 +257,25 @@ open_websocket(Goal, SubProtocol, Options, HTTPIn, HTTPOut) :-
     ws_open(HTTPIn, WsIn, WsOptions),
     ws_open(HTTPOut, WsOut, WsOptions),
     stream_pair(WebSocket, WsIn, WsOut),
-    (   option(guarded(true), Options, true)
-    ->  guard_websocket_server(Goal, WebSocket)
-    ;   call(Goal, WebSocket)
-    ).
+    guard_websocket_server(Goal, WebSocket, Options).
 
-guard_websocket_server(Goal, WebSocket) :-
+guard_websocket_server(Goal, WebSocket, Options) :-
     (   catch(call(Goal, WebSocket), E, true)
     ->  (   var(E)
-        ->  Msg = bye, Code = 1000
+        ->  (   option(guarded(false), Options, true)
+            ->  Close = false
+            ;   Msg = bye, Code = 1000
+            )
         ;   message_to_string(E, Msg),
             Code = 1011
         )
     ;   Msg = "goal failed", Code = 1011
     ),
-    catch(ws_close(WebSocket, Code, Msg), Error,
-          print_message(error, Error)).
+    (   Close == false
+    ->  true
+    ;   catch(ws_close(WebSocket, Code, Msg), Error,
+              print_message(error, Error))
+    ).
 
 
 request_websocket_info(Request, Info) :-
