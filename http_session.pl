@@ -818,10 +818,9 @@ need_sesion_gc(TimeOut) :-
     get_time(Now),
     (   last_gc(LastGC),
         Now-LastGC < TimeOut
-    ->  true
+    ->  fail
     ;   retractall(last_gc(_)),
-        asserta(last_gc(Now)),
-        do_http_gc_sessions
+        asserta(last_gc(Now))
     ).
 
 do_http_gc_sessions :-
