@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2020, SWI-Prolog Solutions b.v.
+    Copyright (c)  2020-2024, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -87,6 +87,7 @@ find:
 :- multifile
     http_session:hooked/0,
     http_session:hook/1,
+    http_session:session_setting/1,
     http_session:session_option/2.
 
 http_session:session_option(redis_db, atom).
@@ -149,7 +150,8 @@ http_session:hook(active_session(SessionID, Peer, LastUsed)) :-
         update_session(SessionID, LastUsed, _, Peer)
     ).
 http_session:hook(set_last_used(SessionID, Now, Timeout)) :-
-    LastUsed is floor(Now/10)*10,
+    http_session:session_setting(granularity(TimeGranularity)),
+    LastUsed is floor(Now/TimeGranularity)*TimeGranularity,
     update_session(SessionID, LastUsed, Updated, _Peer),
     (   Updated == true
     ->  session_db(rw, SessionID, DB, Key),

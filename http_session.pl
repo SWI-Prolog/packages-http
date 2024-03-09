@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker, Matt Lilley
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2006-2020, University of Amsterdam
+    Copyright (c)  2006-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -118,9 +118,11 @@ change in future versions of this library.
 :- multifile
     hooked/0,
     hook/1,                         % +Term
+    session_setting/1,
     session_option/2.
 
 session_setting(timeout(600)).      % timeout in seconds
+session_setting(granularity(60)).   % granularity for timeout
 session_setting(cookie('swipl_session')).
 session_setting(path(/)).
 session_setting(enabled(true)).
@@ -130,6 +132,7 @@ session_setting(gc(passive)).
 session_setting(samesite(lax)).
 
 session_option(timeout, integer).
+session_option(granularity, integer).
 session_option(cookie, atom).
 session_option(path, atom).
 session_option(create, oneof([auto,noauto])).
@@ -192,7 +195,12 @@ session_option(samesite, oneof([none,lax,strict])).
 %           CSRF attacks against REST endpoints but rarely interferes
 %           with legitimage operations. `none` removes the samesite
 %           attribute entirely. __Caution: The value `none` exposes the
-%           entire site to CSRF attacks.__
+%           entire site to CSRF attacks.
+%           * granularity(+Integer)
+%           Granularity for updating that the session is active. Default
+%           is 60 (seconds). Smaller values lead to more precise session
+%           timeout at the cost of more database updates.  This may
+%           notably a problem when using Redis.
 %
 %   In addition, extension libraries can define session_option/2 to make
 %   this   predicate   support    more     options.    In    particular,
@@ -538,7 +546,8 @@ set_last_used(SessionID, Now, TimeOut) :-
     !,
     hook(set_last_used(SessionID, Now, TimeOut)).
 set_last_used(SessionID, Now, TimeOut) :-
-    LastUsed is floor(Now/10)*10,
+    session_setting(granularity(TimeGranularity)),
+    LastUsed is floor(Now/TimeGranularity)*TimeGranularity,
     (   clause(last_used(SessionID, CurrentLast), _, Ref)
     ->  (   CurrentLast == LastUsed
         ->  true
@@ -780,15 +789,25 @@ in_header_state :-
 %!  http_gc_sessions is det.
 %!  http_gc_sessions(+TimeOut) is det.
 %
-%   Delete dead sessions. Currently runs session GC if a new session
-%   is opened and the last session GC was more than a TimeOut ago.
+%   Delete dead sessions. There are two  modes. if gc(passive) is active
+%   (default), session GC is executed if a new session is created and if
+%   the last GC was more than `granularity`  ago. If gc(active) is on, a
+%   thread is created that  runs  the   session  GC  every `granularity`
+%   seconds.
+%
+%   http_gc_sessions/0 is called each time when a session is created.
 
 :- dynamic
     last_gc/1.
 
 http_gc_sessions :-
-    start_session_gc_thread,
-    http_gc_sessions(60).
+    session_setting(gc(active)),
+    !,
+    start_session_gc_thread.
+http_gc_sessions :-
+    session_setting(granularity(TimeGranularity)),
+    http_gc_sessions(TimeGranularity).
+
 http_gc_sessions(TimeOut) :-
     (   with_mutex(http_session_gc, need_sesion_gc(TimeOut))
     ->  do_http_gc_sessions
@@ -856,31 +875,24 @@ stop_session_gc_thread.
 session_gc_loop :-
     thread_self(GcQueue),
     asserta(session_gc_queue(GcQueue)),
+    session_gc_loop_.
+
+session_gc_loop_ :-
+    session_setting(gc(active)),
+    session_setting(granularity(TimeGranularity)),
+    get_time(Now),
+    At is Now+TimeGranularity,
+    thread_self(GcQueue),
     repeat,
-    thread_get_message(Message),
-    (   Message == done
-    ->  !
-    ;   schedule(Message),
-        fail
+    (   thread_get_message(GcQueue, Message, [deadline(At)])
+    ->  (   Message == done
+        ->  !
+        ;   fail
+        )
+    ;   !,
+        http_gc_sessions(10),       % short time, so it runs
+        session_gc_loop_
     ).
-
-schedule(at(Time)) :-
-    current_alarm(At, _, _, _),
-    Time == At,
-    !.
-schedule(at(Time)) :-
-    debug(http_session(gc), 'Schedule GC at ~p', [Time]),
-    alarm_at(Time, http_gc_sessions(10), _,
-             [ remove(true)
-             ]).
-
-schedule_gc(LastUsed, TimeOut) :-
-    nonvar(TimeOut),                            % var(TimeOut) means none
-    session_gc_queue(Queue),
-    !,
-    At is LastUsed+TimeOut+5,                   % give some slack
-    thread_send_message(Queue, at(At)).
-schedule_gc(_, _).
 
 
                  /*******************************
@@ -941,11 +953,11 @@ route_no_cache(Route) :-
 :- if(\+current_prolog_flag(windows, true)).
 %!  urandom(-Handle) is semidet.
 %
-%   Handle is a stream-handle  for   /dev/urandom.  Originally, this
-%   simply tried to open /dev/urandom, failing   if this device does
-%   not exist. It turns out  that   trying  to open /dev/urandom can
-%   block indefinitely on  some  Windows   installations,  so  we no
-%   longer try this on Windows.
+%   Handle is a stream-handle  for   ``/dev/urandom``.  Originally, this
+%   simply tried to open ``/dev/urandom``, failing   if this device does
+%   not exist. It turns out  that   trying  to open ``/dev/urandom`` can
+%   block indefinitely on some Windows installations,   so  we no longer
+%   try this on Windows.
 
 :- dynamic
     urandom_handle/1.
@@ -971,7 +983,7 @@ get_pair(In, Value) :-
 
 %!  random_4(-R1,-R2,-R3,-R4) is det.
 %
-%   Generate 4 2-byte random  numbers.   Uses  =|/dev/urandom|= when
+%   Generate 4 2-byte random  numbers.   Uses  ``/dev/urandom`` when
 %   available to make prediction of the session IDs hard.
 
 :- if(current_predicate(urandom/1)).
