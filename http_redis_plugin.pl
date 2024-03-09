@@ -257,11 +257,18 @@ expire(SessionID, Timeout) :-
 
 gc_sessions :-
     session_expire_db(ro, DB, Key),
+    session_expire_db(rw, DB, TMOKey),
     get_time(Now),
     End is integer(Now),
     redis(DB, zrangebyscore(Key, "-inf", End), TimedOut as atom),
-    forall(member(SessionID, TimedOut),
-           gc_session(SessionID)).
+    (   member(SessionID, TimedOut),
+        redis(DB, zrem(TMOKey, SessionID), 1), % 0 if someone else deleted this
+        gc_session(SessionID),
+        fail
+    ;   true
+    ).
+
+%!  gc_session(+SessionID) is semidet.
 
 gc_session(_) :-
     prolog_current_frame(Frame),
@@ -271,8 +278,6 @@ gc_session(_) :-
 gc_session(SessionID) :-
     debug(http_session(gc), 'GC session ~p', [SessionID]),
     session_db(ro, SessionID, DB, SessionKey),
-    session_expire_db(rw, DB, TMOKey),
-    redis(DB, zrem(TMOKey, SessionID)),
     redis(DB, hget(SessionKey, peer), PeerS),
     ip_name(Peer, PeerS),
     broadcast(http_session(end(SessionID, Peer))),
