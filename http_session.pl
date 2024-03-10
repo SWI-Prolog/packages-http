@@ -858,7 +858,8 @@ start_session_gc_thread :-
     !,
     catch(thread_create(session_gc_loop, _,
                         [ alias('__http_session_gc'),
-                          at_exit(retractall(session_gc_queue(_)))
+                          at_exit(retractall(session_gc_queue(_))),
+                          inherit_from(main)
                         ]),
           error(permission_error(create, thread, _),_),
           true).
