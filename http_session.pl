@@ -545,18 +545,16 @@ set_last_used(SessionID, Now, TimeOut) :-
     hooked,
     !,
     hook(set_last_used(SessionID, Now, TimeOut)).
-set_last_used(SessionID, Now, TimeOut) :-
+set_last_used(SessionID, Now, _TimeOut) :-
     session_setting(granularity(TimeGranularity)),
     LastUsed is floor(Now/TimeGranularity)*TimeGranularity,
     (   clause(last_used(SessionID, CurrentLast), _, Ref)
     ->  (   CurrentLast == LastUsed
         ->  true
         ;   asserta(last_used(SessionID, LastUsed)),
-            erase(Ref),
-            schedule_gc(LastUsed, TimeOut)
+            erase(Ref)
         )
-    ;   asserta(last_used(SessionID, LastUsed)),
-        schedule_gc(LastUsed, TimeOut)
+    ;   asserta(last_used(SessionID, LastUsed))
     ).
 
 
