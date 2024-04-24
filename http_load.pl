@@ -59,10 +59,9 @@ security.
 
 %!  user:prolog_load_file(+URL, +Options)
 %
-%   Hook into load_files/2 that loads   =|http://|= and =|https://|=
-%   resources directly from the web.
-%
-%   @bug    Loading =https= does not validate the certificate.
+%   Hook into load_files/2  that  loads   =|http://|=  and  =|https://|=
+%   resources directly from the web. Options  are passed to load_files/2
+%   and http_open/2.
 
 user:prolog_load_file(Spec, Options) :-
     strip_module(Spec, Module, URL),
@@ -75,21 +74,9 @@ user:prolog_load_file(Spec, Options) :-
     ),
     ensure_extension(GlobalURL, pl, FinalURL),
     setup_call_cleanup(
-        http_open(FinalURL, In,
-                  [ cert_verify_hook(ssl_verify)
-                  ]),
+        http_open(FinalURL, In, Options),
         load_files(Module:FinalURL, [stream(In)|Options]),
         close(In)).
-
-:- public ssl_verify/5.
-
-%!  ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
-%
-%   Currently we accept  all  certificates.
-
-ssl_verify(_SSL,
-           _ProblemCertificate, _AllCertificates, _FirstCertificate,
-           _Error).
 
 is_http_url(URL) :-
     uri_is_global(URL),
@@ -100,9 +87,7 @@ is_http_url(URL) :-
 
 http_scheme(http).
 http_scheme(https) :-
-    catch(use_module(library(http/http_ssl_plugin)),
-          E, (print_message(warning, E), fail)).
-
+    exists_source(library(http/http_ssl_plugin)).
 
 %!  ensure_extension(+URL, +Ext, -PlParts)
 %
