@@ -720,7 +720,10 @@ write_pairs_hor([H|T], Stream, State, Options) :-
     json_write_term(Value, Stream, State, Options),
     (   T == []
     ->  true
-    ;   write(Stream, ', '),
+    ;   (   json_write_state_width(State, 0)
+        ->  write(Stream, ',')
+        ;   write(Stream, ', ')
+        ),
         write_pairs_hor(T, Stream, State, Options)
     ).
 
