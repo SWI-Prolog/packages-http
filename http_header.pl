@@ -1001,6 +1001,11 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %     * atom(+Type, +Atom)
 %     Send Atom using the indicated MIME-type.
 %
+%     * string(+String)
+%     * string(+Type, +String)
+%     Similar to atom(Atom) and atom(Type,Atom), accepting a SWI-Prolog
+%     string.
+%
 %     * cgi_stream(+Stream, +Len) Read the input from Stream which,
 %     like CGI data starts with a partial HTTP header. The fields of
 %     this header are merged with the provided HdrExtra fields. The
