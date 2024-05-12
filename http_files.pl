@@ -43,6 +43,7 @@
 
 :- predicate_options(http_reply_from_files/3, 2,
                      [ indexes(list(atom)),
+                       not_found(oneof([fail,404])),
                        pass_to(http_dispatch:http_reply_file/3, 2),
                        pass_to(http_dirindex:http_reply_dirindex/3, 2)
                      ]).
@@ -85,6 +86,10 @@ paths that begin with the registed location of the handler.
 %     * indexes(+List)
 %     List of files tried to find an index for a directory.  The
 %     default is `['index.html']`.
+%     * not_found(+Action)
+%     Action defines what happens if the target file was not found.
+%     Options: `fail` makes the handler fail silently. `404` make the
+%     handler call http_404/2.   Default is `fail`.
 %
 %   Note that this handler must be tagged as a =prefix= handler (see
 %   http_handler/3 and module introduction). This  also implies that
@@ -119,6 +124,9 @@ http_reply_from_files(Dir, Options, Request) :-
     locate_file(Dir, PathInfo, Result, ResultType, Options),
     !,
     reply(ResultType, Result, Options, Request).
+http_reply_from_files(_Dir, Options, Request) :-
+    option(not_found(404), Options),
+    http_404(Options, Request).
 
 reply(file, Path, Options, Request) :-
     http_reply_file(Path, [unsafe(true)|Options], Request).
