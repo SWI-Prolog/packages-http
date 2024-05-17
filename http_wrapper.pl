@@ -368,6 +368,9 @@ cgi_hook(send_header, CGI) :-
         cgi_discard(CGI)
     ;   cgi_property(CGI, transfer_encoding(chunked))
     ->  http_reply_header(Out, chunked_data, Header)
+    ;   cgi_property(CGI, transfer_encoding(event_stream)),
+        http_reply_header(Out, event_stream, Header),
+        flush_output(Out)
     ;   cgi_property(CGI, content_length(Len))
     ->  http_reply_header(Out, cgi_data(Len), Header)
     ).

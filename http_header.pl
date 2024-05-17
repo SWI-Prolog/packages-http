@@ -776,24 +776,31 @@ http_join_headers([H|T], Hdr0, [H|Hdr]) :-
 %   Alternatively we could dynamically choose for ASCII, ISO-Latin-1
 %   or UTF-8.
 
-http_update_encoding(Header0, utf8, [content_type(Type)|Header]) :-
-    select(content_type(Type0), Header0, Header),
+http_update_encoding(Header0, Encoding, Header) :-
+    memberchk(content_type(Type), Header0),
+    !,
+    http_update_encoding(Type, Header0, Encoding, Header).
+http_update_encoding(Header, octet, Header).
+
+http_update_encoding('text/event-stream', Header, utf8, Header) :-
+    !.
+http_update_encoding(Type0, Header0, utf8, [content_type(Type)|Header]) :-
     sub_atom(Type0, 0, _, _, 'text/'),
+    !,
+    select(content_type(_), Header0, Header),
     !,
     (   sub_atom(Type0, S, _, _, ';')
     ->  sub_atom(Type0, 0, S, _, B)
     ;   B = Type0
     ),
     atom_concat(B, '; charset=UTF-8', Type).
-http_update_encoding(Header, Encoding, Header) :-
-    memberchk(content_type(Type), Header),
+http_update_encoding(Type, Header, Encoding, Header) :-
     (   sub_atom_icasechk(Type, _, 'utf-8')
     ->  Encoding = utf8
     ;   http:mime_type_encoding(Type, Encoding)
     ->  true
     ;   mime_type_encoding(Type, Encoding)
     ).
-http_update_encoding(Header, octet, Header).
 
 %!  mime_type_encoding(+MimeType, -Encoding) is semidet.
 %
@@ -897,6 +904,9 @@ http_update_transfer(if_possible, Request, CgiHeader, Transfer, Header) :-
     Transfer \== none,
     !,
     Header = [transfer_encoding(Transfer)|CgiHeader].
+http_update_transfer(_, _, CgiHeader, event_stream, CgiHeader) :-
+    memberchk(content_type('text/event-stream'), CgiHeader),
+    !.
 http_update_transfer(_, _, CgiHeader, none, CgiHeader).
 
 join_transfer(chunked, chunked, chunked) :- !.
@@ -1353,6 +1363,11 @@ reply_header(cgi_data(Size), HdrExtra, Code) -->
     date(now),
     header_fields(HdrExtra, CLen),
     content_length(Size, CLen),
+    "\r\n".
+reply_header(event_stream, HdrExtra, Code) -->
+    vstatus(ok, Code, HdrExtra),
+    date(now),
+    header_fields(HdrExtra, _),
     "\r\n".
 reply_header(chunked_data, HdrExtra, Code) -->
     vstatus(ok, Code, HdrExtra),

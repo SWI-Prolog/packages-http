@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2023, University of Amsterdam
+    Copyright (c)  2008-2024, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -110,6 +110,7 @@ static atom_t ATOM_content_length;	/* content_length */
 static atom_t ATOM_id;			/* id */
 static atom_t ATOM_get;			/* get */
 static atom_t ATOM_head;		/* head */
+static atom_t ATOM_event_stream;	/* Unbuffered output */
 static functor_t FUNCTOR_method1;	/* method(Method) */
 static predicate_t PREDICATE_call3;	/* Goal, Event, Handle */
 
@@ -132,6 +133,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define CGI_MAGIC 0xa85ce042
 
+static int call_hook(cgi_context *ctx, atom_t event);
 static int start_chunked_encoding(cgi_context *ctx);
 
 static int64_t current_id = 0;
@@ -386,13 +388,16 @@ cgi_set(term_t cgi, term_t prop)
   } else if ( name == ATOM_transfer_encoding )
   { atom_t enc;
 
-    if ( !PL_get_atom(arg, &enc) )
-      return type_error(arg, "atom");
+    if ( !PL_get_atom_ex(arg, &enc) )
+      return FALSE;
 
     if ( ctx->transfer_encoding != enc )
     { if ( enc == ATOM_chunked )
       { ctx->transfer_encoding = enc;
 	rc = start_chunked_encoding(ctx);
+      } else if ( enc == ATOM_event_stream )
+      { ctx->transfer_encoding = enc;
+	rc = call_hook(ctx, ATOM_send_header);
       } else
       { rc = domain_error(arg, "transfer_encoding");
       }
@@ -539,6 +544,11 @@ cgi_write(void *handle, char *buf, size_t size)
 
   if ( ctx->transfer_encoding == ATOM_chunked )
   { return chunked_write_chunk(ctx->stream, ctx->metadata, buf, size);
+  } else if ( ctx->transfer_encoding == ATOM_event_stream )
+  { ssize_t written = Sfwrite(buf, sizeof(char), size, ctx->stream);
+    if ( Sflush(ctx->stream) < 0 )
+      return -1;
+    return written;
   } else
   { size_t osize = ctx->datasize;
     size_t dstart;
@@ -801,6 +811,7 @@ install_cgi_stream()
   ATOM_id		 = PL_new_atom("id");
   ATOM_get		 = PL_new_atom("get");
   ATOM_head		 = PL_new_atom("head");
+  ATOM_event_stream	 = PL_new_atom("event_stream");
   FUNCTOR_method1	 = PL_new_functor(PL_new_atom("method"), 1);
 
   PREDICATE_call3   = PL_predicate("call", 3, "system");
