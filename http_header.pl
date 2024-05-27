@@ -800,6 +800,8 @@ http_update_encoding(Type, Header, Encoding, Header) :-
     ;   http:mime_type_encoding(Type, Encoding)
     ->  true
     ;   mime_type_encoding(Type, Encoding)
+    ->  true
+    ;   Encoding = octet
     ).
 
 %!  mime_type_encoding(+MimeType, -Encoding) is semidet.
