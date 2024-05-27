@@ -202,6 +202,7 @@ name_mimetype('configure.ac', text/plain).
 name_mimetype('makefile.in',  text/plain).
 name_mimetype('makefile.am',  text/plain).
 name_mimetype('readme.in',    text/plain).
+name_mimetype('license',      text/plain).
 
 %!  text_mimetype(+MimeType) is semidet.
 %
