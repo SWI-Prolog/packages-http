@@ -54,7 +54,7 @@ set(HTTP_SERVER_PL_FILES
     http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl
     http_digest.pl http_redis_plugin.pl graphql.pl http_openid.pl
     thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
-    README.md ${HTTP_PLATFORM_FILES})
+    README.md htmx.pl ${HTTP_PLATFORM_FILES})
 
 set(HTTP_EXAMPLE_FILES
     README.md
@@ -179,7 +179,7 @@ if(SWIPL_WITH_HTTP_SERVER)
       http_log.pl http_dispatch.pl http_dirindex.pl http_digest.pl
       http_session.pl http_openid.pl http_dyn_workers.pl http_pwp.pl
       http_files.pl http_cors.pl http_authenticate.pl http_host.pl
-      http_server_health.pl)
+      http_server_health.pl htmx.pl)
 endif()
 
 pkg_doc(http
