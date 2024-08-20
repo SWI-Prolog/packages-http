@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2023, University of Amsterdam
+    Copyright (c)  2002-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -65,7 +65,14 @@
 :- autoload(library(ssl), [ssl_upgrade_legacy_options/2]).
 :- endif.
 :- use_module(library(socket)).
+:- use_module(library(settings)).
 
+:- setting(http:max_keep_alive_idle, number, 2,
+           "Time to keep idle keep alive connections around").
+:- setting(http:max_keep_alive_connections, integer, 10,
+           "Maximum number of client keep alive connections").
+:- setting(http:max_keep_alive_host_connections, integer, 2,
+           "Maximum number of client keep alive to a single host").
 
 /** <module> HTTP client library
 
@@ -1599,21 +1606,40 @@ keep_alive(keep_alive) :- !.
 keep_alive(Connection) :-
     downcase_atom(Connection, 'keep-alive').
 
+%!  keep_alive(+StreamPair, +Host, +In, -Left) is det.
+%
+%   Callback when closing the range stream   used to process the content
+%   of the reply. This callback makes   the  stream available for future
+%   keep-alive connections or closes the stream. The stream is closed if
+%
+%     - There are too many bytes left unprocessed in the range stream.
+%     - There are too many pooled connections.
+
 :- public keep_alive/4.
+:- det(keep_alive/4).
 
 keep_alive(StreamPair, Host, _In, 0) :-
     !,
-    debug(http(connection), 'Adding connection to ~p to pool', [Host]),
-    add_to_pool(Host, StreamPair).
+    add_to_pool_or_close(Host, StreamPair).
 keep_alive(StreamPair, Host, In, Left) :-
-    Left < 100,
-    debug(http(connection), 'Reading ~D left bytes', [Left]),
-    read_incomplete(In, Left),
+    (   Left < 100,
+        debug(http(connection), 'Reading ~D left bytes', [Left]),
+        read_incomplete(In, Left)
+    ->  add_to_pool_or_close(Host, StreamPair)
+    ;   debug(http(connection),
+              'Closing connection due to excessive unprocessed input', []),
+        close_keep_alive(StreamPair)
+    ).
+
+add_to_pool_or_close(Host, StreamPair) :-
     add_to_pool(Host, StreamPair),
-    !.
-keep_alive(StreamPair, _, _, _) :-
-    debug(http(connection),
-          'Closing connection due to excessive unprocessed input', []),
+    !,
+    debug(http(connection), 'Added connection to ~p to pool', [Host]).
+add_to_pool_or_close(Host, StreamPair) :-
+    close_keep_alive(StreamPair),
+    debug(http(connection), 'Closed connection to ~p [pool full]', [Host]).
+
+close_keep_alive(StreamPair) :-
     (   debugging(http(connection))
     ->  catch(close(StreamPair), E,
               print_message(warning, E))
@@ -1641,6 +1667,12 @@ read_incomplete(In, Left) :-
     connection_pool/4,              % Hash, Address, Stream, Time
     connection_gc_time/1.
 
+%!  add_to_pool(+Address, +StreamPair) is semidet.
+%
+%   Add a connection  to  the  keep-alive   pool  after  completing  the
+%   interaction. Fails if there are already  too many connections in the
+%   pool.
+
 add_to_pool(Address, StreamPair) :-
     keep_connection(Address),
     get_time(Now),
@@ -1653,18 +1685,22 @@ get_from_pool(Address, StreamPair) :-
 
 %!  keep_connection(+Address) is semidet.
 %
-%   Succeeds if we want to keep   the  connection open. We currently
-%   keep a maximum of 10 connections  waiting   and  a  maximum of 2
-%   waiting for the same address. Connections   older than 2 seconds
-%   are closed.
+%   Succeeds if we want to keep the connection open. We currently keep a
+%   maximum of `http:max_keep_alive_connections` connections waiting and
+%   a maximum of `http:max_keep_alive_host_connections`  waiting for the
+%   same  address.  Connections  older  than  `http:max_keep_alive_idle`
+%   seconds are closed.
 
 keep_connection(Address) :-
-    close_old_connections(2),
+    setting(http:max_keep_alive_idle, Time),
+    close_old_connections(Time),
     predicate_property(connection_pool(_,_,_,_), number_of_clauses(C)),
-    C =< 10,
+    setting(http:max_keep_alive_connections, MaxConnections),
+    C =< MaxConnections,
     term_hash(Address, Hash),
     aggregate_all(count, connection_pool(Hash, Address, _, _), Count),
-    Count =< 2.
+    setting(http:max_keep_alive_host_connections, MaxHostConnections),
+    Count =< MaxHostConnections.
 
 close_old_connections(Timeout) :-
     get_time(Now),
