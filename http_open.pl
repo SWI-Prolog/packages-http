@@ -1679,9 +1679,24 @@ add_to_pool(Address, StreamPair) :-
     term_hash(Address, Hash),
     assertz(connection_pool(Hash, Address, StreamPair, Now)).
 
+%!  get_from_pool(+Address, -StreamPair) is nondet.
+%
+%   Get an existing Keep-Alive connection to  Address as StreamPair. The
+%   caller relies on non-determinism of this   predicate  to try another
+%   connection if the returned one is  already   closed  by the peer. We
+%   cannot rely on the non-determinism of retract/1 as that respects the
+%   _logical update view_. Therefore, we must   use retract/1 and commit
+%   as retract/1 guarantees that  the  first   retracted  clause  is not
+%   already retracted.
+
 get_from_pool(Address, StreamPair) :-
     term_hash(Address, Hash),
-    retract(connection_pool(Hash, Address, StreamPair, _)).
+    repeat,
+    (   retract(connection_pool(Hash, Address, StreamPair, _))
+    ->  true
+    ;   !,
+        fail
+    ).
 
 %!  keep_connection(+Address) is semidet.
 %
