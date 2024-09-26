@@ -96,8 +96,8 @@ applications:
 %           * peer(+Peer)
 %           IP address of client
 %
-%   @param Close    Unified to one of =close=, =|Keep-Alive|= or
-%                   spawned(ThreadId).
+%   @arg Close Unified to one of `close`, ``Keep-Alive`` or
+%              spawned(ThreadId).
 
 http_wrapper(Goal, In, Out, Close, Options) :-
     status(Id, State0),
@@ -197,6 +197,9 @@ cgi_close(CGI, _, State0, ok, Close) :-
 cgi_close(CGI, Request, Id, http_reply(Status), Close) :-
     !,
     cgi_close(CGI, Request, Id, http_reply(Status, []), Close).
+cgi_close(CGI, _Request, _Id, http_reply(hangup, _), close) :-
+    cgi_discard(CGI),
+    close(CGI).
 cgi_close(CGI, Request, Id, http_reply(Status, ExtraHdrOpts), Close) :-
     cgi_property(CGI, header_codes(Text)),
     Text \== [],
