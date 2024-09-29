@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2020, University of Amsterdam
+    Copyright (c)  2002-2024, University of Amsterdam
                               VU University Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -48,7 +49,7 @@
             http_status_reply/5,        % +Status, +Out, +HdrExtra,
                                         % +Context, -Code
 
-            http_timestamp/2,           % +Time, -HTTP string
+            http_timestamp/2,           % ?Time, ?HTTPstring
 
             http_post_data/3,           % +Stream, +Data, +HdrExtra
 
@@ -93,6 +94,7 @@
 	    [ integer/3, atom/3, whites/2, blanks_to_nl/2, string/3,
 	      number/3, blanks/2, float/3, nonblanks/3, eos/2
 	    ]).
+:- autoload(library(date), [parse_time/3]).
 :- use_module(library(settings),[setting/4,setting/2]).
 
 :- multifile
@@ -2384,11 +2386,17 @@ rfc_date(Time, String, Tail) :-
                 '%a, %d %b %Y %T GMT',
                 Date, posix).
 
-%!  http_timestamp(+Time:timestamp, -Text:atom) is det.
+%!  http_timestamp(?Time:timestamp, ?Text:atom) is det.
 %
-%   Generate a description of a Time in HTTP format (RFC1123)
+%   Convert between a SWI-Prolog time stamp and  a string in HTTP format
+%   (RFC1123).
 
-http_timestamp(Time, Atom) :-
+http_timestamp(Time, Text), nonvar(Text) =>
+    (   parse_time(Text, rfc_1123, Time)
+    ->  true
+    ;   syntax_error(rfc_1123(Text))
+    ).
+http_timestamp(Time, Atom), number(Time) =>
     stamp_date_time(Time, Date, 'UTC'),
     format_time(atom(Atom),
                 '%a, %d %b %Y %T GMT',
