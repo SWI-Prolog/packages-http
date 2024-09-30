@@ -1843,6 +1843,8 @@ send_request_header(Out, String) :-
 %     * content_type
 %     Parsed into media(Type/SubType, Attributes), where Attributes
 %     is a list of Name=Value pairs.
+%     * expires
+%     Parsed into a time stamp using http_timestamp/2.
 %
 %   As some fields are already parsed in the `Request`, this predicate
 %   is a no-op when called on an already parsed field.
@@ -1854,6 +1856,8 @@ http_parse_header_value(Field, Value, Prolog) :-
     known_field(Field, _, Type),
     (   already_parsed(Type, Value)
     ->  Prolog = Value
+    ;   parse_header_value_atom(Field, Value, Prolog)
+    ->  true
     ;   to_codes(Value, Codes),
         parse_header_value(Field, Codes, Prolog)
     ).
@@ -1870,6 +1874,7 @@ already_parsed(Term, V)       :- subsumes_term(Term, V).
 
 known_field(content_length,      true,  integer).
 known_field(status,              true,  integer).
+known_field(expires,             false, number).
 known_field(cookie,              true,  list(_=_)).
 known_field(set_cookie,          true,  list(set_cookie(_Name,_Value,_Options))).
 known_field(host,                true,  _Host:_Port).
@@ -1904,6 +1909,16 @@ field_to_prolog(Field, Codes, Prolog) :-
 field_to_prolog(_, Codes, Atom) :-
     atom_codes(Atom, Codes).
 
+%!  parse_header_value_atom(+Field, +ValueAtom, -Value) is semidet.
+%
+%   As parse_header_value/3, but avoid translation to codes.
+
+parse_header_value_atom(content_length, Atom, ContentLength) :-
+    atomic(Atom),
+    atom_number(Atom, ContentLength).
+parse_header_value_atom(expires, Atom, Stamp) :-
+    http_timestamp(Stamp, Atom).
+
 %!  parse_header_value(+Field, +ValueCodes, -Value) is semidet.
 %
 %   Parse the value text of an HTTP   field into a meaningful Prolog
@@ -1911,6 +1926,8 @@ field_to_prolog(_, Codes, Atom) :-
 
 parse_header_value(content_length, ValueChars, ContentLength) :-
     number_codes(ContentLength, ValueChars).
+parse_header_value(expires, ValueCodes, Stamp) :-
+    http_timestamp(Stamp, ValueCodes).
 parse_header_value(status, ValueChars, Code) :-
     (   phrase(" ", L, _),
         append(Pre, L, ValueChars)
