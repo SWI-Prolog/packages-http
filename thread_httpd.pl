@@ -497,8 +497,6 @@ send_to_worker(Queue, Client, Goal, Peer) :-
     thread_send_message(Queue, tcp_client(Client, Goal, Peer)).
 
 accept_rethrow_error(http_stop(_)).
-accept_rethrow_error('$aborted').
-
 
 %!  close_server_socket(+Options)
 %
@@ -825,6 +823,7 @@ done_worker :-                                  % received quit(Sender)
 
 done_status_message_level(true, silent) :- !.
 done_status_message_level(exception('$aborted'), silent) :- !.
+done_status_message_level(exception(unwind(abort)), silent) :- !.
 done_status_message_level(_, informational).
 
 
@@ -849,6 +848,7 @@ recreate_worker(exception(Error), Queue) :-
     create_workers(1, 1, Queue, AliasBase, Options).
 
 recreate_on_error('$aborted').
+recreate_on_error(unwind(abort)).
 recreate_on_error(time_limit_exceeded).
 
 %!  thread_httpd:message_level(+Exception, -Level)
