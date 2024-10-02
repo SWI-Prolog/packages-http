@@ -1106,7 +1106,8 @@ http_reply_file(File, Options, Request) :-
     (   option(cache(true), Options, true)
     ->  (   memberchk(if_modified_since(Since), Request),
             time_file(Path, Time),
-            catch(http_timestamp(Time, Since), _, fail)
+            catch(http_timestamp(Time2, Since), _, fail),
+            abs(Time-Time2) < 1     % allow for loss of second fraction
         ->  throw(http_reply(not_modified))
         ;   true
         ),
