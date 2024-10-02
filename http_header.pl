@@ -2406,12 +2406,16 @@ rfc_date(Time, String, Tail) :-
 %!  http_timestamp(?Time:timestamp, ?Text:atom) is det.
 %
 %   Convert between a SWI-Prolog time stamp and  a string in HTTP format
-%   (RFC1123).
+%   (RFC1123). When parsing, it  accepts   RFC1123,  RFC1036 and ASCTIME
+%   formats. See parse_time/3.
+%
+%   @error syntax_error(http_timestamp(Text)) if the string cannot
+%   be parsed.
 
 http_timestamp(Time, Text), nonvar(Text) =>
-    (   parse_time(Text, rfc_1123, Time)
-    ->  true
-    ;   syntax_error(rfc_1123(Text))
+    (   parse_time(Text, _Format, Time0)
+    ->  Time =:= Time0
+    ;   syntax_error(http_timestamp(Text))
     ).
 http_timestamp(Time, Atom), number(Time) =>
     stamp_date_time(Time, Date, 'UTC'),
