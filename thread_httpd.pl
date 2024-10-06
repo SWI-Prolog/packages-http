@@ -824,6 +824,7 @@ done_worker :-                                  % received quit(Sender)
 done_status_message_level(true, silent) :- !.
 done_status_message_level(exception('$aborted'), silent) :- !.
 done_status_message_level(exception(unwind(abort)), silent) :- !.
+done_status_message_level(exception(unwind(halt(_))), silent) :- !.
 done_status_message_level(_, informational).
 
 
