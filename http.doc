@@ -1585,9 +1585,9 @@ predref(Name/Arity) -->
 
 apropos_predicate(Pattern, pred(Name, Arity, Summary)) :-
     man_object_property(Name/Arity, summary(Summary)),
-    (   sub_atom_icasechk(Pattern, _, Name)
+    (   sub_atom_icasechk(Name, _, Pattern)
     ->  true
-    ;   sub_atom_icasechk(Pattern, _, Summary)
+    ;   sub_atom_icasechk(Summary, _, Pattern)
     ).
 \end{code}
 
