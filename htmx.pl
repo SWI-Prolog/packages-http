@@ -34,7 +34,8 @@
 
 :- module(htmx,
           [ reply_htmx/1,               % +HTML
-            reply_htmx/2                % +HTML, +Request
+            reply_htmx/2,               % +HTML, +Request
+            htmx_oob//2                 % ++Id, :HTML
           ]).
 :- use_module(library(http/html_write)).
 
@@ -97,7 +98,8 @@ additional utility predicates.
 
 :- html_meta
     reply_htmx(html),
-    reply_htmx(html, +).
+    reply_htmx(html, +),
+    htmx_oob(+, html, ?, ?).
 
 %!  reply_htmx(+HTML) is det.
 %!  reply_htmx(+HTML, +Request) is det.
@@ -115,3 +117,12 @@ reply_htmx(HTML) :-
 
 reply_htmx(HTML, _Request) :-
     reply_htmx(HTML).
+
+%!  htmx_oob(++Target, :HTML)// is det.
+%
+%   Emit an htmx out-of-band element.  HTML is used to swap the
+%   content of the DOM element with id Target.
+
+htmx_oob(Target, HTML) -->
+    html(div([id(Target), 'hx-swap-oob'(true)],
+             HTML)).
