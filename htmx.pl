@@ -53,7 +53,7 @@ that cause an HTTP request. The  HTTP   response  is typically a (short)
 HTML fragment that extends or replaces  an   element  on  the page. This
 allows us to program a most functionality interactive seen in modern web
 applications using the powerful  SWI-Prolog   HTML  generation framework
-rather than having to write a  JSON backend and accompagnying JavaScript
+rather than having to write a  JSON backend and  accompanying JavaScript
 frontend that runs in the browser.
 
 Below is a minimal, yet fully functional application

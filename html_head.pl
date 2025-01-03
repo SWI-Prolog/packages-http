@@ -82,7 +82,7 @@ are removed.  Next, the following steps are taken:
     2. Replace multiple members by `aggregate' scripts or css files.
        see use_agregates/4.
     3. Order all resources by demanding that their dependencies
-       preceede the resource itself.  Note that the ordering of
+       precede the resource itself.  Note that the ordering of
        resources in the dependency list is *ignored*.  This implies
        that if the order matters the dependency list must be split
        and only the primary dependency must be added.
@@ -555,7 +555,7 @@ uncached_resource_base_name(Compound, Base) :-
 %!  html_include(+PathOrList)// is det.
 %
 %   Include to HTML resources  that  must   be  in  the  HTML <head>
-%   element. Currently onlu supports  =|.js|=   and  =|.css|= files.
+%   element. Currently only supports  =|.js|=   and  =|.css|= files.
 %   Extend this to support more  header   material.  Do not use this
 %   predicate directly. html_requires//1 is the  public interface to
 %   include HTML resources.

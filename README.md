@@ -10,7 +10,7 @@ both HTTP and HTTPS connections and handle all request methods.
 
 ## Server library
 
-The main server libraris are
+The main server libraries are
 
   - `library(http/thread_httpd)` implements the server
   - `library(http/http_dispatch)` implements binding locations

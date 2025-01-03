@@ -64,7 +64,7 @@ sequences of streams acting as an in-process pipeline.
 
 The predicate http_chunked_open/3 realises encoding  and decoding of the
 HTTP _Chunked_ encoding. This encoding is an obligatory part of the HTTP
-1.1 specification. Messages are split into chunks, each preceeded by the
+1.1 specification. Messages are split into chunks, each  preceded by the
 length of the chunk. Chunked  encoding   allows  sending messages over a
 serial link (typically a TCP/IP stream) for  which the reader knows when
 the message is ended. Unlike standard HTTP   though, the sender does not
@@ -75,7 +75,7 @@ flush on the output stream.
 The predicate stream_range_open/3 handles the Content-length on an input
 stream for handlers that are designed  to   process  an entire file. The
 filtering stream claims end-of-file after reading  a specified number of
-bytes, dispite the fact that the underlying stream may be longer.
+bytes, despite the fact that the underlying stream may be longer.
 
 @see    The HTTP 1.1 protocol http://www.w3.org/Protocols/rfc2616/rfc2616.html
 */
@@ -189,7 +189,7 @@ bytes, dispite the fact that the underlying stream may be longer.
                  *            MULTIPART         *
                  *******************************/
 
-%!  multipart_open(+Stream, -DataSttream, +Options) is det.
+%!  multipart_open(+Stream, -DataStream, +Options) is det.
 %
 %   DataStream  is  a  stream  that  signals  `end_of_file`  if  the
 %   multipart _boundary_ is encountered. The stream  can be reset to
@@ -286,7 +286,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 %       this stream.
 %       * thread(-ThreadID)
 %       ThreadID is the identifier of the `owning thread'
-%       * transfer_encoding(-Tranfer)
+%       * transfer_encoding(-Transfer)
 %       One of =chunked= or =none=.
 %       * connection(-Connection)
 %       One of =Keep-Alive= or =close=
@@ -304,7 +304,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 
 %!  cgi_set(+CGIStream, ?Property) is det.
 %
-%   Change one of the properies.  Supported properties are:
+%   Change one of the properties.  Supported properties are:
 %
 %       * request(+Term)
 %       Associate a request to the stream.
@@ -314,10 +314,10 @@ bytes, dispite the fact that the underlying stream may be longer.
 %       client.
 %       * connection(-Connection)
 %       One of =Keep-Alive= or =close=.
-%       * transfer_encoding(-Tranfer)
+%       * transfer_encoding(-Transfer)
 %       One of =chunked= or =none=.  Initially set to =none=.  When
 %       switching to =chunked= from the =header= hook, it calls the
-%       =send_header= hook and if there is data queed this is send
+%       =send_header= hook and if there is data queued this is send
 %       as first chunk.  Each subsequent write to the CGI stream
 %       emits a chunk.  The implementation does __not__ use the
 %       chunked stream filter defined by http_chunked_open/3.  It
@@ -327,7 +327,7 @@ bytes, dispite the fact that the underlying stream may be longer.
 
 %!  cgi_discard(+CGIStream) is det.
 %
-%   Discard content produced sofar. It sets   the  state property to
+%   Discard content produced so far. It sets  the  state property to
 %   =discarded=, causing close to omit the   writing  the data. This
 %   must be used for an alternate output (e.g. an error page) if the
 %   page generator fails.

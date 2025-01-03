@@ -73,7 +73,7 @@ with the request, deciding on:
 Now, the stream is placed in  full   buffering  mode  (SIO_FBUF). If the
 transfer encoding is 'chunked'  it  immediately   calls  the  hook using
 'send_header' to emit the current header.   Output continues. In chunked
-mode sending the chunks, otherwisse collecting   the  data. On close, it
+mode sending the chunks, otherwise  collecting   the  data. On close, it
 writes an empty block (chunked mode)  or   (normal  mode) calls the hook
 'send_header' which now has access to   the  content-length, followed by
 the data.
@@ -434,7 +434,7 @@ cgi_discard(term_t cgi)
 		 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Call hook on the data we collected sofar.   The  hook is called with the
+Call hook on the data we collected so far.  The  hook is called with the
 following additional arguments:
 
     * Event-type (header, data)

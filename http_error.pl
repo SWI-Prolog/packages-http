@@ -49,7 +49,7 @@ stack-trace and sends error reports to the Prolog console. The behaviour
 can be controlled by
 
   - nodebug(http(error))
-    After disabling the http(error) debug channal, errors are only sent
+    After disabling the http(error) debug channel, errors are only sent
     to the client.  See nodebug/1 and debug/1.
   - set_setting(http:client_backtrace, false)
     Stop sending stack traces to the client. Note that sending the stack

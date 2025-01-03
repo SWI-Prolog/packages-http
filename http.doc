@@ -99,7 +99,7 @@ This library provides http_open/3 and friends. It
 is a library for opening an endpoint identified by an HTTP URL as a
 Prolog stream. The general skeleton for using this library
 is given below, where \nopredref{process}{1} processes the data from the
-HTTP server.\footnote{One may opt to use cleanup/2 intead of
+HTTP server.\footnote{One may opt to use cleanup/2 instead of
 setup_call_cleanup/3 to allow for aborting while http_open/3 is waiting
 for the connection.}
 
@@ -458,7 +458,7 @@ message.
 
 Options fall into three categories: those that handle presence of
 the parameter, those that guide conversion and restrict types and
-those that support automatic generation of documention.  First,
+those that support automatic generation of documentation.  First,
 the presence-options:
 
 \begin{description}
@@ -933,7 +933,7 @@ present. If the dispatch module is used (see \secref{httpdispatch}),
 spawning is normally specified as an option to the http_handler/3
 registration.
 
-We recomment the use of thread pools. They allow registration of a set
+We recommend the use of thread pools. They allow registration of a set
 of threads using common characteristics, specify how many can be active
 and what to do if all threads are active. A typical application may
 define a small pool of threads with large stacks for computation
@@ -1098,7 +1098,7 @@ not start with \chr{/}.
 
 This problem can also be solved using the contributed Apache module
 \const{proxy_html} that can be instructed to rewrite URLs embedded in
-HTML documents. In our experience, this is not troublefree as URLs can
+HTML documents. In our experience, this is not trouble-free as URLs can
 appear in many places in generated documents.  JavaScript can create
 URLs on the fly, which makes rewriting virtually impossible.
 
@@ -1301,7 +1301,7 @@ The example below generates a   URL  that references the predicate
 set_lang/1 in the application with given parameters.  The http_handler/3
 declaration binds \const{/setlang} to the predicate set_lang/1 for which
 we provide a very simple implementation.  The code between \const{...}
-is part of an HTML page showing the english flag which, when pressed,
+is part of an HTML page showing the English flag which, when pressed,
 calls \term{set_lang}{Request} where \arg{Request} contains the search
 parameter \mbox{\const{lang} = \const{en}}.  Note that the HTTP location
 (path) \const{/setlang} can be moved without affecting this code.

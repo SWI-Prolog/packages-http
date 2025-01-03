@@ -993,7 +993,7 @@ return_headers(Options, Headers) :-
 %
 %   Parse the header lines for   the  headers(-List) option. Invalid
 %   header   lines   are   skipped,   printing   a   warning   using
-%   pring_message/2.
+%   print_message/2.
 
 parse_headers([], []) :- !.
 parse_headers([Line|Lines], Headers) :-
@@ -1782,7 +1782,7 @@ keep_alive_error(Error, StreamPair) :-
 %
 %   This hook is used by the HTTP   client library to define default
 %   options based on the the broken-down request-URL.  The following
-%   example redirects all trafic, except for localhost over a proxy:
+%   example redirects all traffic, except for localhost over a proxy:
 %
 %       ```
 %       :- multifile

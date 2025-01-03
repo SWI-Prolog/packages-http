@@ -60,7 +60,7 @@ from library(http/http_client).
 %!  http_client:http_convert_data(+In, +Fields, -Data, +Options) is semidet.
 %
 %   Convert =|multipart/form-data|= messages for http_read_data/3.
-%   This plugin adds the folling options to http_read_data/3:
+%   This plugin adds the following options to http_read_data/3:
 %
 %     * form_data(+AsForm)
 %     If the content-type is =|multipart/form-data|=, return the

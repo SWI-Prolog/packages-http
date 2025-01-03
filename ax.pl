@@ -61,7 +61,7 @@ username or e-mail address.
 %     Only provide the attribute if it is available. This is
 %     mutually exclusive with =required=.  This is the default.
 %     - url(+URL)
-%     Can be used to ovcerrule or extend the ax_alias/2.
+%     Can be used to overrule or extend the ax_alias/2.
 %     - count(+Count)
 %     Maximum number of values to provide
 %

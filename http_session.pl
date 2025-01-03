@@ -165,7 +165,7 @@ session_option(samesite, oneof([none,lax,strict])).
 %           atom.  See route/1.
 %
 %           * enabled(+Boolean)
-%           Enable/disable session management.  Sesion management
+%           Enable/disable session management. Session management
 %           is enabled by default after loading this file.
 %
 %           * create(+Atom)
@@ -173,7 +173,7 @@ session_option(samesite, oneof([none,lax,strict])).
 %           (default), which creates a session if there is a request
 %           whose path matches the defined session path or =noauto=,
 %           in which cases sessions are only created by calling
-%           http_open_session/2 explicitely.
+%           http_open_session/2 explicitly.
 %
 %           * proxy_enabled(+Boolean)
 %           Enable/disable proxy session management. Proxy session
@@ -193,7 +193,7 @@ session_option(samesite, oneof([none,lax,strict])).
 %           strict has best security, but prevents links from
 %           external sites from operating properly. lax stops most
 %           CSRF attacks against REST endpoints but rarely interferes
-%           with legitimage operations. `none` removes the samesite
+%           with legit image operations. `none` removes the samesite
 %           attribute entirely. __Caution: The value `none` exposes the
 %           entire site to CSRF attacks.
 %           * granularity(+Integer)
@@ -924,8 +924,8 @@ http_session_cookie(Cookie) :-
 %!  route(-RouteID) is semidet.
 %
 %   Fetch the route identifier. This value   is added as .<route> to
-%   the session cookie and used  by   -for  example- the apache load
-%   balanching module. The default route is   the  local name of the
+%   the session cookie and used  by   -for  example- the Apache load
+%   balancing  module. The default route is   the  local name of the
 %   host.     Alternatives     may      be       provided      using
 %   http_set_session_options/1.
 

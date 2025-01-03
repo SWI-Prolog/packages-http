@@ -546,7 +546,7 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %       single-line output.
 %
 %       * step(+Step)
-%       Indentation increnment for next level.  Default is 2.
+%       Indentation increment for next level.  Default is 2.
 %
 %       * tab(+TabDistance)
 %       Distance between tab-stops.  If equal to Step, layout
@@ -557,7 +557,7 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %       print them as a JSON string.  The default raises a type
 %       error.  Note that this option only makes sense if you can
 %       guarantee that the passed value is not an otherwise valid
-%       Prolog reporesentation of a Prolog term.
+%       Prolog representation of a Prolog term.
 %
 %   If a string is  emitted,  the   sequence  =|</|=  is  emitted as
 %   =|<\/|=. This is valid  JSON  syntax   which  ensures  that JSON
@@ -574,12 +574,12 @@ stream_error_context(Stream, stream(Stream, Line, LinePos, CharNo)) :-
 %   point numbers are emitted.
 %
 %   Note that this hook is shared by all   users  of this library. It is
-%   generally  adviced  to  map  a  unique    compound   term  to  avoid
+%   generally  advised  to  map  a  unique    compound   term  to  avoid
 %   interference with normal output.
 %
 %   @arg State and Options are opaque handles to the current output
 %   state and settings.  Future versions may provide documented access
-%   to these terms.  Currently it is adviced to ignore these arguments.
+%   to these terms.  Currently it is advised to ignore these arguments.
 
 %!  json_dict_pairs(+Dict, -Pairs) is semidet.
 %
@@ -1083,7 +1083,7 @@ make_json_dict_options(Options, Record, RestOptions) :-
 %
 %   Convert  between  textual  representation  and    a   JSON  term
 %   represented as a dict. Options are as for json_read/3.
-%   In _write_ mode, the addtional option
+%   In _write_ mode, the additional option
 %
 %       * as(Type)
 %       defines the output type, which is one of =atom=,

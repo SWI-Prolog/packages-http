@@ -58,7 +58,7 @@
 
 This library implements HTTP  _Digest   Authentication_  as per RFC2617.
 Unlike  _Basic  Authentication_,  digest  authentication   is  based  on
-challenge-reponse and therefore does not need  to send the password over
+challenge-response and therefore does not need to send the password over
 the (insecure) connection. In addition, it   provides  a count mechanism
 that ensure that old  credentials  cannot   be  reused,  which  prevents
 attackers  from  using  old  credentials  with  a  new  request.  Digest
@@ -369,12 +369,12 @@ hash(Text, Hash) :-
 
 %!  http_digest_authenticate(+Request, -User, -UserFields, +Options)
 %
-%   Validate the client reponse from the Request header. On success,
+%   Validate the client response from the Request header. On success,
 %   User is the validated user and  UserFields are additional fields
 %   from the password file. Options include:
 %
 %     - passwd_file(+File)
-%     Validate passwords agains the given password file.  The
+%     Validate passwords against the given password file.  The
 %     file is read using http_current_user/3 from
 %     library(http/http_authenticate).
 %     - stale(-Stale)

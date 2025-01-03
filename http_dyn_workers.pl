@@ -82,7 +82,7 @@ The policy depends on three settings:
 %!  http:schedule_workers(+Dict)
 %
 %   Called if there  is  no  immediately   free  worker  to  handle  the
-%   incomming  request.  The  request  is    forwarded   to  the  thread
+%   incoming  request.  The  request  is    forwarded   to  the  thread
 %   =|__http_scheduler|= as the hook is called in time critical code.
 
 :- multifile

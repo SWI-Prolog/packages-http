@@ -46,11 +46,11 @@
 
 This small module allows  for   enabling  Cross-Origin  Resource Sharing
 (CORS) for a specific  request.  Typically,   CORS  is  enabled  for API
-services that you want to have useable  from browser client code that is
+services that you want to have  usable  from browser client code that is
 loaded from another domain. An example are   the LOD and SPARQL services
 in ClioPatria.
 
-Because CORS is a security risc  (see   references),  it  is disabled by
+Because CORS is a security risk  (see   references),  it  is disabled by
 default. It is enabled through the setting  http:cors. The value of this
 setting is a list of domains  that   are  allowed to access the service.
 Because * is used as a wildcard match,  the value [*] allows access from

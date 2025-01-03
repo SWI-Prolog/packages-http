@@ -248,12 +248,12 @@ js_args([H|T]) -->
 %       by this library.
 %       $ object(Attributes) :
 %       Where Attributes is a Key-Value list where each pair can be
-%       written as Key-Value, Key=Value or Key(Value), accomodating
+%       written as Key-Value, Key=Value or Key(Value), accommodating
 %       all common constructs for this used in Prolog.
 %       $ { K:V, ... }
 %       Same as object(Attributes), providing a more JavaScript-like
 %       syntax.  This may be useful if the object appears literally
-%       in the source-code, but is generally less friendlyto produce
+%       in the source-code, but is generally less friendly to produce
 %       as a result from a computation.
 %       $ Dict :
 %       Emit a dict as a JSON object using json_write_dict/3.
@@ -265,7 +265,7 @@ js_args([H|T]) -->
 %       emitting JavaScript symbols (i.e. function- or variable
 %       names).
 %       $ Number :
-%       Emited literally
+%       Emitted literally
 %       $ symbol(Atom) :
 %       Synonym for @(Atom).  Deprecated.
 %       $ Atom or String :

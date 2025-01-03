@@ -80,7 +80,7 @@ commandline options:
 
   - Select the port(s) to be used by the server
   - Run the startup of the process as root to perform privileged
-    tasks and the server itself as unpriviledged user, for example
+    tasks and the server itself as unprivileged user, for example
     to open ports below 1000.
   - Fork and detach from the controlling terminal
   - Handle console and debug output using a file and/or the syslog
@@ -606,7 +606,7 @@ options_password(_, '').
 %   Start the HTTP server.  It performs the following steps:
 %
 %     1. Call broadcast(http(pre_server_start))
-%     2. Foreach server
+%     2. For each server
 %        a. Call broadcast(http(pre_server_start(Port)))
 %        b. Call http_server(http_dispatch, Options)
 %        c. Call broadcast(http(post_server_start(Port)))
@@ -780,7 +780,7 @@ prctl(_).
 
 %!  server_redirect(+To, +Request)
 %
-%   Redirect al requests for this server to the specified server. To
+%   Redirect all requests for this server to the specified server. To
 %   is one of:
 %
 %     $ A port (integer) :
@@ -823,7 +823,7 @@ default_port(https, 443).
 
 %!  setup_debug(+Options) is det.
 %
-%   Initialse debug/3 topics. The  =|--debug|=   option  may be used
+%   Initialise debug/3 topics. The  =|--debug|=   option  may be used
 %   multiple times.
 
 setup_debug(Options) :-
