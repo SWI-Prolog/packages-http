@@ -484,7 +484,7 @@ status_reply(Status, Out, Options) :-
 %!  status_has_content(+StatusTerm, -HTTPCode)
 %
 %   True when StatusTerm  is  a  status   that  usually  comes  with  an
-%   expanatory content message.
+%   explanatory content message.
 
 status_has_content(created(_Location)).
 status_has_content(moved(_To)).
@@ -871,7 +871,7 @@ connection(Header, Close) :-
 %
 %   Decide on the transfer encoding  from   the  Request and the CGI
 %   header.    The    behaviour    depends      on    the    setting
-%   http:chunked_transfer. If =never=, even   explitic  requests are
+%   http:chunked_transfer. If =never=, even   explicit  requests are
 %   ignored. If =on_request=, chunked encoding  is used if requested
 %   through  the  CGI  header  and  allowed    by   the  client.  If
 %   =if_possible=, chunked encoding is  used   whenever  the  client
@@ -933,7 +933,7 @@ transfer(Header, Transfer) :-
 
 %!  content_length_in_encoding(+Encoding, +In, -Bytes)
 %
-%   Determine hom many bytes are required to represent the data from
+%   Determine how many bytes are required to represent the data from
 %   stream In using the given encoding.  Fails if the data cannot be
 %   represented with the given encoding.
 
@@ -1786,7 +1786,7 @@ header_field(Name, Value) -->
 
 %!  read_field_value(-Codes)//
 %
-%   Read a field eagerly upto the next whitespace
+%   Read a field eagerly up to the next whitespace
 
 read_field_value([H|T]) -->
     [H],
@@ -2749,7 +2749,7 @@ header(_) -->
 
 %!  address//
 %
-%   Emit the HTML for the server address on behalve of error and
+%   Emit the HTML for the server address on behalf of error and
 %   status messages (non-200 replies).  Default is
 %
 %       ==

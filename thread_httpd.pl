@@ -245,7 +245,7 @@ address_domain(_, Domain) =>
 %!  make_socket(+Address, :OptionsIn, -OptionsOut) is det.
 %
 %   Create the HTTP server socket and  worker pool queue. OptionsOut
-%   is quaranteed to hold the option queue(QueueId).
+%   is guaranteed to hold the option queue(QueueId).
 %
 %   @arg   OptionsIn   is   qualified   to     allow   passing   the
 %   module-sensitive ssl option argument.
@@ -1063,7 +1063,7 @@ long(_, long).
 %!  update_rate_mma(!State, -MMA) is det.
 %
 %   Implement _Modified Moving  Average_  computing   the  average  time
-%   between requests as an exponential moving averate with alpha=1/N.
+%   between requests as an exponential moving average with alpha=1/N.
 %
 %   @arg Resolution is the time resolution  in 1/Resolution seconds. All
 %   storage is done in integers to avoid  the need for stack freezing in

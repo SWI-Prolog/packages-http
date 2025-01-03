@@ -62,7 +62,7 @@
 
 /** <module> Serve PWP pages through the HTTP server
 
-This  module  provides  convience  predicates  to  include  PWP  (Prolog
+This  module  provides convenience predicates  to  include  PWP  (Prolog
 Well-formed Pages) in a Prolog  web-server.   It  provides the following
 predicates:
 

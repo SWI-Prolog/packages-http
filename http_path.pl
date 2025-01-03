@@ -63,7 +63,7 @@
 This module provides an abstract specification  of HTTP server locations
 that is inspired on absolute_file_name/3. The   specification is done by
 adding rules to the  dynamic   multifile  predicate http:location/3. The
-speficiation is very similar to   user:file_search_path/2,  but takes an
+specification is very similar to  user:file_search_path/2,  but takes an
 additional argument with options. Currently only one option is defined:
 
     * priority(+Integer)
@@ -118,7 +118,7 @@ admin location with the option =|[priority(10)]|=.
 %
 %   This library provides  a  default   for  the  abstract  location
 %   =root=. This defaults to the setting   http:prefix  or, when not
-%   available to the  path  =|/|=.  It   is  adviced  to  define all
+%   available to the  path  =|/|=.  It   is  advised  to  define all
 %   locations (ultimately) relative to  =root=.   For  example,  use
 %   root('home.html') rather than =|'/home.html'|=.
 

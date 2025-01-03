@@ -94,7 +94,7 @@ language for HTTP-based APIs.
 %  Desc = "SWI-Prolog package implementing a SourceHut GraphQL API client.".
 %  ```
 %
-%  Options is a list whose elemenets are one of the following:
+%  Options is a list whose elements are one of the following:
 %  - token(+Token)
 %    Token is string that will be used as an OAuth2.0 token. See also
 %    graphql_auth_token_hook/2.
@@ -284,7 +284,7 @@ qq_var(Vars, _=Var) :- member(V, Vars), V == Var, !.
 %      A list of associations of Prolog variable names, given as atoms,
 %      to _GraphQL values_.
 %
-%      Occurences of the special lexical construct "<Name>" (that is,
+%      Occurrences of the special lexical construct "<Name>" (that is,
 %      ASCII 60, then the codes of the atom Name, then ASCII 62) in
 %      Source are expanded in Document to the _GraphQL value_ Value.
 %      This option can be used to interpolate GraphQL documents with
@@ -1040,7 +1040,7 @@ graphql_document_to_string(Document, String, Options) :-
 %
 %  Options are a list whose elements are one of:
 %    - separator(+Sep)
-%      Sep is a list of codes to be used for separating adjancent
+%      Sep is a list of codes to be used for separating adjacent
 %      GraphQL values in Codes. Defaults to a single space.
 %      This option can be used to separate values with commas
 %      (which are optional throughout GraphQL) by passing

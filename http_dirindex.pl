@@ -121,7 +121,7 @@ directory_members(Dir, Dirs, Files) :-
 %     Sort the files in the directory listing by Field.  Field
 %     is one of =name= (default), =size= or =time=.
 %     * order(+AscentDescent)
-%     Sorting order.  Default is =ascending=.  The altenative is
+%     Sorting order.  Default is =ascending=.  The alternative is
 %     =descending=
 %     * name(:RenderName)
 %     DCG used to render a name in the table.  The File is passed.

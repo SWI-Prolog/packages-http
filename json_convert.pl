@@ -119,7 +119,7 @@ simplifies debugging this rather complicated process.
         is not =any=.  Conversion to JSON could map variables to =null=,
         though this may be unsafe.  If the Prolog term is known to be
         non-ground and JSON @null is a sensible mapping, we can also use
-        this simple snipit to deal with that fact.
+        this simple snippet to deal with that fact.
 
         ==
                 term_variables(Term, Vars),
@@ -277,7 +277,7 @@ type_check(Type, V, V, _, Goal) :-
 %!  prolog_bool_to_json(+Prolog, -JSON) is semidet.
 %
 %   JSON is the JSON boolean for Prolog. It is a flexible the Prolog
-%   notation for thruth-value, accepting one of  =true=, =on= or =1=
+%   notation for  truth-value, accepting one of  =true=, =on= or =1=
 %   for @true and one of =false=, =fail=, =off= or =0= for @false.
 %
 %   @error  instantiation_error if Prolog is unbound.
@@ -433,7 +433,7 @@ types([Name|T0], [Name|TN], [any|TT]) :-
 %   Translate a Prolog application Term  into   a  JSON object term.
 %   This transformation is based on   :- json_object/1 declarations.
 %   If  a  json_object/1  declaration  declares   a  field  of  type
-%   =boolean=, commonly used thruth-values in   Prolog are converted
+%   =boolean=, commonly used  truth-values in   Prolog are converted
 %   to JSON booleans. Boolean  translation   accepts  one of =true=,
 %   =on=, =1=, @true, =false=, =fail=, =off= or =0=, @false.
 %

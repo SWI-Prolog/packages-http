@@ -98,7 +98,7 @@ an HTTP request. The typical usage is e.g.,
 %           fetched using call(Goal, A, Declarations).
 %
 %           * form_data(-Data)
-%           Return the data read from the GET por POST request as a
+%           Return the data read from the GET or POST request as a
 %           list Name = Value.  All data, including name/value pairs
 %           used for Parms, is unified with Data.
 %

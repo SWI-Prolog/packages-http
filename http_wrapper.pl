@@ -66,11 +66,11 @@ protocol at the server side and is   mainly intended for *internal use*.
 It   is   used   by    library(thread_httpd)   and   library(inet_httpd)
 (deprecated).
 
-Still, it provides a few  predicates   that  are  occasinally useful for
+Still, it provides a few  predicates   that  are occasionally useful for
 applications:
 
   - http_current_request/1 finds the current request for occasional
-    usage in places where it is not avaialable otherwise.
+    usage in places where it is not available otherwise.
   - http_peer/2 finds the (IP4) peer address, getting the original
     address if we are behind a proxy (=X-Forwarded-For=)
   - http_relative_path/2 can be used to find a relative path from
@@ -84,7 +84,7 @@ applications:
 %   stream `Out'.
 %
 %   The goal is assumed  to  write   the  reply  to =current_output=
-%   preceeded by an HTTP header, closed by  a blank line. The header
+%   preceded  by an HTTP header, closed by  a blank line. The header
 %   *must* contain a Content-type: <type>   line.  It may optionally
 %   contain a line =|Transfer-encoding: chunked|= to request chunked
 %   encoding.

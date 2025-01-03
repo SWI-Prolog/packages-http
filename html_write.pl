@@ -836,7 +836,7 @@ html_quoted(Text) -->
 %   Quote the value  according  to   the  rules  for  tag-attributes
 %   included in double-quotes.  Note   that  -like  html_quoted//1-,
 %   attributed   values   printed   through   html//1   are   quoted
-%   atomatically.
+%   automatically.
 %
 %   @tbd    Assumes UTF-8 encoding of the output.
 
@@ -908,7 +908,7 @@ html_receive(Id) -->
 %!  html_receive(+Id, :Handler)// is det.
 %
 %   This extended version of html_receive//1   causes  Handler to be
-%   called to process all messages posted to the channal at the time
+%   called to process all messages posted to the channel at the time
 %   output  is  generated.  Handler  is    called  as  below,  where
 %   `PostedTerms` is a list of  Module:Term   created  from calls to
 %   html_post//2. Module is the context module of html_post and Term
@@ -938,7 +938,7 @@ html_noreceive(Id) -->
 %   Collect  posted  tokens  and  copy    them  into  the  receiving
 %   mailboxes. Mailboxes may produce output for  each other, but not
 %   cyclic. The current scheme to resolve   this is rather naive: It
-%   simply permutates the mailbox resolution order  until it found a
+%   simply  permutes  the mailbox resolution order  until it found a
 %   working one. Before that, it puts   =head= and =script= boxes at
 %   the end.
 

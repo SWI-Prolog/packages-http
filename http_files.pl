@@ -57,7 +57,7 @@ http_reply_dirindex/3 to act as a simple   web-server. Such a server can
 be created using the following code  sample,   which  starts a server at
 port 8080 that serves files from the  current directory ('.'). Note that
 the handler needs a `prefix` option to   specify that it must handle all
-paths that begin with the registed location of the handler.
+paths that begin with the registered location of the handler.
 
 ```
 :- use_module(library(http/http_server)).

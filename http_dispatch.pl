@@ -160,7 +160,7 @@ write_index(Request) :-
 %   Options  is  a  list containing the following options:
 %
 %     - authentication(+Type)
-%       Demand authentication. Authentication methods are pluggable. The
+%       Demand authentication. Authentication methods are  plugable. The
 %       library http_authenticate.pl provides a plugin for user/password
 %       based =Basic= HTTP authentication.
 %
@@ -624,7 +624,7 @@ http_current_handler(Path, M:C, Options) :-
 %   returned location is the  path  up   to  the  first  variable, e.g.,
 %   =|/user/|= in the example above.
 %
-%   User code is adviced to  use   http_link_to_id/3  which can also add
+%   User code is advised to  use   http_link_to_id/3  which can also add
 %   query parameters to  the  URL.  This   predicate  is  a  helper  for
 %   http_link_to_id/3.
 %
@@ -768,7 +768,7 @@ location_by_id_raw(ID, Location, Pattern, Priority) :-
 %     ```
 %
 %   @arg HandleID is either an atom, possibly module qualified
-%   predicate or a compound term if the hander is defined using
+%   predicate or a compound term if the handler is defined using
 %   a pattern.  See http_handler/3 and http_location_by_id/2.
 %
 %   @arg Parameters is one of
@@ -1071,7 +1071,7 @@ extend(G0, Extra, G) :-
 %           * static_gzip(+Boolean)
 %           If `true` (default `false`) and, in addition to the plain
 %           file, there is a ``.gz`` file that is not older than the
-%           plain file and the client acceps =gzip= encoding, send
+%           plain file and the client accepts =gzip= encoding, send
 %           the compressed file with ``Transfer-encoding: gzip``.
 %
 %           * cached_gzip(+Boolean)
@@ -1327,7 +1327,7 @@ http_switch_protocol(Goal, Options) :-
 
 %!  path_tree(-Tree) is det.
 %
-%   Compile paths into  a  tree.  The   treee  is  multi-rooted  and
+%   Compile paths into  a  tree.   The   tree  is  multi-rooted  and
 %   represented as a list of nodes, where each node has the form:
 %
 %           node(PathOrPrefix, Action, Options, Children)
@@ -1337,7 +1337,7 @@ http_switch_protocol(Goal, Options) :-
 %   worker thread holds a copy of  the   tree.  If handler facts are
 %   changed the _generation_ is  incremented using next_generation/0
 %   and each worker thread will  re-compute   the  tree  on the next
-%   ocasion.
+%   occasion.
 
 path_tree(Tree) :-
     current_generation(G),

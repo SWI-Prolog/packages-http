@@ -253,7 +253,7 @@ openid_logged_in(OpenID) :-
 %        - Find the OpenID claimed identity and server
 %        - Associate to the OpenID server
 %        - redirects to the OpenID server for validation
-%     4. The OpenID server will redirect here with the authetication
+%     4. The OpenID server will redirect here with the authentication
 %        information.  This is handled by openid_authenticate/4.
 %
 %   Options:
@@ -581,7 +581,7 @@ openid_server(OpenIDLogin, OpenID, Server, Target) :-
 
 %!  public_url(+Request, +Path, -URL) is det.
 %
-%   True when URL is a publically useable  URL that leads to Path on
+%   True when URL is a publicly usable  URL that leads to Path on
 %   the current server.
 
 public_url(Request, Path, URL) :-
@@ -610,8 +610,8 @@ scheme_port(https, 443).
 %   Find the public URL for Request that   we  can make available to our
 %   identity provider. This must be an  absolute   URL  where  we can be
 %   contacted.   Before   trying   a     configured    version   through
-%   http_public_url/2, we try to see wether the login message contains a
-%   referer parameter or wether the browser provided one.
+%   http_public_url/2, we try to see whether the login message contains a
+%   referrer parameter or whether the browser provided one.
 
 openid_current_url(Request, URL) :-
     option(request_uri(URI), Request),
@@ -1239,7 +1239,7 @@ openid_associate(URL, Handle, Assoc) :-
 %
 %   Associate with an open-id server.  We   first  check for a still
 %   valid old association. If there is  none   or  it is expired, we
-%   esstablish one and remember it.  Options:
+%   establish one and remember it.  Options:
 %
 %     * ns(URL)
 %     One of =http://specs.openid.net/auth/2.0= (default) or

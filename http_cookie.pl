@@ -233,7 +233,7 @@ current_client(ClientId) :-
 %
 %   Query current cookie database. If Name   is given, it is matched
 %   case insensitive against the known cookies.   If  it is unbound,
-%   the  cookie  name  is  returned  in    its  oiginal  case  (case
+%   the  cookie  name  is  returned  in    its original  case  (case
 %   preserving).
 
 cookie_current_cookie(ClientId, Name, Value, Options) :-

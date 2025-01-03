@@ -42,7 +42,7 @@
 /** <module> Determine mime-type for a file
 
 Simple library to guess the mime-type from   the extension of a file. As
-various applications need  to  do  this   type  ofinferencing  it  seems
+various applications need  to  do  this   type of inferencing  it  seems
 worthwhile to place this functionality in an extensible library.
 
 @tbd    Consider content handling (using the Unix file command)

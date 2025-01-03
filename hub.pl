@@ -83,7 +83,7 @@ server_ A scenario for realizing an chat server is:
        - hub_broadcast/2 sends a message to all clients of the
          hub.
 
-A hub consists of (currenty) four message   queues  and a simple dynamic
+A hub consists of (currently) four message  queues  and a simple dynamic
 fact. Threads that are needed for the communication tasks are created on
 demand and die if no more work needs to be done.
 
@@ -150,7 +150,7 @@ which allows a single thread  to  wait   for  many  sockets.  But ... on
 Windows it allows to wait for at most  64 sockets. In addition, there is
 no way to add an additional input   for control messages because Windows
 select() can only wait for sockets. On Unix   we could use pipe/2 to add
-the control channal. On Windows  we   would  need  an additional network
+the control channel. On Windows  we   would  need  an additional network
 service, giving rise its own  problems   with  allocation, firewalls and
 security.
 

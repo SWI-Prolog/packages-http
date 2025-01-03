@@ -66,7 +66,7 @@ predicates to read and write password files.
 %   to Type. Type identifies the required authentication technique:
 %
 %           * basic(+PasswordFile)
-%           Use HTTP =Basic= authetication and verify the password
+%           Use HTTP =Basic= authentication and verify the password
 %           from PasswordFile. PasswordFile is a file holding
 %           usernames and passwords in a format compatible to
 %           Unix and Apache. Each line is record with =|:|=
@@ -92,7 +92,7 @@ predicates to read and write password files.
 %
 %   @param  Fields is a list of fields from the password-file entry.
 %           The first element is the user.  The hash is skipped.
-%   @tbd    Should we also cache failures to reduce the risc of
+%   @tbd    Should we also cache failures to reduce the risk of
 %           DoS attacks?
 
 http_authenticate(basic(File), Request, [User|Fields]) :-
