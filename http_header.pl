@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2024, University of Amsterdam
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -265,7 +265,8 @@ map_exception_to_http_status(_E, _Status, _NewHdr, _NewContext) :-
 :- endif.
 
 :- meta_predicate
-    if_no_head(0, +).
+    if_no_head(0, +),
+    with_encoding(+, +, 0).
 
 %!  http_reply_data(+Data, +Out, +HdrExtra, +Method, -Code) is semidet.
 %
@@ -282,7 +283,7 @@ http_reply_data_(html(HTML), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(html(HTML), HdrExtra, Code), Header),
     send_reply_header(Out, Header),
-    if_no_head(print_html(Out, HTML), Method).
+    if_no_head(with_encoding(Out, utf8, print_html(Out, HTML)), Method).
 http_reply_data_(file(Type, File), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(file(Type, File), HdrExtra, Code), Header),
@@ -321,6 +322,16 @@ if_no_head(_, head) :-
     !.
 if_no_head(Goal, _) :-
     call(Goal).
+
+with_encoding(Out, Encoding, Goal) :-
+    stream_property(Out, encoding(Old)),
+    (   Old == Encoding
+    ->  call(Goal)
+    ;   setup_call_cleanup(
+            set_stream(Out, encoding(Encoding)),
+            call(Goal),
+            set_stream(Out, encoding(Old)))
+    ).
 
 reply_file(Out, _File, Header, head) :-
     !,
@@ -1327,8 +1338,8 @@ reply_header(html(Tokens), HdrExtra, Code) -->
     vstatus(ok, Code, HdrExtra),
     date(now),
     header_fields(HdrExtra, CLen),
-    content_length(html(Tokens), CLen),
-    content_type(text/html),
+    content_length(html(Tokens, utf8), CLen),
+    content_type(text/html, utf8),
     "\r\n".
 reply_header(file(Type, File), HdrExtra, Code) -->
     vstatus(ok, Code, HdrExtra),
@@ -1668,50 +1679,38 @@ content_length(Reply, Len) -->
     "Content-Length: ", integer(Len),
     "\r\n".
 
+:- meta_predicate
+    print_length(0, -, +, -).
 
-length_of(_, Len) :-
-    nonvar(Len),
-    !.
-length_of(string(String, Encoding), Len) :-
+:- det(length_of/2).
+length_of(_, Len), integer(Len) => true.
+length_of(string(String, Encoding), Len) =>
     length_of(codes(String, Encoding), Len).
-length_of(codes(String, Encoding), Len) :-
-    !,
-    setup_call_cleanup(
-        open_null_stream(Out),
-        ( set_stream(Out, encoding(Encoding)),
-          format(Out, '~s', [String]),
-          byte_count(Out, Len)
-        ),
-        close(Out)).
-length_of(atom(Atom, Encoding), Len) :-
-    !,
-    setup_call_cleanup(
-        open_null_stream(Out),
-        ( set_stream(Out, encoding(Encoding)),
-          format(Out, '~a', [Atom]),
-          byte_count(Out, Len)
-        ),
-        close(Out)).
-length_of(file(File), Len) :-
-    !,
+length_of(codes(String, Encoding), Len) =>
+    print_length(format(Out, '~s', [String]), Out, Encoding, Len).
+length_of(atom(Atom, Encoding), Len) =>
+    print_length(format(Out, '~a', [Atom]), Out, Encoding, Len).
+length_of(file(File), Len) =>
     size_file(File, Len).
-length_of(memory_file(Handle), Len) :-
-    !,
+length_of(memory_file(Handle), Len) =>
     size_memory_file(Handle, Len, octet).
-length_of(html_tokens(Tokens), Len) :-
-    !,
+length_of(html_tokens(Tokens), Len) =>
     html_print_length(Tokens, Len).
-length_of(html(Tokens), Len) :-     % deprecated
-    !,
-    html_print_length(Tokens, Len).
-length_of(bytes(Bytes), Len) :-
-    !,
-    (   string(Bytes)
-    ->  string_length(Bytes, Len)
-    ;   length(Bytes, Len)          % assuming a list of 0..255
-    ).
-length_of(Len, Len).
+length_of(html(Tokens, Encoding), Len) =>
+    print_length(print_html(Out, Tokens), Out, Encoding, Len).
+length_of(bytes(Bytes), Len) =>
+    print_length(format(Out, '~s', [Bytes]), Out, octet, Len).
+length_of(Num, Len), integer(Num) =>
+    Len = Num.
 
+print_length(Goal, Out, Encoding, Len) :-
+    setup_call_cleanup(
+        open_null_stream(Out),
+        ( set_stream(Out, encoding(Encoding)),
+          call(Goal),
+          byte_count(Out, Len)
+        ),
+        close(Out)).
 
 %!  content_range(+Unit:atom, +From:int, +RangeEnd:int, +Size:int)// is det
 %
