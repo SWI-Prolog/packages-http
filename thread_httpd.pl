@@ -1044,6 +1044,7 @@ create_pool(Pool) :-
 thread_repeat_wait(Goal) :-
     new_rate_mma(5, 1000, State),
     repeat,
+      notrace,
       update_rate_mma(State, MMA),
       long(MMA, IsLong),
       (   IsLong == brief
