@@ -128,7 +128,9 @@ any(Term, Options) -->
 %   Process a compound term.
 
 compound('$VAR'(Var), Options) -->
-    { Options.get(numbervars) == true,
+    { (   Options.get(numbervars) == true
+      ;   Options.get(portray) == true
+      ),
       !,
       format(string(S), '~W', ['$VAR'(Var), [numbervars(true)]]),
       (   S == "_"
