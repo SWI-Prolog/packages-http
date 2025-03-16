@@ -546,8 +546,8 @@ assert_openid(OpenIDLogin, OpenID, Server, Target) :-
     assert_openid_in_session(openid_login(OpenIDLogin, OpenID, Server, Target)).
 
 assert_openid_in_session(Term) :-
-    (   http_in_session(Session)
-    ->  debug(openid(verify), 'Assert ~p in ~p', [Term, Session])
+    (   http_in_session(_0Session)
+    ->  debug(openid(verify), 'Assert ~p in ~p', [Term, _0Session])
     ;   debug(openid(verify), 'No session!', [])
     ),
     http_session_assert(Term).
@@ -565,16 +565,18 @@ openid_server(OpenIDLogin, OpenID, Server) :-
     openid_server(OpenIDLogin, OpenID, Server, _Target).
 
 openid_server(OpenIDLogin, OpenID, Server, Target) :-
-    http_in_session(Session),
+    http_in_session(_0Session),
     (   http_session_data(openid_login(OpenIDLogin, OpenID, Server, Target))
     ->  true
-    ;   http_session_data(openid_login(OpenIDLogin1, OpenID1, Server1, Target1)),
+    ;   http_session_data(openid_login(_0OpenIDLogin1, _0OpenID1,
+                                       _0Server1, _0Target1)),
         debug(openid(verify), '~p \\== ~p',
               [ openid_login(OpenIDLogin, OpenID, Server, Target),
-                openid_login(OpenIDLogin1, OpenID1, Server1, Target1)
+                openid_login(_0OpenIDLogin1, _0OpenID1, _0Server1, _0Target1)
               ]),
         fail
-    ;   debug(openid(verify), 'No openid_login/4 term in session ~p', [Session]),
+    ;   debug(openid(verify), 'No openid_login/4 term in session ~p',
+              [_0Session]),
         fail
     ).
 
