@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2017, VU University Amsterdam
+    Copyright (c)  2017-2025, VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -47,9 +48,9 @@ This module provides the HTML  resource   `jquery`.  To  get the default
 version of jquery included in a web page,  make sure this file is loaded
 and include the following into the HTML generation DCG.
 
-  ==
+```
     html_requires(jquery),
-  ==
+```
 
 The file served is determined by the setting `jquery:version` and loaded
 from the file search path `js`,  the   default  for which is provided by
@@ -81,30 +82,22 @@ user:file_search_path(js, Dir) :-
     jquery_dir(Dir).
 :- endif.
 
+ensure_jquery :-
+    html_current_resource(jquery),
+    !.
+ensure_jquery :-
+    register_jquery.
+
 register_jquery :-
-    setting(version, JQuery0),
-    backward_compatibility_hack(JQuery0, JQuery),
+    setting(version, JQuery),
     html_resource(jquery,
                   [ virtual(true),
                     requires([ js(JQuery)
                              ])
                   ]).
 
-% Older versions of this library used only the jQuery version as setting
-% value. As Debian provides central jQuery   files  and uses a different
-% naming convention, we now use the complete file name. The first clause
-% recognises the old setting.
-
-backward_compatibility_hack(Version, File) :-
-    sub_atom(Version, 0, 1, _, C0),
-    char_type(C0, digit),
-    !,
-    atomic_list_concat(['jquery-', Version, '.js'], File).
-backward_compatibility_hack(File, File).
-
-:- if(\+html_current_resource(jquery)).
-:- initialization register_jquery.
+:- initialization ensure_jquery.
 :- listen(settings(changed(jquery:version, _, _)),
           register_jquery).
-:- endif.
+
 
