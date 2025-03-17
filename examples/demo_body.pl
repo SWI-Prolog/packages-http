@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2017, University of Amsterdam
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,11 +38,6 @@
           [ reply/1
           ]).
 :- use_module(library(http/http_client)).
-
-:- if(exists_source(library(pce))).
-:- use_module(library(pce)).
-:- use_module(library(http/http_image)).        % make XPCE generate images
-:- endif.
 
 :- discontiguous
     reply/1.
@@ -213,30 +209,6 @@ reply(Request) :-
     A is 1/0,
     format('Content-type: text/plain~n~n', []),
     format('A = ~w~n', [A]).
-
-%       /xpce?class=box
-%
-%       Make XPCE reply with a graphics image. The demo-body pce_reply/1
-%       is called embedded in a  message  to   XPCE  to  force  the XPCE
-%       incremental garbage collector to reclaim   objects created while
-%       serving the request. pce_reply/1 replies   to ?class=box using a
-%       blue box with rounded corners.
-
-:- if(current_predicate(send/3)).
-reply(Request) :-
-    member(path('/xpce'), Request),
-    !,
-    send(@(prolog), call, demo_body:pce_reply(Request)).
-
-pce_reply(Request) :-
-    memberchk(search(Search), Request),
-    memberchk(class=box, Search),
-    new(Box, box(200,200)),
-    send(Box, radius, 20),
-    send(Box, fill_pattern, colour(skyblue)),
-    reply_image(Box, []).
-
-:- endif.
 
 %       ... Otherwise
 %
