@@ -142,8 +142,8 @@ swipl_plugin(
     PL_LIB_SUBDIR http/web/icons
     PL_LIBS ${ICONS})
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
-	DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
+install_prolog_src(FILES ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl
+		   DESTINATION ${SWIPL_INSTALL_LIBRARY}/http)
 install_qlfs(${SWIPL_INSTALL_LIBRARY}/http
 	     ${CMAKE_CURRENT_BINARY_DIR}/jquery.pl)
 if(NOT IS_ABSOLUTE ${JQUERYDIR})
