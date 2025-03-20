@@ -403,6 +403,7 @@ http_opt_meta(Option, Meta) :-
 %   non-interactive mode this predicate calls halt(1).
 
 http_daemon(Options) :-
+    Error = error(_,_),
     catch(http_daemon_guarded(Options), Error, start_failed(Error)).
 
 start_failed(Error) :-
