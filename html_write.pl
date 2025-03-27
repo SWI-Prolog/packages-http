@@ -1502,10 +1502,14 @@ meta_called([_|MT], [_|AT], Called, Tail) :-
     prolog_colour:goal_colours/2,
     prolog_colour:style/2,
     prolog_colour:message//1,
-    prolog:called_by/2.
+    prolog:called_by/2,
+    prolog:xref_update_syntax/2.        % +Term, +Module
 
 prolog_colour:goal_colours(Goal, Colours) :-
-    html_meta_head(Goal, _Module, Head),
+    (   html_meta_head(Goal, _Module, Head)
+    ->  true
+    ;   dyn_html_meta_head(Goal, _Module, Head)
+    ),
     html_meta_colours(Head, Goal, Colours).
 prolog_colour:goal_colours(html_meta(_),
                            built_in-[meta_declarations([html])]).
@@ -1671,14 +1675,34 @@ prolog_colour:message(http_no_location_for_id(ID)) -->
     [ '~w: no such ID'-[ID] ].
 
 
+                /*******************************
+                *        XREF HTML_META        *
+                *******************************/
+
+:- dynamic dyn_html_meta_head/3 as volatile.
+
+prolog:xref_update_syntax((:- html_meta(Decls)), Module) :-
+    dyn_meta_heads(Decls, Module).
+
+dyn_meta_heads((A,B), Module) =>
+    dyn_meta_heads(A, Module),
+    dyn_meta_heads(B, Module).
+dyn_meta_heads(QHead, Module) =>
+    strip_module(Module:QHead, M, Head),
+    most_general_goal(Head, Gen),
+    retractall(dyn_html_meta_head(Gen, M, _)),
+    asserta(dyn_html_meta_head(Gen, M, Head)).
+
 %       prolog:called_by(+Goal, -Called)
 %
 %       Hook into library(pce_prolog_xref).  Called is a list of callable
 %       or callable+N to indicate (DCG) arglist extension.
 
-
 prolog:called_by(Goal, Called) :-
-    html_meta_head(Goal, _Module, Head),
+    (   html_meta_head(Goal, _Module, Head)
+    ->  true
+    ;   dyn_html_meta_head(Goal, _Module, Head)
+    ),
     html_meta_called(Head, Goal, Called).
 
 called_by(Term) -->
