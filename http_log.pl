@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2008-2018, University of Amsterdam
+    Copyright (c)  2008-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -87,6 +88,7 @@ specifications (e.g. =|/topsecret?password=secret|=).
 http_message(Message) :-
     log_message(Message),
     http_log_stream(Stream),
+    E = error(_,_),
     catch(http_message(Message, Stream), E,
           log_error(E)).
 
@@ -105,13 +107,13 @@ http_message(request_finished(Id, Code, Status, CPU, Bytes), Stream) :-
 %   setting `http:on_log_error`, which is one of:
 %
 %     - retry
-%     Close the log file. The system will try to reopen it on the
-%     next log event, recovering from the error. Note that the
-%     most common case for this is probably running out of disc space.
+%       Close the log file. The system will try to reopen it on the
+%       next log event, recovering from the error. Note that the
+%       most common case for this is probably running out of disc space.
 %     - exit
 %     - exit(Code)
-%     Stop the server using halt(Code). The `exit` variant is equivalent
-%     to exit(1).
+%       Stop the server using halt(Code). The `exit` variant is
+%       equivalent to exit(1).
 %
 %   The best choice depends on  your   priorities.  Using  `retry` gives
 %   priority to keep the server running.  Using `exit` guarantees proper
@@ -142,13 +144,14 @@ log_error_continue(exit(Code)) :-
                  *******************************/
 
 :- dynamic
-    log_stream/2.                   % Stream, TimeTried
+    log_stream/2,                   % Stream, TimeTried
+    halt_registered/0.
 
 %!  http_log_stream(-Stream) is semidet.
 %
 %   True when Stream is a stream to the  opened HTTP log file. Opens the
-%   log file in =append= mode if the file  is not yet open. The log file
-%   is determined from the setting =|http:logfile|=.  If this setting is
+%   log file in `append` mode if the file  is not yet open. The log file
+%   is determined from the setting ``http:logfile``.  If this setting is
 %   set to the empty atom (''), this predicate fails.
 %
 %   If  a  file  error  is   encountered,    this   is   reported  using
@@ -167,7 +170,8 @@ http_log_stream([]) :-
     setting(http:logfile, ''),
     !,
     get_time(Now),
-    assert(log_stream([], Now)).
+    assert(log_stream([], Now)),
+    fail.
 http_log_stream(Stream) :-
     setting(http:logfile, Term),
     broadcast(http_log_open(Term)),
@@ -196,11 +200,18 @@ open_log(File, Stream) :-
                  buffer(line)
                ]), E, open_error(E)),
     get_time(Time),
-    format(Stream,
-           'server(started, ~0f).~n',
-           [ Time ]),
-    assert(log_stream(Stream, Time)),
-    at_halt(close_log(stopped)).
+    register_close_log,
+    Error = error(_,_),
+    catch(format(Stream,
+                 'server(started, ~0f).~n',
+                 [ Time ]),
+          Error,
+          open_error(Stream, Error)),
+    assert(log_stream(Stream, Time)).
+
+open_error(Stream, E) :-
+    close(Stream, [force(true)]),
+    open_error(E).
 
 open_error(E) :-
     print_message(error, E),
@@ -218,6 +229,12 @@ log_open_error_continue(retry) :-
 log_open_error_continue(Action) :-
     log_error_continue(Action).
 
+register_close_log :-
+    halt_registered,
+    !.
+register_close_log :-
+    at_halt(close_log(stopped)),
+    asserta(halt_registered).
 
 %!  http_log_close(+Reason) is det.
 %
@@ -257,7 +274,10 @@ close_log(_).
 
 http_log(Format, Args) :-
     (   http_log_stream(Stream)
-    ->  system:format(Stream, Format, Args) % use operators from `system`
+    ->  Error = error(_,_),
+        catch(system:format(Stream, Format, Args), % use operators from `system`
+              Error,
+              log_error(Error))
     ;   true
     ).
 
@@ -266,7 +286,7 @@ http_log(Format, Args) :-
 %
 %   Write log message that Request was started to Stream.
 %
-%   @param  Filled with sequence identifier for the request
+%   @arg  Filled with sequence identifier for the request
 
 log_started(Request, Id, Stream) :-
     is_stream(Stream),
