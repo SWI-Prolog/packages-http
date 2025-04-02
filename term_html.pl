@@ -503,10 +503,11 @@ no_space(quote(R), quote(L)) :-
 no_space(alnum, symbol).
 no_space(symbol, alnum).
 
-%!  end_code_type(+Term, +Class, -Code, Options)
+%!  end_code_type(+Term, +Class, -Type, +Options) is det.
 %
-%   True when code is the first/last character code that is emitted
-%   by printing Term using Options.
+%   True when code is the first/last character   code that is emitted by
+%   printing Term using Options.  `Options.side`   is  either  `left` or
+%   `right`.
 
 end_code_type(Atom, a, Type, Options) :-
     atom(Atom),
@@ -544,6 +545,13 @@ end_code_type(List, Type, _) :-
     ),
     !,
     Type = punct.
+end_code_type(Blob, Type, Options) :-
+    blob(Blob, Tag),
+    !,                                  % assumes writing as tag<...>
+    (   Options.side == left
+    ->  end_code_type(Tag, Type, Options)
+    ;   Type = symbol
+    ).
 end_code_type(OpTerm, Type, Options) :-
     compound_name_arity(OpTerm, Name, 1),
     is_op1(Name, OpType, Pri, ArgPri, Options),
