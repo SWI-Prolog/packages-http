@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2022, VU University Amsterdam
+    Copyright (c)  2014-2025, VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -47,6 +47,9 @@
     portray//2,                     % +Term, +Options
     layout/3.                       % +Term, -Layout, +Options
 
+:- meta_predicate
+    term(+, :, ?, ?).
+
 /** <module> Represent Prolog terms as HTML
 
 This file is primarily designed to   support running Prolog applications
@@ -61,11 +64,11 @@ terms as structured HTML.
 %   processed:
 %
 %     - format(+Format)
-%     Used for atomic values.  Typically this is used to
-%     render a single value.
-%     - float_format(+Format)
-%     If a float is rendered, it is rendered using
-%     `format(string(S), Format, [Float])`
+%       Used for atomic values.  Typically this is used to
+%       render a single value.
+%     - emit(:Closure)
+%       Call call(Closure, HTML)// rather than html//1 to emit the
+%       result.
 %
 %   @tbd    Cyclic terms.
 %   @tbd    Attributed terms.
@@ -75,24 +78,45 @@ terms as structured HTML.
 
 term(Term, Options) -->
     { must_be(acyclic, Term),
-      merge_options(Options,
+      meta_options(is_meta, Options, Options1),
+      merge_options(Options1,
                     [ priority(1200),
                       max_depth(1 000 000 000),
                       depth(0)
                     ],
-                    Options1),
-      dict_options(Dict, Options1)
+                    Options2),
+      dict_options(Dict, Options2)
     },
     any(Term, Dict),
     finalize_term(Term, Dict).
 
+is_meta(emit).
+
 :- html_meta
-    embrace(html,?,?).
+    embrace(html,+,?,?),
+    emit(html,+,?,?).
+
+%!  emit(:HTML, +Options)// is det.
+%
+%   Support the option emit(Closure)  to   call  call(Closure, HTML) for
+%   emitting the result rather than html//1.
+
+emit(HTML, Options) -->
+    { get_dict(emit, Options, Closure) },
+    !,
+    call(Closure, HTML).
+emit(HTML, _Options) -->
+    html(HTML).
+
+%!  any(@Term, +Options:dict)// is det.
+%
+%   Emit an arbitrary Prolog Term as HTML controlled by Options.
+%   @arg Options is a dict.
 
 any(_, Options) -->
     { Options.depth >= Options.max_depth },
     !,
-    html(span(class('pl-ellipsis'), ...)).
+    emit(span(class('pl-ellipsis'), ...), Options).
 any(Term, Options) -->
     (   {   nonvar(Term)
         ;   attvar(Term)
@@ -106,13 +130,13 @@ any(Term, Options) -->
       quote_atomic(Term, S, Options),
       primitive_class(Class0, Term, S, Class)
     },
-    html(span([class(Class)], S)).
+    emit(span([class(Class)], S), Options).
 any(Term, Options) -->
     { blob(Term,Type), Term \== [] },
     !,
     (   blob_rendering(Type,Term,Options)
     ->  []
-    ;   html(span(class('pl-blob'),['<',Type,'>']))
+    ;   emit(span(class('pl-blob'),['<',Type,'>']), Options)
     ).
 any(Term, Options) -->
     { is_dict(Term), !
@@ -138,7 +162,7 @@ compound('$VAR'(Var), Options) -->
       ;   Class = 'pl-var'
       )
     },
-    html(span([class(Class)], S)).
+    emit(span([class(Class)], S), Options).
 compound(List, Options) -->
     { (   List == []
       ;   List = [_|_]                              % May have unbound tail
@@ -150,7 +174,7 @@ compound(List, Options) -->
 compound({X}, Options) -->
     !,
     { arg_options(Options, _{priority:1200}, ArgOptions) },
-    html(span(class('pl-curl'), [ '{', \any(X, ArgOptions), '}' ])).
+    emit(span(class('pl-curl'), [ '{', \any(X, ArgOptions), '}' ]), Options).
 compound(OpTerm, Options) -->
     { compound_name_arity(OpTerm, Name, 1),
       is_op1(Name, Type, Pri, ArgPri, Options),
@@ -171,17 +195,17 @@ compound(Compound, Options) -->
       arg_options(Options, _{priority:999}, ArgOptions),
       extra_classes(Compound, Classes, Attrs, Options)
     },
-    html(span([ class(['pl-compound','pl-adaptive'|Classes]),
+    emit(span([ class(['pl-compound','pl-adaptive'|Classes]),
                 'data-arity'(Arity),
                 'data-name'(Name)
               | Attrs
               ],
               [ span(class(['pl-functor', 'pl-trigger']),
-                     [ S, \punct('(') ]),
+                     [ S, \punct('(', Options) ]),
                 span(class('pl-compound-args'),
                      [ \args(0, Arity, Compound, ArgOptions)
                      ])
-              ])).
+              ]), Options).
 
 extra_classes(Term, Classes, OAttrs, Options) :-
     findall(A, extra_attr(Term, A, Options), Attrs),
@@ -215,21 +239,21 @@ arg_options(Options, Extra, Options.put(depth, NewDepth).put(Extra)) :-
 %   Emit arguments of a compound term.
 
 args(Arity, Arity, _, _) --> !.
-args(I, Arity, Compound, ArgOptions) -->
+args(I, Arity, Compound, Options) -->
     { NI is I + 1,
       arg(NI, Compound, Arg)
     },
     (   {NI == Arity}
-    ->  html([ span(class('pl-compound-arg'), \any(Arg, ArgOptions)),
+    ->  emit([ span(class('pl-compound-arg'), \any(Arg, Options)),
                span(class(['pl-compound-close', 'pl-punct']), ')')
-             ])
-    ;   html(span(class('pl-compound-arg'),
-                  [ \any(Arg, ArgOptions), \punct(',') ])),
-        args(NI, Arity, Compound, ArgOptions)
+             ], Options)
+    ;   emit(span(class('pl-compound-arg'),
+                  [ \any(Arg, Options), \punct(',', Options) ]), Options),
+        args(NI, Arity, Compound, Options)
     ).
 
-punct(Punct) -->
-    html(span(class('pl-punct'), Punct)).
+punct(Punct, Options) -->
+    emit(span(class('pl-punct'), Punct), Options).
 
 %!  list(+List, +Options)//
 %
@@ -242,13 +266,13 @@ list(List, Options) -->
       ;   Attr = ['data-length'(Length), 'data-partial'(true)]
       )
     },
-    html(span([ class(['pl-list','pl-adaptive'])
+    emit(span([ class(['pl-list','pl-adaptive'])
               | Attr
               ],
               [ span(class(['pl-list-open', 'pl-trigger', 'pl-punct']), '['),
                 \list_content(List, Options),
                 span(class(['pl-list-close', 'pl-punct']), ']')
-              ])).
+              ]), Options).
 
 list_content([], _Options) -->
     !,
@@ -269,20 +293,20 @@ list_content([H|T], Options) -->
           Next = list
       )
     },
-    html(span(class('pl-list-el'),
-              [ \any(H, Options) | Sep ])),
+    emit(span(class('pl-list-el'),
+              [ \any(H, Options) | Sep ]), Options),
     list_next(Next, T, ArgOptions).
 
 list_next(end, _, _) --> !.
-list_next(depth_limit, _, _) -->
+list_next(depth_limit, _, Options) -->
     !,
-    html(span(class('pl-ellipsis'), ...)).
+    emit(span(class('pl-ellipsis'), ...), Options).
 list_next(tail, Value, Options) -->
     {   var(Value)
     ->  Class = 'pl-var-tail'
     ;   Class = 'pl-nonvar-tail'
     },
-    html(span(class(Class), \any(Value, Options))).
+    emit(span(class(Class), \any(Value, Options)), Options).
 list_next(list, Tail, Options) -->
     list_content(Tail, Options).
 
@@ -330,7 +354,7 @@ operator_module(TypeIn, _) :-
 op1(Type, Pri, Term, ArgPri, Options) -->
     { Pri > Options.priority },
     !,
-    embrace(\op1(Type, Term, ArgPri, Options)).
+    embrace(\op1(Type, Term, ArgPri, Options), Options).
 op1(Type, _, Term, ArgPri, Options) -->
     op1(Type, Term, ArgPri, Options).
 
@@ -342,7 +366,7 @@ op1(prefix, Term, ArgPri, Options) -->
       quote_atomic(Functor, S, FuncOptions),
       extra_classes(Term, Classes, Attrs, Options.put(op, prefix))
     },
-    html(span([ class(['pl-compound', 'pl-op', 'pl-prefix-op'|Classes]),
+    emit(span([ class(['pl-compound', 'pl-op', 'pl-prefix-op'|Classes]),
                 'data-arity'(1),
                 'data-name'(Functor)
               | Attrs
@@ -350,7 +374,7 @@ op1(prefix, Term, ArgPri, Options) -->
               [ span(class(['pl-functor', 'pl-trigger']), S),
                 \space(Functor, Arg, o, a, FuncOptions, ArgOptions),
                 \op_arg(Arg, ArgOptions)
-              ])).
+              ]), Options).
 op1(postfix, Term, ArgPri, Options) -->
     { Term =.. [Functor,Arg],
       arg_options(Options, DepthOptions),
@@ -359,7 +383,7 @@ op1(postfix, Term, ArgPri, Options) -->
       quote_atomic(Functor, S, FuncOptions),
       extra_classes(Term, Classes, Attrs, Options.put(op, postfix))
     },
-    html(span([ class(['pl-compound', 'pl-op', 'pl-postfix-op'|Classes]),
+    emit(span([ class(['pl-compound', 'pl-op', 'pl-postfix-op'|Classes]),
                 'data-arity'(1),
                 'data-name'(Functor)
               | Attrs
@@ -367,14 +391,14 @@ op1(postfix, Term, ArgPri, Options) -->
               [ \op_arg(Arg, ArgOptions),
                 \space(Arg, Functor, a, o, ArgOptions, FuncOptions),
                 span(class('pl-functor'), S)
-              ])).
+              ]), Options).
 
 %!  op2(+Pri, +Term, +Type, +LeftPri, +RightPri, +Options)// is det.
 
 op2(Pri, Term, Type, LeftPri, RightPri, Options) -->
     { Pri > Options.priority },
     !,
-    embrace(\op2(Term, Type, LeftPri, RightPri, Options)).
+    embrace(\op2(Term, Type, LeftPri, RightPri, Options), Options).
 op2(_, Term, Type, LeftPri, RightPri, Options) -->
     op2(Term, Type, LeftPri, RightPri, Options).
 
@@ -388,10 +412,10 @@ op2(Term, xfy, LeftPri, RightPri, Options) -->
       ArgOptions  = DepthOptions.put(#{priority:LeftPri, quoted_op:S}),
       extra_classes(Term, Classes, Attrs, Options.put(op, infix))
     },
-    html(span([ class(['pl-op-seq', 'pl-adaptive'|Classes])
+    emit(span([ class(['pl-op-seq', 'pl-adaptive'|Classes])
               | Attrs
               ],
-              \op_seq(List, Functor, RightPri, ArgOptions))).
+              \op_seq(List, Functor, RightPri, ArgOptions)), Options).
 op2(Term, _Type, LeftPri, RightPri, Options) -->
     { Term =.. [Functor,Left,Right],
       arg_options(Options, DepthOptions),
@@ -407,7 +431,7 @@ op2(Term, _Type, LeftPri, RightPri, Options) -->
       quote_op(Functor, S, Options),
       extra_classes(Term, Classes, Attrs, Options.put(op, infix))
     },
-    html(span([ class([ 'pl-compound', 'pl-adaptive', 'pl-op', 'pl-infix-op'
+    emit(span([ class([ 'pl-compound', 'pl-adaptive', 'pl-op', 'pl-infix-op'
                       | Classes
                       ]),
                 'data-arity'(2),
@@ -419,7 +443,7 @@ op2(Term, _Type, LeftPri, RightPri, Options) -->
                 span(class(['pl-functor', 'pl-trigger']), S),
                 Space,
                 \op_arg(Right, RightOptions)
-              ])).
+              ]), Options).
 
 %!  op_arg(+Term, +Options)// is det.
 
@@ -428,7 +452,7 @@ op_arg(Atom, Options) -->
       operator_module(Module, Options),
       current_op(_,_,Module:Atom)
     }, !,
-    embrace(\any(Atom, Options.put(embrace, never))).
+    embrace(\any(Atom, Options.put(embrace, never)), Options).
 op_arg(Any, Options) -->
     any(Any, Options).
 
@@ -436,20 +460,20 @@ op_seq([Last], _Functor, LastPri, Options) -->
     !,
     { LastOptions = Options.put(priority, LastPri)
     },
-    html(span(class('pl-op-seq-el'), \op_arg(Last, LastOptions))).
+    emit(span(class('pl-op-seq-el'), \op_arg(Last, LastOptions)), Options).
 op_seq([H|T], Functor, LastPri, Options) -->
-    html(span(class('pl-op-seq-el'),
+    emit(span(class('pl-op-seq-el'),
               [ \op_arg(H, Options),
                 \left_space(H, Functor, Options),
                 span(class('pl-infix'), Options.quoted_op)
-              ])),
+              ]), Options),
     op_seq(T, Functor, LastPri, Options).
 
 left_space(Left, Functor, Options) -->
     { need_space(Left, Functor, a, o, Options, Options.put(embrace, never))
     },
     !,
-    html(' ').
+    emit(' ', Options).
 left_space(_,_,_) -->
     [].
 
@@ -461,17 +485,17 @@ xfy_list(Term, Name, List),
 xfy_list(Term, _, List) =>
     List = [Term].
 
-%!  embrace(+HTML)//
+%!  embrace(+HTML, +Options)//
 %
 %   Place parenthesis around HTML  with  a   DOM  that  allows to easily
 %   justify the height of the parenthesis.
 
-embrace(HTML) -->
-    html(span(class('pl-embrace'),
+embrace(HTML, Options) -->
+    emit(span(class('pl-embrace'),
               [ span(class('pl-parenthesis'), '('),
-                span(class('pl-embraced'),\html(HTML)),
+                span(class('pl-embraced'),\emit(HTML, Options)),
                 span(class('pl-parenthesis'), ')')
-              ])).
+              ]), Options).
 
 %!  space(@T1, @T2, +C1, +C2, +Options)//
 %
@@ -480,7 +504,7 @@ embrace(HTML) -->
 
 space(T1, T2, C1, C2, LeftOptions, RightOptions) -->
     { need_space(T1, T2, C1, C2, LeftOptions, RightOptions) },
-    html(' ').
+    emit(' ', RightOptions).
 space(_, _, _, _, _, _) -->
     [].
 
@@ -630,7 +654,7 @@ dict(Term, Options) -->
       quote_atomic(Tag, S, Options.put(embrace, never)),
       arg_options(Options, ArgOptions)
     },
-    html(span(class(['pl-dict', 'pl-adaptive']),
+    emit(span(class(['pl-dict', 'pl-adaptive']),
               [ span(class(['pl-tag', 'pl-trigger']), S),
                 span(class(['pl-dict-open', 'pl-punct']), '{'),
                 span(class('pl-dict-body'),
@@ -638,13 +662,13 @@ dict(Term, Options) -->
                             \dict_kvs(Pairs, ArgOptions)),
                        span(class(['pl-dict-close', 'pl-punct']), '}')
                      ])
-              ])).
+              ]), Options).
 
 dict_kvs([], _) --> [].
 dict_kvs(_, Options) -->
     { Options.depth >= Options.max_depth },
     !,
-    html(span(class('pl-ellipsis'), ...)).
+    emit(span(class('pl-ellipsis'), ...), Options).
 dict_kvs(KVs, Options) -->
     dict_kvs2(KVs, Options).
 
@@ -663,14 +687,14 @@ dict_kvs2([K-V|T], Options) -->
       ;   Sep = [\punct(','), ' ']
       )
     },
-    html(span(class('pl-dict-kv'),
-              [ span(class('pl-key'), [S, \punct(:)]),
+    emit(span(class('pl-dict-kv'),
+              [ span(class('pl-key'), [S, \punct(:, Options)]),
                 VSpace,
                 span(class('pl-dict-value'),
                      [ \any(V, ArgOptions)
                      | Sep
                      ])
-              ])),
+              ]), Options),
     dict_kvs2(T, Options).
 
 quote_atomic(Float, String, Options) :-
@@ -745,15 +769,15 @@ primitive_class(Class, _, _, Class).
 %
 %   Handle the full_stop(Bool) and nl(Bool) options.
 
-finalize_term(Term, Dict) -->
-    (   { true == Dict.get(full_stop) }
-    ->  space(Term, '.', o, o, Dict, Dict),
-        (   { true == Dict.get(nl) }
-        ->  html(['.', br([])])
-        ;   html('. ')
+finalize_term(Term, Options) -->
+    (   { true == Options.get(full_stop) }
+    ->  space(Term, '.', o, o, Options, Options),
+        (   { true == Options.get(nl) }
+        ->  emit(['.', br([])], Options)
+        ;   emit('. ', Options)
         )
-    ;   (   { true == Dict.get(nl) }
-        ->  html(br([]))
+    ;   (   { true == Options.get(nl) }
+        ->  emit(br([]), Options)
         ;   []
         )
     ).
