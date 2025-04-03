@@ -75,7 +75,7 @@
           ]).
 :- use_module(html_quasiquotations, [html/4]).
 :- use_module(library(debug),[debug/3]).
-:- use_module(html_decl, [(html_meta)/1, op(_,_,_)]).
+:- use_module(html_decl, [(html_meta)/1, html_no_content/1, op(_,_,_)]).
 :- autoload(library(error),
 	    [must_be/2,domain_error/2,instantiation_error/1]).
 :- autoload(library(lists),
@@ -453,8 +453,7 @@ do_expand(Term, M) -->
     { Term =.. [Env, Contents]
     },
     !,
-    (   { layout(Env, _, empty)
-        }
+    (   { html_no_content(Env) }
     ->  html_begin(Env, Contents)
     ;   (   { Contents == [],
               html_current_option(dialect(xhtml))
@@ -491,7 +490,7 @@ qhtml(_, Contents, M) -->
 
 check_non_empty([], _, _) :- !.
 check_non_empty(_, Tag, Term) :-
-    layout(Tag, _, empty),
+    html_no_content(Tag),
     !,
     print_message(warning,
                   format('Using empty element with content: ~p', [Term])).
@@ -567,7 +566,7 @@ html_begin(Env, Attributes) -->
     [<],
     [Env],
     attributes(Env, Attributes),
-    (   { layout(Env, _, empty),
+    (   { html_no_content(Env),
           html_current_option(dialect(xhtml))
         }
     ->  ['/>']
@@ -576,9 +575,9 @@ html_begin(Env, Attributes) -->
     post_open(Env).
 
 html_end(Env)   -->                     % empty element or omited close
-    { layout(Env, _, -),
+    { html_no_content(Env)
+    ; layout(Env, _, -),
       html_current_option(dialect(html))
-    ; layout(Env, _, empty)
     },
     !,
     [].
@@ -1138,12 +1137,11 @@ post_close(_) -->
 %   rather incomplete. New rules can  be   added  to  this multifile
 %   predicate.
 %
-%   @param Tag      Name of the tag
-%   @param Open     Tuple M-N, where M is the number of lines before
-%                   the tag and N after.
-%   @param Close    Either as Open, or the atom - (minus) to omit the
-%                   close-tag or =empty= to indicate the element has
-%                   no content model.
+%   @arg Tag      Name of the tag
+%   @arg Open     Tuple M-N, where M is the number of lines before
+%                 the tag and N after.
+%   @arg Close    Either as Open, or the atom - (minus) to omit the
+%                 close-tag.
 %
 %   @tbd    Complete table
 
@@ -1186,20 +1184,20 @@ layout(h4,         2-0, 0-2).
 
 layout(iframe,     1-1, 1-1).
 
-layout(area,       1-0, empty).
-layout(base,       1-1, empty).
-layout(br,         0-1, empty).
-layout(col,        0-0, empty).
-layout(embed,      1-1, empty).
-layout(hr,         1-1, empty).         % empty elements
-layout(img,        0-0, empty).
-layout(input,      1-0, empty).
-layout(link,       1-1, empty).
-layout(meta,       1-1, empty).
-layout(param,      1-0, empty).
-layout(source,     1-0, empty).
-layout(track,	   1-0, empty).
-layout(wbr,	   0-0, empty).
+layout(area,       1-0, -).
+layout(base,       1-1, -).
+layout(br,         0-1, -).
+layout(col,        0-0, -).
+layout(embed,      1-1, -).
+layout(hr,         1-1, -).
+layout(img,        0-0, -).
+layout(input,      1-0, -).
+layout(link,       1-1, -).
+layout(meta,       1-1, -).
+layout(param,      1-0, -).
+layout(source,     1-0, -).
+layout(track,	   1-0, -).
+layout(wbr,	   0-0, -).
 
 layout(p,          2-1, -).             % omited close
 layout(td,         0-0, 0-0).

@@ -34,6 +34,7 @@
 
 :- module(html_decl,
           [ (html_meta)/1,              % +Spec
+            html_no_content/1,          % ?Element
 
             op(1150, fx, html_meta)
           ]).
@@ -192,7 +193,7 @@ html_colours(Term, TermColours) :-
     !,
     (   Args = [One]
     ->  TermColours = html(Name)-ArgColours,
-        (   layout(Name, _, empty)
+        (   html_no_content(Name)
         ->  attr_colours(One, ArgColours)
         ;   html_colours(One, Colours),
             ArgColours = [Colours]
@@ -297,6 +298,25 @@ format_colours(_Format, type_error(text)).
 
 format_arg_colours(Args, _Format, classify) :- is_list(Args), !.
 format_arg_colours(_, _, type_error(list)).
+
+%!  html_no_content(?Element)
+%
+%   True when Element has no content.
+
+html_no_content(area).
+html_no_content(base).
+html_no_content(br).
+html_no_content(col).
+html_no_content(embed).
+html_no_content(hr).
+html_no_content(img).
+html_no_content(input).
+html_no_content(link).
+html_no_content(meta).
+html_no_content(param).
+html_no_content(source).
+html_no_content(track).
+html_no_content(wbr).
 
 :- op(990, xfx, :=).                    % allow compiling without XPCE
 :- op(200, fy, @).
