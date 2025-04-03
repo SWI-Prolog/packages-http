@@ -78,7 +78,7 @@ endif(SWIPL_WITH_HTTP_SERVER)
 configure_file(config.h.cmake config.h)
 
 set(HTML_PL_FILES
-    html_write.pl html_quasiquotations.pl term_html.pl html_head.pl
+    html_write.pl html_decl.pl html_quasiquotations.pl term_html.pl html_head.pl
     http_path.pl mimetype.pl)
 
 set(HTTP_CLIENT_PL_FILES
