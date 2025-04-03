@@ -684,7 +684,7 @@ dict_kvs2([K-V|T], Options) -->
       arg_options(Options, ArgOptions),
       (   T == []
       ->  Sep = []
-      ;   Sep = [\punct(','), ' ']
+      ;   Sep = [\punct(',', Options), ' ']
       )
     },
     emit(span(class('pl-dict-kv'),
