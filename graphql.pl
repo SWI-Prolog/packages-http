@@ -1120,18 +1120,15 @@ graphql_write_value_maybe(Value, Options) -->
 
 graphql_write_value(enum(N), _Options) -->
     !,
-    {   string_codes(N, Codes)    },
-    Codes.
+    format('~s', [N]).
 graphql_write_value(variable(V), _Options) -->
     !,
-    {   string_codes(V, Codes)    },
-    [0'$|Codes].
+    format('$~s', [V]).
 graphql_write_value(Atom, _Options) -->
-    {   atom(Atom),
-        !,
-        atom_codes(Atom, Codes)
+    {   atom(Atom)
     },
-    Codes.
+    !,
+    format('~a', [Atom]).
 graphql_write_value(String, Options) -->
     {   string(String),
         !,
@@ -1141,11 +1138,10 @@ graphql_write_value(String, Options) -->
     graphql_write_string(Codes, Options),
     "\"".
 graphql_write_value(Number, _Options) -->
-    {   number(Number),
-        !,
-        number_codes(Number, Codes)
+    {   number(Number)
     },
-    Codes.
+    !,
+    format('~w', [Number]).
 graphql_write_value(List, Options) -->
     {   is_list(List)   },
     !,
@@ -1366,3 +1362,6 @@ graphql_write_inline_fragment(TypeCondition,
 
 graphql_write_type_condition(TypeCondition, Options) -->
     "on ", graphql_write_name(TypeCondition, Options).
+
+format(Format, Args, Head, Tail) :-
+    format(codes(Head, Tail), Format, Args).
