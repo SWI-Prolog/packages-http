@@ -34,7 +34,7 @@
 :- autoload(library(aggregate), [aggregate_all/3, aggregate_all/4]).
 :- autoload(library(apply), [maplist/3]).
 :- autoload(library(option), [option/2]).
-:- autoload(library(http/http_dispatch), [http_handler/3]).
+:- use_module(library(http/http_dispatch), [http_handler/3]).
 :- autoload(library(http/http_json), [reply_json/1]).
 :- autoload(library(http/http_parameters), [http_parameters/2]).
 :- autoload(library(http/thread_httpd), [http_server_property/2, http_workers/2]).
