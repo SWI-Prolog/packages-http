@@ -649,3 +649,9 @@ prolog_edit:locate(Path, html_resource(Spec), [file(File), line(Line)]) :-
     atom(Path),
     html_resource(Spec, File:Line, _Properties),
     sub_term(Path, Spec).
+
+                /*******************************
+                *  SUPPRESS AUTOLOAD WARNINGS  *
+                *******************************/
+
+'$nowarn_autoload'(html_requires/3, _).
