@@ -38,6 +38,7 @@
                                                 % -HdrExtra, -Context
             in_or_exclude_backtrace/2           % +Error, -CleanedError
           ]).
+:- use_module(library(settings), [current_setting/1, setting/2]).
 
 /** <module> Map Prolog exceptions to HTTP errors
 
