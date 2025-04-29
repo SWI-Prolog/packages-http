@@ -43,14 +43,15 @@
             ws_open/3,                  % +Stream, -WebSocket, +Options
             ws_property/2               % +WebSocket, ?Property
           ]).
-:- autoload(library(base64),[base64//1]).
 :- use_module(library(debug),[debug/3]).
+:- use_module(library(http/http_dispatch),[http_switch_protocol/2]).
+
+:- autoload(library(base64),[base64//1]).
 :- autoload(library(error),
 	    [permission_error/3,must_be/2,type_error/2,domain_error/2]).
 :- autoload(library(lists),[member/2]).
 :- autoload(library(option),[select_option/3,option/2,option/3]).
 :- autoload(library(sha),[sha_hash/3]).
-:- autoload(library(http/http_dispatch),[http_switch_protocol/2]).
 :- autoload(library(http/http_open),[http_open/3]).
 :- autoload(library(http/json),[json_write_dict/2,json_read_dict/3]).
 
