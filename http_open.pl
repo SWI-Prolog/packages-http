@@ -1660,7 +1660,7 @@ read_incomplete(In, Left) :-
               open_null_stream(Null),
               copy_stream_data(In, Null, Left),
               close(Null)),
-          _,
+          error(_,_),
           fail).
 
 :- dynamic
