@@ -79,25 +79,26 @@ applications:
 
 %!  http_wrapper(:Goal, +In, +Out, -Close, +Options) is det.
 %
-%   Simple wrapper to read and decode an HTTP header from `In', call
-%   :Goal while watching for exceptions and send the result to the
+%   Simple wrapper to read and decode  an   HTTP  header from `In', call
+%   :Goal while watching for  exceptions  and   send  the  result to the
 %   stream `Out'.
 %
-%   The goal is assumed  to  write   the  reply  to =current_output=
-%   preceded  by an HTTP header, closed by  a blank line. The header
-%   *must* contain a Content-type: <type>   line.  It may optionally
-%   contain a line =|Transfer-encoding: chunked|= to request chunked
-%   encoding.
+%   The goal is assumed to write  the reply to `current_output` preceded
+%   by an HTTP header, closed  by  a   blank  line.  The header __must__
+%   contain a Content-type: <type> line.  It   may  optionally contain a
+%   line ``Transfer-encoding: chunked`` to request chunked encoding.
 %
 %   Options:
 %
-%           * request(-Request)
-%           Return the full request to the caller
-%           * peer(+Peer)
-%           IP address of client
+%     - request(-Request)
+%       Return the full request to the caller
+%     - byte_count(-Count)
+%       Stream In byte_count/2 after reading the request.
+%     - peer(+Peer)
+%       IP address of client
 %
-%   @arg Close Unified to one of `close`, ``Keep-Alive`` or
-%              spawned(ThreadId).
+%   @arg   Close   Unified   to   one    of   `close`,   ``Keep-Alive``,
+%   spawned(ThreadId) or switch_protocol(:Goal, +SwitchOptions)
 
 http_wrapper(Goal, In, Out, Close, Options) :-
     status(Id, State0),
@@ -106,7 +107,9 @@ http_wrapper(Goal, In, Out, Close, Options) :-
     ->  Close = close,
         extend_request(Options, [], _) % return request
     ;   var(ReqError)
-    ->  extend_request(Options, Request0, Request1),
+    ->  byte_count(In, ByteCount),
+        ignore(memberchk(byte_count(ByteCount), Options)),
+        extend_request(Options, Request0, Request1),
         cgi_open(Out, CGI, cgi_hook, [request(Request1)]),
         cgi_property(CGI, id(Id)),
         (   debugging(http(request))
@@ -135,7 +138,7 @@ status(Id, state0(Thread, CPU, Id)) :-
     thread_cputime(CPU).
 
 
-%!  http_wrap_spawned(:Goal, -Request, -Close) is det.
+%!  http_wrap_spawned(:Goal, +Request, -Close) is det.
 %
 %   Internal  use  only.  Helper  for    wrapping  the  handler  for
 %   http_spawn/2.
@@ -147,10 +150,8 @@ http_wrap_spawned(Goal, Request, Close) :-
     cgi_property(CGI, id(Id)),
     handler_with_output_to(Goal, Id, -, current_output, Error),
     (   retract(spawned(ThreadId))
-    ->  Close = spawned(ThreadId),
-        Request = []
-    ;   cgi_property(CGI, request(Request)),
-        status(Id, State0),
+    ->  Close = spawned(ThreadId)
+    ;   status(Id, State0),
         catch(cgi_close(CGI, Request, State0, Error, Close),
               _,
               Close = close)

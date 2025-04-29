@@ -57,6 +57,7 @@
 :- use_module(library(gensym)).
 :- use_module(http_wrapper).
 :- use_module(http_path).
+:- use_module(http_stream).
 
 :- autoload(library(uri), [uri_resolve/3]).
 :- autoload(library(aggregate), [aggregate_all/3]).
@@ -874,6 +875,30 @@ current_message_level(Term, Level) :-
     ;   Level = error
     ).
 
+%!  read_remaining_request(+StartBody, +Request) is semidet.
+%
+%   If our handler did not read the   complete  request we must read the
+%   remainder if we are dealing with a Keep-alive connection.
+
+read_remaining_request(StartBody, Request) :-
+    memberchk(content_length(Len), Request),
+    !,
+    memberchk(pool(client(_Queue, _Goal, In, _Out)), Request),
+    byte_count(In, Here),
+    Left is StartBody+Len-Here,
+    read_incomplete(In, Left).
+read_remaining_request(_, _Request).
+
+read_incomplete(_, 0) :-
+    !.
+read_incomplete(In, Left) :-
+    % Left < 1 000 000,			% Optionally close anyway.
+    catch(setup_call_cleanup(
+              open_null_stream(Null),
+              copy_stream_data(In, Null, Left),
+              close(Null)),
+          error(_,_),
+          fail).
 
 %!  http_requeue(+Header)
 %
@@ -915,17 +940,18 @@ http_process(Goal, In, Out, Options) :-
     set_stream(In, timeout(TMO)),
     set_stream(Out, timeout(TMO)),
     http_wrapper(Goal, In, Out, Connection,
-                 [ request(Request)
+                 [ request(Request),
+                   byte_count(StartBody)
                  | Options
                  ]),
-    next(Connection, Request).
+    next(Connection, StartBody, Request).
 
-next(Connection, Request) :-
-    next_(Connection, Request), !.
-next(Connection, Request) :-
-    print_message(warning, goal_failed(next(Connection,Request))).
+next(Connection, StartBody, Request) :-
+    next_(Connection, StartBody, Request), !.
+next(Connection, StartBody, Request) :-
+    print_message(warning, goal_failed(next(Connection,StartBody,Request))).
 
-next_(switch_protocol(SwitchGoal, _SwitchOptions), Request) :-
+next_(switch_protocol(SwitchGoal, _SwitchOptions), _, Request) :-
     !,
     memberchk(pool(client(_Queue, _Goal, In, Out)), Request),
     (   catch(call(SwitchGoal, In, Out), E,
@@ -934,14 +960,15 @@ next_(switch_protocol(SwitchGoal, _SwitchOptions), Request) :-
     ->  true
     ;   http_close_connection(Request)
     ).
-next_(spawned(ThreadId), _) :-
+next_(spawned(ThreadId), _, _) :-
     !,
     debug(http(spawn), 'Handler spawned to thread ~w', [ThreadId]).
-next_(Connection, Request) :-
+next_(Connection, StartBody, Request) :-
     downcase_atom(Connection, 'keep-alive'),
+    read_remaining_request(StartBody, Request),
     http_requeue(Request),
     !.
-next_(_, Request) :-
+next_(_, _, Request) :-
     http_close_connection(Request).
 
 
@@ -984,6 +1011,7 @@ http_spawn(Goal, Options) :-
     select_option(pool(Pool), Options, ThreadOptions),
     !,
     current_output(CGI),
+    Error = error(Formal, _),
     catch(thread_create_in_pool(Pool,
                                 wrap_spawned(CGI, Goal), Id,
                                 [ detached(true)
@@ -991,11 +1019,11 @@ http_spawn(Goal, Options) :-
                                 ]),
           Error,
           true),
-    (   var(Error)
+    (   var(Formal)
     ->  http_spawned(Id)
-    ;   Error = error(resource_error(threads_in_pool(_)), _)
+    ;   Formal = resource_error(threads_in_pool(_))
     ->  throw(http_reply(busy))
-    ;   Error = error(existence_error(thread_pool, Pool), _),
+    ;   Formal = existence_error(thread_pool, Pool),
         create_pool(Pool)
     ->  http_spawn(Goal, Options)
     ;   throw(Error)
@@ -1010,8 +1038,11 @@ http_spawn(Goal, Options) :-
 
 wrap_spawned(CGI, Goal) :-
     set_output(CGI),
+    cgi_property(CGI, request(Request)),
+    memberchk(input(Input), Request),
+    byte_count(Input, StartBody),
     http_wrap_spawned(Goal, Request, Connection),
-    next(Connection, Request).
+    next(Connection, StartBody, Request).
 
 %!  create_pool(+Pool)
 %

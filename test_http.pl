@@ -39,6 +39,9 @@ run_network_tests :-
 
 :- begin_tests(http_open, [condition(run_network_tests)]).
 
+:- meta_predicate
+    with_server(-, 0, +).
+
 test(read, true) :-
     http_open('http://www.swi-prolog.org/', In,
               [status_code(Code)]),
@@ -163,26 +166,100 @@ test(fail, Code == 500) :-
     request('/fail', Code, Type, Content, []),
     assertion(html_content(Type, Content,
                            "goal unexpectedly failed")).
-
-request(Path, Code, Type, Content, ExtraHdrs) :-
-    setup_call_cleanup(
-        http_server(http_dispatch, [silent(true), port(localhost:Port)]),
-        ( format(atom(URL), 'http://localhost:~w~w', [Port, Path]),
-          setup_call_cleanup(
-              http_open(URL, Stream,
-                        [ status_code(Code),
-                          header(content_type, Type),
-                          header(content_length, Len)
-                        | ExtraHdrs
-                        ]),
-              read_string(Stream, CLen, Content),
-              close(Stream))
+test(post_echo, Content == Data) :-
+    Data = "Hello world!",
+    request('/post/echo', _Code, _Type, Content,
+            [ post(string(text/plain, Data))
+            ]).
+test(post_echo_keep_alive,
+     [ Content2 == Data,
+       cleanup(http_close_keep_alive(_))
+     ]) :-
+    Data = "Hello world!",
+    with_server(
+        ServerURL,
+        ( client(ServerURL, '/post/echo', _, _, _Content1,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ]),
+          client(ServerURL, '/post/echo', _, _, Content2,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ])
         ),
-        http_stop_server(Port, [])),
+        [ keep_alive_timeout(0.1)
+        ]).
+test(post_echo_keep_alive_short_read,
+     [ Content2 == Data,
+       cleanup(http_close_keep_alive(_))
+     ]) :-
+    Data = "0123456789 Hello world!",
+    with_server(
+        ServerURL,
+        ( client(ServerURL, '/post/echo/short_read', _, _, Content1,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ]),
+          assertion(sub_string(Data, 0, 10, _, Content1)),
+          client(ServerURL, '/post/echo', _, _, Content2,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ])
+        ),
+        [ keep_alive_timeout(0.1)
+        ]).
+test(post_echo_keep_alive_short_read_spawned,
+     [ Content2 == Data,
+       cleanup(http_close_keep_alive(_))
+     ]) :-
+    Data = "0123456789 Hello world!",
+    with_server(
+        ServerURL,
+        ( client(ServerURL, '/spawn/post/echo/short_read', _, _, Content1,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ]),
+          assertion(sub_string(Data, 0, 10, _, Content1)),
+          client(ServerURL, '/post/echo', _, _, Content2,
+                 [ post(string(text/plain, Data)),
+                   connection('Keep-alive')
+                 ])
+        ),
+        [ keep_alive_timeout(0.1)
+        ]).
+
+with_server(URL, Goal, Options) :-
+    setup_call_cleanup(
+        http_server(http_dispatch,
+                    [ silent(true),
+                      port(localhost:Port)
+                    | Options
+                    ]),
+        (   format(atom(URL), 'http://localhost:~w', [Port]),
+            Goal
+        ),
+        http_stop_server(Port, [])).
+
+client(ServerURL, Path, Code, Type, Content, ExtraHdrs) :-
+    format(atom(URL), '~w~w', [ServerURL, Path]),
+    setup_call_cleanup(
+        http_open(URL, Stream,
+                  [ status_code(Code),
+                    header(content_type, Type),
+                    header(content_length, Len)
+                  | ExtraHdrs
+                  ]),
+        read_string(Stream, CLen, Content),
+        close(Stream)),
     (   Len == ''
     ->  assertion(CLen == 0)
     ;   assertion(CLen == Len)
     ).
+
+request(Path, Code, Type, Content, ExtraHdrs) :-
+    with_server(ServerURL,
+                client(ServerURL, Path, Code, Type, Content, ExtraHdrs),
+                []).
 
 :- http_handler('/ok/html_1', ok_html_1, []).
 :- http_handler('/ok/html_unicode', ok_html_unicode, []).
@@ -202,6 +279,10 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
 :- http_handler('/bad-request', bad_request_handler, []).
 :- http_handler('/created', created, []).
 :- http_handler('/fail', fail, []).
+:- http_handler('/post/echo', post_echo, [method(post)]).
+:- http_handler('/post/echo/short_read', post_echo_short_read, [method(post)]).
+:- http_handler('/spawn/post/echo/short_read', post_echo_short_read,
+                [spawn, method(post)]).
 
 ok_html_1(_Request) :-
     reply_html_page(
@@ -261,6 +342,17 @@ created(Request) :-
 
 fail(_Request) :-
     fail.
+
+post_echo(Request) :-
+    http_read_data(Request, Data, [to(string)]),
+    format('Content-type: text/plain~n~n'),
+    format('~s', [Data]).
+
+post_echo_short_read(Request) :-
+    option(input(In), Request),
+    read_string(In, 10, Data),
+    format('Content-type: text/plain~n~n'),
+    format('~s', [Data]).
 
 :- end_tests(http_server).
 
