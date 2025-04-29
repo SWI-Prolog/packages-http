@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2014-2022, University of Amsterdam
+    Copyright (c)  2014-2025, University of Amsterdam
                               VU University Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -190,6 +190,10 @@ multipart_read(void *handle, char *buf, size_t size)
       }
 
       in->bufp += processed;
+      if ( in->position )		   /* looses line count/position */
+      { in->position->byteno += processed;
+	in->position->charno += processed; /* assumes no multibyte encoding */
+      }
     } while( left > 0 &&
 	     in->bufp < in->limitp &&
 	     ctx->state != s_end &&
