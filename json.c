@@ -167,6 +167,8 @@ json_skip_ws(term_t stream, term_t c0, term_t next)
     } while ( is_ws(c) );
 
     PL_release_stream(in);
+    if ( c == -1 && Sferror(in) )
+      return false;
   }
 
   return PL_unify_integer(next, c);
