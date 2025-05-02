@@ -1047,16 +1047,16 @@ transfer_encoding_filter_(Encoding, In0, In, Options) :-
     In = In0.
 transfer_encoding_filter_(Encoding, In0, In, _Options) :-
     stream_pair(In0, In1, Out),
-    (   nonvar(Out)
-    ->  close(Out)
-    ;   true
-    ),
-    (   http:encoding_filter(Encoding, In1, In)
+    (   http:encoding_filter(Encoding, In1, In2)
     ->  true
     ;   autoload_encoding(Encoding),
-        http:encoding_filter(Encoding, In1, In)
+        http:encoding_filter(Encoding, In1, In2)
     ->  true
     ;   domain_error(http_encoding, Encoding)
+    ),
+    (   var(Out)
+    ->  In = In2
+    ;   stream_pair(In, In2, Out)
     ).
 
 :- multifile
