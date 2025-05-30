@@ -56,7 +56,9 @@ applications using the powerful  SWI-Prolog   HTML  generation framework
 rather than having to write a  JSON backend and  accompanying JavaScript
 frontend that runs in the browser.
 
-Below is a minimal, yet fully functional application
+Below is a minimalistic, yet fully functional application that  replaces
+a button after a click in two ways, using either a direct hx-swap our an
+out-of-band hx-swap command.
 
 ```
 :- use_module(library(http/http_server)).
@@ -78,16 +80,25 @@ home(_Request) :-
         [ title('HTMX demo'),
           script(src('https://unpkg.com/htmx.org'), [])
         ],
-        [ button([ 'hx-post'('/htmx/clicked'),
+        [ button([ id(button1),
+                   'hx-post'('/htmx/clicked1'),
                    'hx-swap'('outerHTML')
                  ],
-                 'Click me')
+                 'Click me (1)'),
+          button([ id(button2),
+                   'hx-post'('/htmx/clicked2')
+                 ],
+                 'Click me (2)')
         ]).
 
-:- http_handler(htmx(clicked), reply_htmx(\clicked), []).
+:- http_handler(htmx(clicked1), reply_htmx(\clicked1), []).
+:- http_handler(htmx(clicked2), reply_htmx(\clicked2), []).
 
-clicked -->
-    html('Thanks for clicking me!').
+clicked1 -->
+    html('Thanks for clicking me! (1)').
+
+clicked2 -->
+    htmx_oob(button2, html('Thanks for clicking me! (2)')).
 ```
 
 HTMX requires no  dedicated  support  from   the  server.  This  library
