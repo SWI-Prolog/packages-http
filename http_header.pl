@@ -2413,7 +2413,10 @@ rfc_date(Time, String, Tail) :-
 
 http_timestamp(Time, Text), nonvar(Text) =>
     (   parse_time(Text, _Format, Time0)
-    ->  Time =:= Time0
+    ->  (   var(Time)
+        ->  Time = Time0
+        ;   Time =:= Time0
+        )
     ;   syntax_error(http_timestamp(Text))
     ).
 http_timestamp(Time, Atom), number(Time) =>
