@@ -1146,7 +1146,7 @@ prolog:message(httpd(created_pool(Pool))) -->
 
 http_root(Address, Options) -->
     { landing_page(Address, URI, Options) },
-    [ '~w'-[URI] ].
+    [ url(URI) ].
 
 landing_page(Host:Port, URI, Options) :-
     !,
