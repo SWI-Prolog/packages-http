@@ -1645,8 +1645,8 @@ that the IPv6 address needs to be quoted to create the desired
 \arg{Host}:\arg{Port} term.
 
 \begin{code}
-?- http_server('::':8080, []).
-?- http_server('::1':8080, []).
+?- http_server(Goal,[port('::':8080)]).
+?- http_server(Goal,[port('::1':8080)]).
 \end{code}
 
 \section{Transfer encodings}
