@@ -48,12 +48,15 @@
             json_read_dict/3,           % +Stream, -Dict, +Options
             json_write_dict/2,          % +Stream, +Dict
             json_write_dict/3,          % +Stream, +Dict, +Options
-            atom_json_dict/3            % ?Atom, ?JSONDict, +Options
+            atom_json_dict/3,           % ?Atom, ?JSONDict, +Options
+            json/4
           ]).
 :- use_module(library(record)).
 :- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
+:- use_module(library(apply)).
+:- use_module(library(quasi_quotations)).
 
 :- use_foreign_library(foreign(json)).
 
@@ -65,7 +68,8 @@
                      [ null(ground),
                        true(ground),
                        false(ground),
-                       value_string_as(oneof([atom,string]))
+                       value_string_as(oneof([atom,string])),
+                       qqdict(list(compound(=(atom,var))))
                      ]).
 :- predicate_options(json_write/3, 3,
                      [ indent(nonneg),
@@ -126,10 +130,11 @@ terms.
               end_of_file:ground = error,
               value_string_as:oneof([atom,string]) = atom,
               tag:atom = '',
-              default_tag:atom).
+              default_tag:atom,
+              qqdict:list(compound(atom=var))).
 
 default_json_dict_options(
-    json_options(null, true, false, error, string, '', _)).
+    json_options(null, true, false, error, string, '', _, [])).
 
 
                  /*******************************
@@ -314,7 +319,27 @@ json_term_top(D, Stream, Number, _Options) :-
     json_read_number(Stream, D, Number).
 json_term_top(C, Stream, Constant, Options) :-
     json_read_constant(C, Stream, ID),
+    !,
     json_constant(ID, Constant, Options).
+json_term_top(C, Stream, Var, Options) :-
+    code_type(C, prolog_var_start),
+    !,
+    json_read_var_cont(Stream, Codes),
+    atom_codes(Name, [C | Codes]),
+    json_options_qqdict(Options, QQDict),
+    (   memberchk(Name=Var, QQDict)
+    ->  true
+    ;   syntax_error(illegal_var, Stream)
+    ).
+
+json_read_var_cont(Stream, [C | L]) :-
+    peek_code(Stream, C),
+    code_type(C, prolog_identifier_continue),
+    !,
+    get_code(Stream, C),
+    json_read_var_cont(Stream, L).
+json_read_var_cont(_, []).
+
 
 json_pairs(0'}, _, [], _) :- !.
 json_pairs(C0, Stream, [Pair|Tail], Options) :-
@@ -1010,6 +1035,9 @@ json_read_dict(Stream, Dict, Options) :-
     ),
     term_to_dict(Term, Dict, OptionTerm).
 
+term_to_dict(Var, Var, _Options) :-
+    var(Var),
+    !.
 term_to_dict(json(Pairs), Dict, Options) :-
     !,
     (   json_options_tag(Options, TagName),
@@ -1105,6 +1133,42 @@ atom_json_dict(Result, Term, Options) :-
     with_output_to(Out,
                    json_write_dict(current_output, Term, Options1)).
 
+                 /*******************************
+                 *      QUASI-QUOTATIONS        *
+                 *******************************/
+
+%!  json(+Content, +Vars, +VarDict, -JSON) is det.
+%
+%   The predicate json/4 implements  JSON   quasi  quotations. These
+%   quotations produce a JSON dict that  is suitable for
+%   json_write_dict/2. The quasi quoter only  accepts  valid,   but
+%   possibly  partial JSON documents.  The quoter replaces content
+%   whose value  is a Prolog variable that appears in the argument
+%   list   of  the =json= indicator. Notably, you can't use a Prolog
+%   variable in place of an object key. Here is  an  example.
+%
+%     ==
+%       {|json(Name)||
+%           { "name": Name,
+%             "created": {
+%               "day":null,
+%               "month":"December",
+%               "year":2007
+%             },
+%             "confirmed":true,
+%             "members":[1,2,3]
+%           }
+%       |}.
+%     ==
+
+:- quasi_quotation_syntax(json).
+
+json(Content, Vars, Dict, Result) :-
+    must_be(list, Dict),
+    include(qq_var(Vars), Dict, QQDict),
+    with_quasi_quotation_input(Content, Stream, json_read_dict(Stream, Result, [qqdict(QQDict)])).
+
+qq_var(Vars, _=Var) :- member(V, Vars), V == Var, !.
 
                  /*******************************
                  *           MESSAGES           *
