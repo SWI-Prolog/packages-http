@@ -136,7 +136,7 @@ terms.
               qqdict:list(compound(atom=var))).
 
 default_json_dict_options(
-    json_options(null, true, false, error, string, '', _, [])).
+    json_options(null, true, false, error, string, '', _, _)).
 
 
                  /*******************************
@@ -326,6 +326,7 @@ json_term_top(C, Stream, Constant, Options) :-
 json_term_top(C, Stream, Var, Options) :-
     code_type(C, prolog_var_start),
     json_options_qqdict(Options, QQDict),
+    nonvar(QQDict),
     !,
     json_read_var_cont(Stream, Codes),
     atom_codes(Name, [C | Codes]),
