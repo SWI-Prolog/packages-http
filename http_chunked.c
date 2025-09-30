@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2023, University of Amsterdam
+    Copyright (c)  2007-2025, University of Amsterdam
                               VU University Amsterdam
 			      CWI, Amsterdam
 			      SWI-Prolog Solutions b.v.
@@ -39,6 +39,7 @@
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 #include <time.h>
@@ -416,12 +417,12 @@ error:
 }
 
 
-static int
-get_chunked_metadata(term_t t, chunked_metadata **ctx, int silent)
+static bool
+get_chunked_metadata(term_t t, chunked_metadata **ctx, bool silent)
 { IOSTREAM *s;
-  int rc = FALSE;
+  bool rc = false;
 
-  if ( (rc=PL_get_stream(t, &s, 0)) )
+  if ( PL_get_stream(t, &s, 0) )
   { chunked_metadata **mdp = NULL;
 
     if ( s->functions == &chunked_functions )
@@ -441,7 +442,7 @@ get_chunked_metadata(term_t t, chunked_metadata **ctx, int silent)
 	*mdp = alloc_chunked_metadata();
       if ( *mdp )
       { *ctx = *mdp;
-	rc = TRUE;
+	rc = true;
       }
     }
 
