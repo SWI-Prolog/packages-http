@@ -450,3 +450,11 @@ json_to_string(JSON, String) :-
     with_output_to(string(String),
                    json_write(current_output,JSON,[width(0)])).
 
+
+                /*******************************
+                *           SANDBOX            *
+                *******************************/
+
+:- multifile sandbox:safe_primitive/1.
+
+sandbox:safe_primitive(javascript:javascript(_,_,_,_)).

@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2013-2015, VU University Amsterdam
+    Copyright (c)  2013-2025, VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -108,3 +109,12 @@ xml_attribute(Dict, Attr=Name, Attr=Var) :-
     memberchk(Name=Var, Dict),
     !.
 xml_attribute(_, Attr, Attr).
+
+
+                /*******************************
+                *           SANDBOX            *
+                *******************************/
+
+:- multifile sandbox:safe_primitive/1.
+
+sandbox:safe_primitive(html_quasi_quotations:html(_,_,_,_)).

@@ -1204,3 +1204,11 @@ json_syntax_error(non_existing_var(Var, QQDict)) -->
     [ 'Variable ', ansi(code, '~w', [Var]),
       ' is not defined in {|',ansi(code,'~w',Term),'|||}'
     ].
+
+                /*******************************
+                *           SANDBOX            *
+                *******************************/
+
+:- multifile sandbox:safe_primitive/1.
+
+sandbox:safe_primitive(json:json(_,_,_,_)).
