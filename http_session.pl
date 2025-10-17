@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker, Matt Lilley
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2006-2024, University of Amsterdam
+    Copyright (c)  2006-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -68,7 +68,6 @@
 :- use_module(library(socket)).
 :- use_module(library(broadcast)).
 :- use_module(library(lists)).
-:- use_module(library(time)).
 :- use_module(library(option)).
 
 :- predicate_options(http_open_session/2, 2, [renew(boolean)]).
@@ -130,6 +129,8 @@ session_setting(create(auto)).
 session_setting(proxy_enabled(false)).
 session_setting(gc(passive)).
 session_setting(samesite(lax)).
+session_setting(http_only(false)).
+session_setting(secure(false)).
 
 session_option(timeout, integer).
 session_option(granularity, integer).
@@ -141,6 +142,8 @@ session_option(enabled, boolean).
 session_option(proxy_enabled, boolean).
 session_option(gc, oneof([active,passive])).
 session_option(samesite, oneof([none,lax,strict])).
+session_option(http_only, boolean).
+session_option(secure, boolean).
 
 %!  http_set_session_options(+Options) is det.
 %
@@ -196,6 +199,17 @@ session_option(samesite, oneof([none,lax,strict])).
 %           with legit image operations. `none` removes the samesite
 %           attribute entirely. __Caution: The value `none` exposes the
 %           entire site to CSRF attacks.
+%
+%           * http_only(+Boolean)
+%           If `true` (default `false`), add the ``HttpOnly`` property
+%           to the session cookie. This causes the browser to deny
+%           access from JavaScript.
+%
+%           * secure(+Boolean)
+%           If `true`, (default `false`), add the ``Secure`` property
+%           to the session cookie.   This causes the browser to report
+%           the cookie only over HTTPS connections.
+%
 %           * granularity(+Integer)
 %           Granularity for updating that the session is active. Default
 %           is 60 (seconds). Smaller values lead to more precise session
@@ -409,17 +423,35 @@ create_session(Request0, Request, SessionID) :-
     http_session_cookie(SessionID),
     session_setting(cookie(Cookie)),
     session_setting(path(Path)),
-    session_setting(samesite(SameSite)),
+    cookie_attributes(Attrs),
+    atomics_to_string([''|Attrs], '; ', AttrString),
     debug(http_session, 'Created session ~q at path=~q', [SessionID, Path]),
-    (   SameSite == none
-    ->  format('Set-Cookie: ~w=~w; Path=~w; Version=1\r\n',
-               [Cookie, SessionID, Path])
-    ;   format('Set-Cookie: ~w=~w; Path=~w; Version=1; SameSite=~w\r\n',
-               [Cookie, SessionID, Path, SameSite])
-    ),
+    format('Set-Cookie: ~w=~w; Path=~w; Version=1~w\r\n',
+           [ Cookie, SessionID, Path, AttrString ]),
     Request = [session(SessionID)|Request0],
     peer(Request0, Peer),
     open_session(SessionID, Peer).
+
+cookie_attributes([SameSite|Attrs]) :-
+    session_setting(samesite(Value)),
+    Value \== none,
+    !,
+    string_concat('SameSite=', Value, SameSite),
+    cookie_attributes1(Attrs).
+cookie_attributes(Attrs) :-
+    cookie_attributes1(Attrs).
+
+cookie_attributes1(['HttpOnly'|Attrs]) :-
+    session_setting(http_only(true)),
+    !,
+    cookie_attributes2(Attrs).
+cookie_attributes1(Attrs) :-
+    cookie_attributes2(Attrs).
+
+cookie_attributes2(['Secure']) :-
+    session_setting(secure(true)),
+    !.
+cookie_attributes2([]).
 
 
 %!  http_open_session(-SessionID, +Options) is det.
