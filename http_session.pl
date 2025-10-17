@@ -198,7 +198,7 @@ session_option(secure, boolean).
 %           CSRF attacks against REST endpoints but rarely interferes
 %           with legit image operations. `none` removes the samesite
 %           attribute entirely. __Caution: The value `none` exposes the
-%           entire site to CSRF attacks.
+%           entire site to CSRF attacks__.
 %
 %           * http_only(+Boolean)
 %           If `true` (default `false`), add the ``HttpOnly`` property
