@@ -53,7 +53,7 @@
 :- autoload(library(option),[select_option/3,option/2,option/3]).
 :- autoload(library(sha),[sha_hash/3]).
 :- autoload(library(http/http_open),[http_open/3]).
-:- autoload(library(http/json),[json_write_dict/2,json_read_dict/3]).
+:- autoload(library(json),[json_write_dict/2,json_read_dict/3]).
 
 :- meta_predicate
     http_upgrade_to_websocket(1, +, +).

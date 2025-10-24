@@ -1686,8 +1686,6 @@ on another stream.  See online documentation at
 
 \InputIfFileExists{websocket.tex}{}{}
 \InputIfFileExists{hub.tex}{}{}
-\input{json.tex}
-
 
 \section{MIME support}
 \label{sec:http-mime}

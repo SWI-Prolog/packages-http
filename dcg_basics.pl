@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2012, VU University Amsterdam
+    Copyright (c)  2002-2025, VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,17 +38,12 @@
 
 /** <module> DCG basics
 
-@deprecated     The DCG basics library has been moved to library(dcg_bacis).
+@deprecated     The DCG basics library has been moved to library(dcg_basics).
                 This stub loads and reexports the new library.  Please update
                 your code accordingly.
 */
 
-:- multifile
-    prolog:message//1.
-
-prolog:message(moved_library(Old, New)) -->
-    [ 'Library was moved: ~q --> ~q'-[Old, New] ].
-
 :- initialization
-   print_message(informational, moved_library(library(http/dcg_basics),
-                                          library(dcg/basics))).
+   print_message(informational,
+                 deprecated(moved_library(library(http/dcg_basics),
+                                          library(dcg/basics)))).

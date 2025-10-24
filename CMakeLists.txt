@@ -82,36 +82,25 @@ set(HTML_PL_FILES
     http_path.pl mimetype.pl)
 
 set(HTTP_CLIENT_PL_FILES
-    http_client.pl http_header.pl js_write.pl js_grammar.pl
+    http_client.pl http_header.pl js_write.pl
     http_sgml_plugin.pl mimepack.pl dcg_basics.pl
     http_open.pl http_proxy.pl http_error.pl)
-
-set(JSON_PL_FILES json.pl json_convert.pl)
-if(SWIPL_WITH_HTTP_SERVER)
-list(APPEND JSON_PL_FILES http_json.pl)
-endif()
 
 swipl_plugin(
     html_libs
     PL_LIB_SUBDIR http
     PL_LIBS ${HTML_PL_FILES})
 swipl_plugin(
-    json
-    C_SOURCES json.c
-    PL_LIB_SUBDIR http
-    PL_LIBS ${JSON_PL_FILES})
-swipl_plugin(
     http_stream
     C_SOURCES http_stream.c THREADED
     PL_LIB_SUBDIR http
     PL_LIBS http_stream.pl)
 
-test_libs(json)
 test_libs(term_html
 	  PACKAGES clib sgml http)
 
 add_custom_target(http)
-add_dependencies(http html_libs json http_stream)
+add_dependencies(http html_libs http_stream)
 
 if(SWIPL_WITH_HTTP_CLIENT)
 swipl_plugin(
@@ -187,8 +176,6 @@ endif()
 pkg_doc(http
 	LIBSUBDIR
 	    http
-	SOURCES
-	    json.md
 	SOURCE
 	    post.md --lib=http/html_write
 	DEPENDS

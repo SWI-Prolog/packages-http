@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker, Michiel Hildebrand
     E-mail:        J.Wielemaker@uva.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2010-2014, University of Amsterdam
+    Copyright (c)  2010-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -47,14 +48,14 @@
           ]).
 
 :- use_module(library(http/html_write)).
-:- use_module(library(http/json)).
+:- use_module(library(json)).
 :- use_module(library(apply)).
 :- use_module(library(error)).
 :- use_module(library(lists)).
 :- use_module(library(debug)).
 :- use_module(library(quasi_quotations)).
 :- use_module(library(dcg/basics)).
-:- use_module(js_grammar).
+:- use_module(library(json_grammar)).
 
 :- html_meta
     js_script(html, ?, ?).
@@ -143,7 +144,7 @@ js(Dict, [Pre, Subst|More]) -->
     here(Here0),
     js_tokens(_),
     here(Here1),
-    js_token(identifier(Name)),
+    json_token(identifier(Name)),
     { memberchk(Name=Var, Dict),
       !,
       Subst = \js_expression(Var),
@@ -158,7 +159,7 @@ js(_, [Last]) -->
 
 js_tokens([]) --> [].
 js_tokens([H|T]) -->
-    js_token(H),
+    json_token(H),
     js_tokens(T).
 
 
@@ -249,7 +250,7 @@ js_args([H|T]) -->
 %       $ object(Attributes) :
 %       Where Attributes is a Key-Value list where each pair can be
 %       written as Key-Value, Key=Value or Key(Value), accommodating
-%       all common constructs for this used in Prolog.
+%       all common constructs for this used in Prolog.<
 %       $ { K:V, ... }
 %       Same as object(Attributes), providing a more JavaScript-like
 %       syntax.  This may be useful if the object appears literally

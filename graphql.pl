@@ -56,7 +56,7 @@ language for HTTP-based APIs.
               xinteger//1
             ]).
 :- autoload(library(dcg/high_order), [optional//2, sequence//2]).
-:- autoload(library(http/json), [atom_json_dict/3]).
+:- autoload(library(json), [atom_json_dict/3]).
 :- autoload(library(http/http_client), [http_post/4]).
 :- autoload(library(apply), [include/3]).
 :- autoload(library(lists), [member/2, append/3]).

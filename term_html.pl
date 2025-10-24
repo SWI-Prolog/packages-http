@@ -40,7 +40,7 @@
 :- use_module(library(option)).
 :- use_module(library(error)).
 :- use_module(library(debug)).
-:- use_module(library(http/json)).
+:- use_module(library(json)).
 
 :- multifile
     blob_rendering//3,              % +Type, +Blob, +Options
