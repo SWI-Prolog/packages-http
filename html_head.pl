@@ -619,17 +619,14 @@ html_include(Mime, Path) -->
                  *******************************/
 
 :- multifile
-    user:message_hook/3,
+    prolog:message_action/2,
     prolog:message//1.
-:- dynamic
-    user:message_hook/3.
 
-user:message_hook(load_file(done(_Nesting, _File, _Action,
-                                 _Module, _Time, _Clauses)),
-                  _Level, _Lines) :-
+prolog:message_action(load_file(done(_Nesting, _File, _Action,
+                                     _Module, _Time, _Clauses)),
+                      _Level) :-
     clean_same_about_cache,
-    clean_aggregate_cache,
-    fail.
+    clean_aggregate_cache.
 
 prolog:message(html_include(dont_know, Mime, Path)) -->
     [ 'Don\'t know how to include resource ~q (mime-type ~q)'-

@@ -1545,11 +1545,8 @@ closure_name_arity(Term, Extra, Name/Arity) :-
           next_generation).
 
 :- multifile
-    user:message_hook/3.
-:- dynamic
-    user:message_hook/3.
+    prolog:message_action/2.
 
-user:message_hook(make(done(Reload)), _Level, _Lines) :-
+prolog:message_action(make(done(Reload)), _Level) :-
     Reload \== [],
-    next_generation,
-    fail.
+    next_generation.

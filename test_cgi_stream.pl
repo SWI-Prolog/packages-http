@@ -242,45 +242,6 @@ test(chunked,
 :- end_tests(cgi_chunked).
 
 
-                 /*******************************
-                 *         ERROR HANDLING       *
-                 *******************************/
-
-%!  collect_messages(:Goal, -Messages) is semidet.
-%
-%   Run Goal as once/1, collecting possible messages in Messages.
-
-:- meta_predicate
-    collect_messages(0, -, -).
-
-collect_messages(Goal, True, Messages) :-
-    strip_module(Goal, M, G),
-    collect_messages2(M:G, True, Messages).
-
-:- multifile
-    user:message_hook/3.
-:- dynamic
-    msg_collecting/0,
-    msg/2.
-
-user:message_hook(Term, Kind, _Lines) :-
-    msg_collecting,
-    !,
-    assert(msg(Term, Kind)).
-
-collect_messages2(Goal, True, Messages) :-
-    assert(msg_collecting, Ref),
-    call_cleanup(call_result(Goal, True),
-                 (   erase(Ref),
-                     findall(message(Term, Kind), retract(msg(Term, Kind)),
-                             Messages))).
-
-call_result(Goal, true) :-
-    Goal,
-    !.
-call_result(_, false).
-
-
 :- begin_tests(cgi_errors, [sto(rational_trees)]).
 
 cgi_fail_hook(Event, _) :-

@@ -373,11 +373,8 @@ http_clean_location_cache :-
           http_clean_location_cache).
 
 :- multifile
-    user:message_hook/3.
-:- dynamic
-    user:message_hook/3.
+    prolog:message_action/2.
 
-user:message_hook(make(done(Reload)), _Level, _Lines) :-
+prolog:message_action(make(done(Reload)), _Level) :-
     Reload \== [],
-    http_clean_location_cache,
-    fail.
+    http_clean_location_cache.
