@@ -36,7 +36,7 @@ test(unicode, Reply == [ websocket{opcode:text,  format:string, data:Data}
 test(prolog, Reply == [ websocket{opcode:text,  format:prolog, data:hello(world)}
                       ]) :-
     ws_loop_close([prolog(hello(world))], Reply, [format(prolog)]).
-test(json, Reply =@= [ websocket{opcode:text,  format:json,   data:_{hello:world}}
+test(json, Reply =@= [ websocket{opcode:text,  format:json,   data: #{hello:world}}
                      ]) :-
     ws_loop_close([json(_{hello:world})], Reply,
                   [ format(json),
