@@ -77,10 +77,12 @@
                      [ to(any),
                        content_type(any),
                        form_data(oneof([form,mime])),
-                       input_encoding(encoding),        % multipart messages
+                       input_encoding(encoding),        % multipart
                        on_filename(callable),
                        module(atom),			% x-prolog data
-                       variable_names(-list)
+                       variable_names(-list),
+                       json_object(oneof([term,dict])), % JSON data
+                       value_string_as(oneof([string,atom]))
                      ]).
 
 
