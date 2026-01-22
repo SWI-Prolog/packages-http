@@ -291,10 +291,10 @@ apply_mask(char *data, size_t len, size_t offset, int mask)
   size_t i;
   char msk[4];
 
-  msk[0] = (mask>>24) & 0xff;
-  msk[1] = (mask>>16) & 0xff;
-  msk[2] = (mask>> 8) & 0xff;
-  msk[3] = (mask>> 0) & 0xff;
+  msk[0] = (char) (mask>>24); /* safe cast */
+  msk[1] = (char) (mask>>16);
+  msk[2] = (char) (mask>> 8);
+  msk[3] = (char) (mask>> 0);
 
   for(s=data, i=0; i<len; s++,i++)
   { *s ^= msk[(i+offset)%4];
@@ -415,7 +415,8 @@ read_int(IOSTREAM *in, int bytes)
 
 static int
 ws_next_header(ws_context *ctx, int c)
-{ int fin, rsv, opcode, mask, masked;
+{ bool fin, masked;
+  int rsv, opcode, mask;
   int64_t payload_len;
 
   fin    = (c & (1<<7)) != 0;
@@ -612,7 +613,7 @@ ws_open(term_t org, term_t new, term_t options)
   ws_context *ctx;
   IOSTREAM *s = NULL, *s2 = NULL;
   ws_mode mode = WS_CLIENT;
-  int close_parent = TRUE;
+  int close_parent = true;
   int bufsize = 0;
   atom_t subprotocol = ATOM_null;
 
@@ -663,7 +664,7 @@ ws_open(term_t org, term_t new, term_t options)
   PL_register_atom(subprotocol);
 
   ctx->mode = mode;
-  ctx->close_parent = close_parent;
+  ctx->close_parent = (bool) close_parent; /* safe cast */
   ctx->subprotocol = subprotocol;
   Ssetenc(s, ENC_OCTET, &ctx->parent_encoding);
   if ( !(s2 = Snew(ctx,
@@ -747,31 +748,29 @@ ws_header(char *hdr, ws_context *ctx, int fin, int mask, size_t payload_len)
   int masked = (mask != 0);
   int opcode = (ctx->payload_written ? WS_OP_CONTINUE : ctx->opcode);
 
-  hdr[0] = ( (fin      << 7) |
-	     (ctx->rsv << 4) |
-	     (opcode   << 0) );
+  hdr[0] = (char) ( (fin << 7) | (ctx->rsv << 4) | opcode ); /* safe cast */
 
   if ( payload_len < 126 )
-  { hdr[1] = ( (char)(masked<<7) | (char)payload_len );
+  { hdr[1] = (char) ( (masked<<7) | payload_len ); /* simplified */
   } else if ( payload_len < 65536 )
-  { hdr[1] = ( (char)(masked<<7) | (char)126 );
-    hdr[2] = (payload_len >> 8) & 0xff;
-    hdr[3] = (payload_len & 0xff);
+  { hdr[1] = (char) ( (masked<<7) | 126 );
+    hdr[2] = (char) (payload_len >> 8); /* safe cast */
+    hdr[3] = (char) payload_len;
     hdr_len += 2;
   } else
   { int i;
     uint64_t plen64 = payload_len;
 
-    hdr[1] = ( (masked<<7) | 127 );
+    hdr[1] = (char) ( (masked<<7) | 127 ); /* safe cast */
     for(i=0; i<8; i++)
-      hdr[2+i] = (plen64 >> ((7-i)*8)) & 0xff;
+      hdr[2+i] = (char) (plen64 >> ((7-i)*8));
     hdr_len += 8;
   }
   if ( masked )
   { int i;
 
     for(i=0; i<4; i++)
-      hdr[hdr_len++] = (mask >> ((3-i)*8)) & 0xff;
+      hdr[hdr_len++] = (char) (mask >> ((3-i)*8));
   }
 
   return hdr_len;
