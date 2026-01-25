@@ -1072,22 +1072,18 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %     multipart/mixed and packed using mime_pack/3. See mime_pack/3
 %     for details on the argument format.
 
-http_post_data(Data, Out, HdrExtra) :-
-    http:post_data_hook(Data, Out, HdrExtra),
-    !.
-http_post_data(html(HTML), Out, HdrExtra) :-
-    !,
+http_post_data(Data, Out, HdrExtra),
+    http:post_data_hook(Data, Out, HdrExtra) =>
+    true.
+http_post_data(html(HTML), Out, HdrExtra) =>
     phrase(post_header(html(HTML), HdrExtra), Header),
     send_request_header(Out, Header),
     print_html(Out, HTML).
-http_post_data(xml(XML), Out, HdrExtra) :-
-    !,
+http_post_data(xml(XML), Out, HdrExtra) =>
     http_post_data(xml(text/xml, XML, []), Out, HdrExtra).
-http_post_data(xml(Type, XML), Out, HdrExtra) :-
-    !,
+http_post_data(xml(Type, XML), Out, HdrExtra) =>
     http_post_data(xml(Type, XML, []), Out, HdrExtra).
-http_post_data(xml(Type, XML, Options), Out, HdrExtra) :-
-    !,
+http_post_data(xml(Type, XML, Options), Out, HdrExtra) =>
     setup_call_cleanup(
         new_memory_file(MemFile),
         (   setup_call_cleanup(
@@ -1097,73 +1093,61 @@ http_post_data(xml(Type, XML, Options), Out, HdrExtra) :-
             http_post_data(memory_file(Type, MemFile), Out, HdrExtra)
         ),
         free_memory_file(MemFile)).
-http_post_data(file(File), Out, HdrExtra) :-
-    !,
+http_post_data(file(File), Out, HdrExtra) =>
     (   file_mime_type(File, Type)
     ->  true
     ;   Type = text/plain
     ),
     http_post_data(file(Type, File), Out, HdrExtra).
-http_post_data(file(Type, File), Out, HdrExtra) :-
-    !,
+http_post_data(file(Type, File), Out, HdrExtra) =>
     phrase(post_header(file(Type, File), HdrExtra), Header),
     send_request_header(Out, Header),
     setup_call_cleanup(
         open(File, read, In, [type(binary)]),
         copy_stream_data(In, Out),
         close(In)).
-http_post_data(memory_file(Type, Handle), Out, HdrExtra) :-
-    !,
+http_post_data(memory_file(Type, Handle), Out, HdrExtra) =>
     phrase(post_header(memory_file(Type, Handle), HdrExtra), Header),
     send_request_header(Out, Header),
     setup_call_cleanup(
         open_memory_file(Handle, read, In, [encoding(octet)]),
         copy_stream_data(In, Out),
         close(In)).
-http_post_data(codes(Codes), Out, HdrExtra) :-
-    !,
+http_post_data(codes(Codes), Out, HdrExtra) =>
     http_post_data(codes(text/plain, Codes), Out, HdrExtra).
-http_post_data(codes(Type, Codes), Out, HdrExtra) :-
-    !,
+http_post_data(codes(Type, Codes), Out, HdrExtra) =>
     phrase(post_header(codes(Type, Codes), HdrExtra), Header),
     send_request_header(Out, Header),
     setup_call_cleanup(
         set_stream(Out, encoding(utf8)),
         format(Out, '~s', [Codes]),
         set_stream(Out, encoding(octet))).
-http_post_data(bytes(Type, Bytes), Out, HdrExtra) :-
-    !,
+http_post_data(bytes(Type, Bytes), Out, HdrExtra) =>
     phrase(post_header(bytes(Type, Bytes), HdrExtra), Header),
     send_request_header(Out, Header),
     format(Out, '~s', [Bytes]).
-http_post_data(atom(Atom), Out, HdrExtra) :-
-    !,
+http_post_data(atom(Atom), Out, HdrExtra) =>
     http_post_data(atom(text/plain, Atom), Out, HdrExtra).
-http_post_data(atom(Type, Atom), Out, HdrExtra) :-
-    !,
+http_post_data(atom(Type, Atom), Out, HdrExtra) =>
     phrase(post_header(atom(Type, Atom), HdrExtra), Header),
     send_request_header(Out, Header),
     setup_call_cleanup(
         set_stream(Out, encoding(utf8)),
         write(Out, Atom),
         set_stream(Out, encoding(octet))).
-http_post_data(string(String), Out, HdrExtra) :-
-    !,
+http_post_data(string(String), Out, HdrExtra) =>
     http_post_data(atom(text/plain, String), Out, HdrExtra).
-http_post_data(string(Type, String), Out, HdrExtra) :-
-    !,
+http_post_data(string(Type, String), Out, HdrExtra) =>
     phrase(post_header(string(Type, String), HdrExtra), Header),
     send_request_header(Out, Header),
     setup_call_cleanup(
         set_stream(Out, encoding(utf8)),
         write(Out, String),
         set_stream(Out, encoding(octet))).
-http_post_data(cgi_stream(In, _Len), Out, HdrExtra) :-
-    !,
+http_post_data(cgi_stream(In, _Len), Out, HdrExtra) =>
     debug(obsolete, 'Obsolete 2nd argument in cgi_stream(In,Len)', []),
     http_post_data(cgi_stream(In), Out, HdrExtra).
-http_post_data(cgi_stream(In), Out, HdrExtra) :-
-    !,
+http_post_data(cgi_stream(In), Out, HdrExtra) =>
     http_read_header(In, Header0),
     http_update_encoding(Header0, Encoding, Header),
     content_length_in_encoding(Encoding, In, Size),
@@ -1174,8 +1158,7 @@ http_post_data(cgi_stream(In), Out, HdrExtra) :-
         set_stream(Out, encoding(Encoding)),
         copy_stream_data(In, Out),
         set_stream(Out, encoding(octet))).
-http_post_data(form(Fields), Out, HdrExtra) :-
-    !,
+http_post_data(form(Fields), Out, HdrExtra) =>
     parse_url_search(Codes, Fields),
     length(Codes, Size),
     http_join_headers(HdrExtra,
@@ -1184,8 +1167,7 @@ http_post_data(form(Fields), Out, HdrExtra) :-
     phrase(post_header(cgi_data(Size), Header), HeaderChars),
     send_request_header(Out, HeaderChars),
     format(Out, '~s', [Codes]).
-http_post_data(form_data(Data), Out, HdrExtra) :-
-    !,
+http_post_data(form_data(Data), Out, HdrExtra) =>
     setup_call_cleanup(
         new_memory_file(MemFile),
         ( setup_call_cleanup(
@@ -1207,9 +1189,7 @@ http_post_data(form_data(Data), Out, HdrExtra) :-
               close(In))
         ),
         free_memory_file(MemFile)).
-http_post_data(List, Out, HdrExtra) :-          % multipart-mixed
-    is_list(List),
-    !,
+http_post_data(List, Out, HdrExtra), is_list(List) => % multipart-mixed
     setup_call_cleanup(
         new_memory_file(MemFile),
         ( setup_call_cleanup(
