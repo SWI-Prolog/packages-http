@@ -156,6 +156,10 @@ has_package(ssl HAVE_SSL_PACKAGE)
 if(HAVE_SSL_PACKAGE)
   set(doc_depends ssl)
 endif()
+has_package(zlib HAVE_ZLIB_PACKAGE)
+if(HAVE_ZLIB_PACKAGE)
+  list(APPEND doc_depends zlib)
+endif()
 
 if(SWIPL_WITH_HTTP_SERVER)
   set(HTTP_SECTION_FILES
