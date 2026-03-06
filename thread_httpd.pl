@@ -333,7 +333,8 @@ create_server(Goal, Address, Options) :-
     make_addr_atom(Scheme, Port, Alias),
     thread_self(Initiator),
     thread_create(accept_server(Goal, Initiator, Options), _,
-                  [ alias(Alias)
+                  [ alias(Alias),
+                    class(service)
                   ]),
     thread_get_message(server_started),
     assert(current_server(Port, Goal, Alias, Queue, Scheme, StartTime)).
@@ -645,7 +646,8 @@ create_workers(I, N, _, _, _) :-
 create_workers(I, N, Queue, AliasBase, Options) :-
     gensym(AliasBase, Alias),
     thread_create(http_worker(Options), Id,
-                  [ alias(Alias)
+                  [ alias(Alias),
+                    class(http)
                   | Options
                   ]),
     assertz(queue_worker(Queue, Id)),
@@ -708,6 +710,7 @@ http_worker(Options) :-
           ->  true
           ;   Error = goal_failed(http_process/4)
           ),
+          debug_reset_from_class,   % Restore debug mode after user nodebug
           (   var(Error)
           ->  fail
           ;   current_message_level(Error, Level),
@@ -1014,7 +1017,8 @@ http_spawn(Goal, Options) :-
     Error = error(Formal, _),
     catch(thread_create_in_pool(Pool,
                                 wrap_spawned(CGI, Goal), Id,
-                                [ detached(true)
+                                [ detached(true),
+                                  class(http)
                                 | ThreadOptions
                                 ]),
           Error,
@@ -1031,7 +1035,8 @@ http_spawn(Goal, Options) :-
 http_spawn(Goal, Options) :-
     current_output(CGI),
     thread_create(wrap_spawned(CGI, Goal), Id,
-                  [ detached(true)
+                  [ detached(true),
+                    class(http)
                   | Options
                   ]),
     http_spawned(Id).
