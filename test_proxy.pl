@@ -42,19 +42,23 @@ test_input(Name, Path) :-
     atomic_list_concat([MyDir, Name], /, Path).
 
 :- dynamic
-    port/2.                                 % Role, Port
+    port/2,                                 % Role, Port
+    unused_port_socket/1.                   % Held bound socket reserving
+                                            % the `unused' port
 
 assign_ports :-
-    port(unused, _),
+    unused_port_socket(_),
     !.
 assign_ports :-
-    free_ports(4, [P1,P2,P3,P4]),
+    retractall(port(_,_)),
+    free_ports(3, [P1,P2,P3]),
     assertz(port(http_endpoint,  P1)),      % our HTTP target server
     (   test_https(true)
     ->  assertz(port(https_endpoint, P2))   % our HTTPS target server
     ;   true
     ),
     assertz(port(socks,          P3)),      % our socks server
+    hold_unused_port(P4),
     assertz(port(unused,         P4)).      % port without a server
 
 free_ports(N, Ports) :-
@@ -67,8 +71,30 @@ alloc_port(Socket, Port) :-
     tcp_setopt(Socket, reuseaddr),
     tcp_bind(Socket, Port).
 
+%!  hold_unused_port(-Port) is det.
+%
+%   Bind a fresh socket on a free port without calling tcp_listen/2 and
+%   keep the socket open for the lifetime of the test suite. This
+%   reserves the port number against concurrent ctest jobs allocating
+%   the same port, while incoming connect() attempts still receive RST
+%   (ECONNREFUSED) -- exactly the behaviour the proxy tests want from a
+%   port with no server. SO_REUSEADDR is deliberately NOT set so the
+%   kernel's normal protection is in force.
 
-:- begin_tests(proxy, [condition(current_predicate(pipe/2))]).
+hold_unused_port(Port) :-
+    tcp_socket(Socket),
+    tcp_bind(Socket, Port),
+    assertz(unused_port_socket(Socket)).
+
+release_held_ports :-
+    forall(retract(unused_port_socket(Socket)),
+           catch(tcp_close_socket(Socket), _, true)),
+    retractall(port(_,_)).
+
+
+:- begin_tests(proxy, [ condition(current_predicate(pipe/2)),
+                        cleanup(release_held_ports)
+                      ]).
 
 :- dynamic
     test_proxy/3,
