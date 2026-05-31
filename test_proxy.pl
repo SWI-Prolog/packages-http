@@ -42,12 +42,10 @@ test_input(Name, Path) :-
     atomic_list_concat([MyDir, Name], /, Path).
 
 :- dynamic
-    port/2,                                 % Role, Port
-    unused_port_socket/1.                   % Held bound socket reserving
-                                            % the `unused' port
+    port/2.                                 % Role, Port
 
 assign_ports :-
-    unused_port_socket(_),
+    port(unused, _),
     !.
 assign_ports :-
     retractall(port(_,_)),
@@ -58,7 +56,7 @@ assign_ports :-
     ;   true
     ),
     assertz(port(socks,          P3)),      % our socks server
-    hold_unused_port(P4),
+    free_unused_port(P4),
     assertz(port(unused,         P4)).      % port without a server
 
 free_ports(N, Ports) :-
@@ -71,30 +69,45 @@ alloc_port(Socket, Port) :-
     tcp_setopt(Socket, reuseaddr),
     tcp_bind(Socket, Port).
 
-%!  hold_unused_port(-Port) is det.
+%!  free_unused_port(-Port) is det.
 %
-%   Bind a fresh socket on a free port without calling tcp_listen/2 and
-%   keep the socket open for the lifetime of the test suite. This
-%   reserves the port number against concurrent ctest jobs allocating
-%   the same port, while incoming connect() attempts still receive RST
-%   (ECONNREFUSED) -- exactly the behaviour the proxy tests want from a
-%   port with no server. SO_REUSEADDR is deliberately NOT set so the
-%   kernel's normal protection is in force.
+%   Find a free TCP port to play the `unused' role: a port to which
+%   connecting must be _refused_ because no server listens on it.
+%
+%   We deliberately do *not* allocate this port with bind(0) and we do not
+%   keep a socket bound to reserve it. Instead we pick a currently-free
+%   port from a range _below_ the range the OS uses for automatic
+%   ("ephemeral") port allocation:
+%
+%     - Linux default ip_local_port_range starts at 32768
+%     - macOS default net.inet.ip.portrange.first is 49152
+%     - Windows default dynamic range starts at 49152
+%
+%   No bind(0) from a concurrent ctest job draws from this low range, so
+%   the port stays unbound for the lifetime of the suite without us having
+%   to hold a socket on it. An unbound port is refused immediately on every
+%   platform. (A held, bound-but-not-listening socket would reserve the
+%   port and still refuse on Linux/Windows, but on macOS connecting to such
+%   a socket blocks for several seconds, making the suite take ~30s.)
 
-hold_unused_port(Port) :-
-    tcp_socket(Socket),
-    tcp_bind(Socket, Port),
-    assertz(unused_port_socket(Socket)).
+unused_port_range(20000, 32767).
 
-release_held_ports :-
-    forall(retract(unused_port_socket(Socket)),
-           catch(tcp_close_socket(Socket), _, true)),
-    retractall(port(_,_)).
+free_unused_port(Port) :-
+    unused_port_range(Low, High),
+    between(1, 100, _),                      % bounded number of attempts
+    random_between(Low, High, Port),
+    port_is_free(Port),
+    !.
+
+port_is_free(Port) :-
+    catch(setup_call_cleanup(
+              tcp_socket(Socket),
+              tcp_bind(Socket, Port),         % no reuseaddr: fails if in use
+              tcp_close_socket(Socket)),
+          _, fail).
 
 
-:- begin_tests(proxy, [ condition(current_predicate(pipe/2)),
-                        cleanup(release_held_ports)
-                      ]).
+:- begin_tests(proxy, [ condition(current_predicate(pipe/2)) ]).
 
 :- dynamic
     test_proxy/3,
