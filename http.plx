@@ -353,32 +353,33 @@ similar to the HTTP header: a sequence of \textit{Name: Value} lines
 followed by two newlines.   Unlike long polling, the request does
 not complete after a message.
 
-Following the MDN documentation above, and SSE request can be served
-using the simple example below that generates an event, counting
-every minute.  Note the handler declaration that processes the request
-on a new thread and disables timeout for this location.   Note that
-this implementation uses a thread per client.   This design limits
-the scalability.
+Following the MDN documentation above, an SSE request can be served
+using the simple example below, which generates an event counting
+every minute.  The handler is declared to process the request on a
+new thread and to disable the request timeout, as the response is
+intended to live for as long as the client stays connected.  Note
+that this design uses one thread per client and therefore does not
+scale well to large numbers of subscribers.
 
 \begin{code}
+:- use_module(library(http/sse)).
+
 :- http_handler(root(events), events,
                 [ spawn([]),
                   time_limit(infinite)
                 ]).
 
 events(_Request) :-
-    format('X-Accel-Buffering: no\r\n\c
-            Content-Type: text/event-stream\r\n\c
-            Cache-Control: no-cache\r\n\r\n'),
-
+    sse_open,
     between(1, infinite, Min),
-        format('event: minute~n'),
-        format('data: {"minute": ~d}~n~n', [Min]),
-        flush_output,
+        sse_send(_{event: minute, data: Min}),
         sleep(60),
         fail.
 \end{code}
 
+The library \pllib{http/sse} hides the wire format and the response
+headers needed to defeat HTTP intermediaries that buffer small
+responses (see \predref{sse_open}{0} and \predref{sse_send}{1}).
 Of course, rather than sleep/1 to decide when to fire the next event
 this thread typically has to wait for events in the application.  This
 can be achieved using thread_wait/2 or message queues.

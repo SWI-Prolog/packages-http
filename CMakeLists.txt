@@ -54,6 +54,7 @@ set(HTTP_SERVER_PL_FILES
     http_cors.pl yadis.pl ax.pl http_load.pl http_multipart_plugin.pl
     http_digest.pl http_redis_plugin.pl graphql.pl http_openid.pl
     thread_httpd.pl http_server.pl http_dyn_workers.pl http_session.pl
+    sse.pl
     README.md htmx.pl ${HTTP_PLATFORM_FILES})
 
 set(HTTP_EXAMPLE_FILES
@@ -147,7 +148,7 @@ swipl_examples(${HTTP_EXAMPLE_FILES})
 swipl_examples(${PWP_FILES}
 	       SUBDIR pwp)
 
-test_libs(cgi_stream http multipart proxy websocket graphql
+test_libs(cgi_stream http multipart proxy websocket graphql sse
 	  PACKAGES clib sgml plunit ssl zlib
 	  PARENT_LIB)
 endif(SWIPL_WITH_HTTP_SERVER)
@@ -163,7 +164,7 @@ endif()
 
 if(SWIPL_WITH_HTTP_SERVER)
   set(HTTP_SECTION_FILES
-    websocket.pl hub.pl)
+    websocket.pl hub.pl sse.pl)
 endif()
 
 set(HTTP_PLDOC_FILES
