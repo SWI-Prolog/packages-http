@@ -631,6 +631,11 @@ cgi_close(void *handle)
   { case CGI_DATA:
     { if ( ctx->transfer_encoding == ATOM_chunked )
       { rc = chunked_write_trailer(ctx->stream, ctx->metadata);
+      } else if ( ctx->transfer_encoding == ATOM_event_stream )
+      { /* Headers were already sent when the encoding was selected;
+	   each write was flushed to the wire by cgi_write().  Nothing
+	   left to do here.
+	*/
       } else
       { size_t clen = ctx->datasize - ctx->data_offset;
 	const char *dstart = &ctx->data[ctx->data_offset];
