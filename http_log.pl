@@ -521,7 +521,8 @@ log_check_deleted(_).
 %     - keep_logs(+Count)
 %     Number of rotated log files to keep (default 10)
 %     - compress_logs(+Format)
-%     Compress the log files to the given format.
+%     Compress the log files to the given format.  Default
+%     `gzip` and this is currently the only supported compressor.
 %     - background(+Boolean)
 %     If `true`, rotate the log files in the background.
 
