@@ -18,6 +18,7 @@
 :- use_module(library(option)).
 :- use_module(library(readutil)).
 :- use_module(library(error)).
+:- use_module(library(settings)).
 
 test_sse :-
     run_tests([ sse_format,
@@ -92,6 +93,21 @@ test(bad_retry_rejected,
      [error(domain_error(retry, -1))]) :-
     with_output_to(string(_),
                    sse_send(_{retry: -1, data: x})).
+test(open_no_cors) :-
+    setting(http:cors, Save),
+    setup_call_cleanup(
+        set_setting(http:cors, []),
+        with_output_to(string(Headers), sse_open),
+        set_setting(http:cors, Save)),
+    \+ sub_string(Headers, _, _, _, "Access-Control-").
+test(open_cors_wildcard) :-
+    setting(http:cors, Save),
+    setup_call_cleanup(
+        set_setting(http:cors, [*]),
+        with_output_to(string(Headers), sse_open),
+        set_setting(http:cors, Save)),
+    assertion(sub_string(Headers, _, _, _,
+                         "Access-Control-Allow-Origin: *")).
 
 :- end_tests(sse_format).
 

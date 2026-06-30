@@ -43,6 +43,7 @@
 :- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
+:- use_module(library(http/http_cors)).
 
 :- predicate_options(sse_open/1, 1,
                      [ headers(list),
@@ -90,7 +91,13 @@ A single SSE response is single-writer;  multiple threads writing to the
 same response will interleave bytes and corrupt   the stream. Fan out to
 multiple clients by giving each connection its own writer.
 
+Browsers loading  the  page  from   a  different  origin  than  the  SSE
+endpoint  need  Cross-Origin  Resource  Sharing  (CORS).  sse_open/0,1
+calls cors_enable/0, so setting the `http:cors` setting (see
+library(http/http_cors)) enables it.
+
 @see library(http/websocket) for bi-directional messaging.
+@see library(http/http_cors) for enabling CORS.
 */
 
 %!  sse_open is det.
@@ -105,6 +112,11 @@ multiple clients by giving each connection its own writer.
 %     - `Content-Type: text/event-stream`
 %     - `Cache-Control: no-cache`
 %     - `X-Accel-Buffering: no` (disables nginx response buffering)
+%
+%   cors_enable/0  is  called  after  the  mandatory  headers,  so  the
+%   `http:cors` setting controls whether an `Access-Control-Allow-Origin`
+%   header is emitted. Browser-based `EventSource` clients on a different
+%   origin need this; non-browser clients do not.
 %
 %   Options:
 %
@@ -126,6 +138,7 @@ sse_open(Options) :-
     format(Out, 'Cache-Control: no-cache\r\n', []),
     format(Out, 'X-Accel-Buffering: no\r\n', []),
     format(Out, 'Connection: close\r\n', []),
+    cors_enable,
     (   option(headers(Extras), Options)
     ->  must_be(list, Extras),
         forall(member(Name-Value, Extras),
