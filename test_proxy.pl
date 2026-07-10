@@ -273,9 +273,10 @@ start_socks_server(Port):-
 stop_socks_server(Port) :-
     socks_control(Port, ThreadId, ControlWrite),
     ignore(thread_wait(socks_waiting(ThreadId), [timeout(5)])),
-    retract(socks_control(Port, ThreadId, ControlWrite)),
     thread_property(ThreadId, id(_0Id)),
     debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
+    retract(socks_control(Port, ThreadId, ControlWrite)),
+    close(ControlWrite),
     catch_with_backtrace(
 	setup_call_cleanup(
 	    tcp_connect(localhost:Port, Tmp,
@@ -285,7 +286,6 @@ stop_socks_server(Port) :-
 	    close(Tmp)),
 	E, print_message(warning, stop(socks_server, E))),
     thread_join(ThreadId, _),
-    close(ControlWrite),
     debug(stop, 'ok', []).
 
 socks_server(Initiator, Socket, ControlRead) :-
