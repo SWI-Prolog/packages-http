@@ -138,15 +138,7 @@ start_http_proxy(Port):-
 stop_http_proxy_server:-
     debug(stop, 'Stopping http proxy server ...', []),
     retract(http_proxy_control(Port, ThreadId, ControlWrite)),
-    close(ControlWrite),
-    catch(setup_call_cleanup(
-	      tcp_connect(localhost:Port, Tmp,
-			  [ bypass_proxy(true)
-			  ]),
-	      true,
-	      close(Tmp)),
-	  E, print_message(warning, stop(http_proxy_server, E))),
-    thread_join(ThreadId, _),
+    stop_control_thread(http_proxy_server, Port, ThreadId, ControlWrite),
     debug(stop, 'ok', []).
 
 http_proxy_server(Socket, ControlRead):-
@@ -276,6 +268,17 @@ stop_socks_server(Port) :-
     thread_property(ThreadId, id(_0Id)),
     debug(stop, 'Stopping socks server ~p=~p ...', [ThreadId,_0Id]),
     retract(socks_control(Port, ThreadId, ControlWrite)),
+    stop_control_thread(socks_server, Port, ThreadId, ControlWrite),
+    debug(stop, 'ok', []).
+
+%!  stop_control_thread(+Kind, +Port, +ThreadId, +ControlWrite) is det.
+%
+%   Shared cleanup for a proxy/socks worker thread.  Closes the
+%   ControlWrite pipe end so the worker's ControlRead sees EOF, then
+%   opens a dummy TCP connection to Port to unblock any pending
+%   tcp_accept/3, and finally waits for the thread to terminate.
+
+stop_control_thread(Kind, Port, ThreadId, ControlWrite) :-
     close(ControlWrite),
     catch_with_backtrace(
 	setup_call_cleanup(
@@ -284,9 +287,8 @@ stop_socks_server(Port) :-
 			]),
 	    true,
 	    close(Tmp)),
-	E, print_message(warning, stop(socks_server, E))),
-    thread_join(ThreadId, _),
-    debug(stop, 'ok', []).
+	E, print_message(warning, stop(Kind, E))),
+    thread_join(ThreadId, _).
 
 socks_server(Initiator, Socket, ControlRead) :-
     thread_send_message(Initiator, started),
