@@ -1,16 +1,40 @@
+/*  Part of SWI-Prolog
+
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org
+    Copyright (c)  2016-2026, SWI-Prolog Solutions b.v.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
 :- module(test_proxy,
 	  [ test_proxy/0
 	  ]).
-:- asserta(user:file_search_path(foreign, '.')).
-:- asserta(user:file_search_path(foreign, '../clib')).
-:- asserta(user:file_search_path(foreign, '../ssl')).
-:- asserta(user:file_search_path(foreign, '../sgml')).
-:- asserta(user:file_search_path(library, '..')).
-:- asserta(user:file_search_path(library, '../plunit')).
-:- asserta(user:file_search_path(library, '../clib')).
-:- asserta(user:file_search_path(library, '../sgml')).
-:- asserta(user:file_search_path(library, '../ssl')).
-
 :- use_module(library(http/http_header)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_proxy)).
@@ -26,6 +50,11 @@
 :- if(exists_source(library(ssl))).
 :- use_module(library(ssl)).
 :- use_module(library(http/http_ssl_plugin)).
+:- use_module(library(apply), [maplist/3, maplist/2]).
+:- use_module(library(lists), [member/2, append/3]).
+:- use_module(library(random), [random_between/3]).
+:- use_module(library(readutil), [read_line_to_codes/2]).
+
 test_https(true).
 :- else.
 test_https(false).
@@ -243,9 +272,9 @@ http_get_proxy(Code, (Major-Minor), _Headers, Slave, Write):-
     copy_stream_data(Slave, Write).
 
 
-:-dynamic
-	test_socks_mapping/2,
-	test_http_connect_mapping/2.
+:- dynamic
+    test_socks_mapping/2,
+    test_http_connect_mapping/2.
 
 start_socks_server(Port):-
     tcp_socket(Socket),
@@ -420,11 +449,9 @@ shovel_dispatch(Pair, SlaveRead, SlaveWrite, Control, [Stream|More], Done) :-
 
 :- dynamic
     socks_proxy_connection_attempt/1,
-    http_proxy_connection_attempt/1,
-    http_page_serve_attempt/1.
+    http_proxy_connection_attempt/1.
 
-http_endpoint(_Request):-
-    assert(http_page_serve_attempt(?)),
+http_endpoint(_Request) :-
     format('Content-type: text/html~n~nHello', []).
 
 start_servers :-
@@ -475,7 +502,7 @@ add_auth_http_proxy :-
 
 
 :- meta_predicate
-    proxy_test(0,0,-,-).
+    proxy_test(0,0,0,-,-).
 
 proxy_test(Init, Goal, Cleanup, SocksAttempts, HTTPAttempts) :-
     retractall(socks_proxy_connection_attempt(_)),
@@ -718,32 +745,3 @@ test('Test an exotic application-level proxy - http with authentication'):-
     assertion(HTTPProxyAttempts == [authenticated_get(URL)]).
 
 :- end_tests(proxy).
-
-		 /*******************************
-		 *        MESSAGE TRICKS        *
-		 *******************************/
-
-:- meta_predicate
-    catch_messages(0, -).
-
-catch_messages(Goal, Messages) :-
-    nb_setval(messages, []),
-    thread_self(Me),
-    setup_call_cleanup(assert((user:message_hook(Msg, _, _) :-
-				    catch_message(Me, Msg)),
-			      Ref),
-		       once(Goal),
-		       collect_messages(Messages, Ref)).
-
-catch_message(Me, Msg) :-
-    thread_self(Me),
-    !,
-    nb_getval(messages, L0),
-    duplicate_term(Msg, Copy),
-    nb_linkval(messages, [Copy|L0]).
-
-collect_messages(Messages, Ref) :-
-    erase(Ref),
-    nb_getval(messages, L),
-    nb_delete(messages),
-    reverse(L, Messages).
