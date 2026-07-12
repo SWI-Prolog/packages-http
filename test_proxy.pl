@@ -160,9 +160,9 @@ start_http_proxy(Port):-
     tcp_listen(Socket, 5),
     pipe(ControlRead, ControlWrite),
     format(atom(Alias), 'http-proxy@~w', [Port]),
-    thread_create(http_proxy_server(Socket, ControlRead), ThreadId,
-		  [alias(Alias)]),
-    assert(http_proxy_control(Port, ThreadId, ControlWrite)).
+    assert(http_proxy_control(Port, Alias, ControlWrite)),
+    thread_create(http_proxy_server(Socket, ControlRead), _ThreadId,
+		  [alias(Alias)]).
 
 stop_http_proxy_server:-
     debug(stop, 'Stopping http proxy server ...', []),
@@ -283,11 +283,9 @@ start_socks_server(Port):-
     tcp_listen(Socket, 5),
     pipe(ControlRead, ControlWrite),
     format(atom(Alias), 'socks@~w', [Port]),
-    thread_self(Me),
-    thread_create(socks_server(Me, Socket, ControlRead), ThreadId,
-		  [ alias(Alias) ]),
-    assert(socks_control(Port, ThreadId, ControlWrite)),
-    thread_get_message(started).
+    assert(socks_control(Port, Alias, ControlWrite)),
+    thread_create(socks_server(Socket, ControlRead), _ThreadId,
+		  [ alias(Alias) ]).
 
 :- dynamic socks_waiting/1.
 
@@ -319,8 +317,7 @@ stop_control_thread(Kind, Port, ThreadId, ControlWrite) :-
 	E, print_message(warning, stop(Kind, E))),
     thread_join(ThreadId, _).
 
-socks_server(Initiator, Socket, ControlRead) :-
-    thread_send_message(Initiator, started),
+socks_server(Socket, ControlRead) :-
     thread_self(Me),
     thread_property(Me, id(Id)),
     debug(start, 'Started SOCKS server in thread ~p', [Id]),
