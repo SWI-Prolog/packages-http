@@ -140,7 +140,7 @@ http_parameters(Request, Params, Options) :-
     meta_options(is_meta, Options, QOptions),
     option(attribute_declarations(DeclGoal), QOptions, no_decl_goal),
     http_parms(Request, Params, DeclGoal, Form),
-    (   memberchk(form_data(RForm), QOptions)
+    (   option(form_data(RForm), QOptions)
     ->  RForm = Form
     ;   true
     ).
@@ -232,16 +232,16 @@ fill_param(Name, Values, Options, FormData) :-
     !,
     fill_param_list(FormData, Name, Values, Options).
 fill_param(Name, Values, Options, FormData) :-
-    memberchk(list(Type), Options),
+    option(list(Type), Options),
     !,
     fill_param_list(FormData, Name, Values, [Type|Options]).
 fill_param(Name, Value, Options, FormData) :-
     (   memberchk(Name=Value0, FormData),
         Value0 \== ''               % Not sure
     ->  http_convert_parameter(Options, Name, Value0, Value)
-    ;   memberchk(default(Value), Options)
+    ;   option(default(Value), Options)
     ->  true
-    ;   memberchk(optional(true), Options)
+    ;   option(optional(true), Options)
     ->  true
     ;   throw(error(existence_error(http_parameter, Name), _))
     ).

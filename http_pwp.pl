@@ -1,9 +1,10 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2011, VU University, Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2009-2026, VU University, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,17 +37,20 @@
           [ reply_pwp_page/3,           % :File, +Options, +Request
             pwp_handler/2               % +Options, +Request
           ]).
-:- use_module(library(http/http_dispatch)).
-:- use_module(library(sgml)).
-:- use_module(library(sgml_write)).
-:- use_module(library(option)).
-:- use_module(library(error)).
-:- use_module(library(lists)).
-:- use_module(library(pwp)).
+:- use_module(library(http/http_dispatch),
+              [http_safe_file/2, http_reply_file/3]).
+:- autoload(library(sgml), [load_structure/3]).
+:- autoload(library(error), [permission_error/3]).
+:- autoload(library(lists), [member/2]).
+:- autoload(library(option),
+            [meta_options/3, option/2, option/3, merge_options/3]).
+:- autoload(library(pwp), [pwp_xml/3]).
+:- autoload(library(sgml_write), [html_write/3, xml_write/3]).
 
 :- predicate_options(pwp_handler/2, 1,
                      [ cache(boolean),
                        hide_extensions(list(atom)),
+                       index(any),
                        index_hook(callable),
                        mime_type(any),
                        path_alias(atom),
@@ -103,10 +107,13 @@ predicates:
 %
 %       * path_alias(+Alias)
 %       Search for PWP files as Alias(Path).  See absolute_file_name/3.
-%       * index(+Index)
-%       Name of the directory index (pwp) file.  This option may
-%       appear multiple times.  If no such option is provided,
+%       * index(+IndexOrList)
+%       Name of the directory index (pwp) file.  IndexOrList is either a
+%       single file name or a list of file names that are tried in order;
+%       the first that exists is served.  If no such option is provided,
 %       pwp_handler/2 looks for =|index.pwp|=.
+%       __note__ Older versions allowed for repeating this option rather
+%       than providing a list.
 %       * view(+Boolean)
 %       If =true= (default is =false=), allow for ?view=source to serve
 %       PWP file as source.
@@ -146,12 +153,7 @@ pwp_handler(QOptions, Request) :-
                              file_errors(fail)
                            ])
     ->  ensure_slash(Path, Dir),
-        (   (   member(index(Index), Options)
-            *-> true
-            ;   Index = 'index.pwp'
-            ),
-            atom_concat(Dir, Index, File),
-            access_file(File, read)
+        (   find_index(Dir, File, Options)
         ->  true
         ;   option(index_hook(Hook), Options),
             call(Hook, Path, Options, Request)
@@ -166,6 +168,22 @@ pwp_handler(QOptions, Request) :-
     server_file(File, Request, Options).
 
 is_meta(index_hook).
+
+%!  find_index(+Dir, -File, +Options) is nondet.
+%
+%   True when File is an existing index (pwp) file in directory Dir.  The
+%   candidate file name(s) are taken from the index(IndexOrList) option:
+%   a single file name or a list of file names that are tried in order.
+%   If no index option is provided, =|index.pwp|= is used.
+
+find_index(Dir, File, Options) :-
+    option(index(Index), Options, 'index.pwp'),
+    (   is_list(Index)
+    ->  member(Base, Index)
+    ;   Base = Index
+    ),
+    atom_concat(Dir, Base, File),
+    access_file(File, read).
 
 server_file(File, _, _) :-              % index-hook did the work
     var(File),

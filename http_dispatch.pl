@@ -318,7 +318,7 @@ compile_handler(Path, Pred, Options0,
                 http_dispatch:handler(Path1, Pred, IsPrefix, Options)) :-
     check_path(Path, Path1, PathOptions),
     check_id(Options0),
-    (   memberchk(segment_pattern(_), PathOptions)
+    (   option(segment_pattern(_), PathOptions)
     ->  IsPrefix = true,
         Options1 = Options0
     ;   select(prefix, Options0, Options1)
@@ -465,7 +465,7 @@ path_to_list(Value) -->
     { must_be(atom, Value) }.
 
 check_id(Options) :-
-    memberchk(id(Id), Options),
+    option(id(Id), Options),
     !,
     must_be(atom, Id).
 check_id(_).
@@ -947,7 +947,7 @@ match_segment_pattern([H0|T0], [H|T]) :-
 
 
 eval_condition(Options) :-
-    (   memberchk(condition(Cond), Options)
+    (   option(condition(Cond), Options)
     ->  catch(Cond, E, (print_message(warning, E), fail))
     ;   true
     ).
@@ -1357,11 +1357,11 @@ path_tree_nocache(Tree) :-
 
 prefix_handler(Prefix, Action, Options, Priority-PLen) :-
     handler(Spec, Action, true, Options),
-    (   memberchk(priority(Priority), Options)
+    (   option(priority(Priority), Options)
     ->  true
     ;   Priority = 0
     ),
-    (   memberchk(segment_pattern(Pattern), Options)
+    (   option(segment_pattern(Pattern), Options)
     ->  length(Pattern, PLen)
     ;   PLen = 0
     ),

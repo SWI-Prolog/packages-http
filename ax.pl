@@ -37,6 +37,7 @@
             ax_form_attributes/2        % +Form, -Values
           ]).
 :- use_module(library(error)).
+:- autoload(library(option), [option/2]).
 
 
 /** <module> Attribute Exchange library
@@ -94,7 +95,7 @@ type_alias(Spec, Attr=URL) :-
     functor(Spec, Alias, Arity),
     (   Arity > 1,
         arg(2, Spec, Options),
-        memberchk(url(URL), Options)
+        option(url(URL), Options)
     ->  true
     ;   ax_alias(Alias, URL)
     ->  true
@@ -119,7 +120,7 @@ count_attr([], []).
 count_attr([Spec|T0], [A=Count|T]) :-
     functor(Spec, Alias, 2),
     arg(2, Spec, Options),
-    memberchk(count(Count), Options),
+    option(count(Count), Options),
     !,
     atomic_list_concat('openid.ax.count.', Alias, A),
     count_attr(T0, T).

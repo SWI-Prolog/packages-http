@@ -326,7 +326,7 @@ address_parts(Address) -->
 
 create_server(Goal, Address, Options) :-
     get_time(StartTime),
-    memberchk(queue(Queue), Options),
+    option(queue(Queue), Options),
     scheme(Scheme, Options),
     autoload_https(Scheme),
     address_port(Address, Port),
@@ -715,7 +715,7 @@ http_worker(Options) :-
           ->  fail
           ;   current_message_level(Error, Level),
               print_message(Level, Error),
-              memberchk(peer(Peer), ClientOptions),
+              option(peer(Peer), ClientOptions),
               close_connection(Peer, In, Out),
               fail
           )
@@ -740,7 +740,7 @@ get_work(Queue, Message, MaxIdle) :-
 open_client(requeue(In, Out, Goal, ClOpts),
             _, Goal, In, Out, Opts, ClOpts) :-
     !,
-    memberchk(peer(Peer), ClOpts),
+    option(peer(Peer), ClOpts),
     option(keep_alive_timeout(KeepAliveTMO), Opts, 2),
     check_keep_alive_connection(In, KeepAliveTMO, Peer, In, Out).
 open_client(Message, Queue, Goal, In, Out, Opts,
@@ -911,7 +911,7 @@ read_incomplete(In, Left) :-
 http_requeue(Header) :-
     requeue_header(Header, ClientOptions),
     memberchk(pool(client(Queue, Goal, In, Out)), ClientOptions),
-    memberchk(peer(Peer), ClientOptions),
+    option(peer(Peer), ClientOptions),
     http_enough_workers(Queue, keep_alive, Peer),
     thread_send_message(Queue, requeue(In, Out, Goal, ClientOptions)),
     !.
