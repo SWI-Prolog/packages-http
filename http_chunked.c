@@ -47,8 +47,6 @@
 
 #define MAXHDR 1024			/* max size of chunk header line */
 
-static atom_t ATOM_close_parent;	/* close_parent(Bool) */
-static atom_t ATOM_max_chunk_size;	/* max_chunk_size(Int) */
 
 
 		 /*******************************
@@ -346,36 +344,29 @@ static IOFUNCTIONS chunked_functions =
 		    SIO_REPXML|SIO_REPPL|\
 		    SIO_RECORDPOS)
 
+static PL_option_t http_chunked_options[] =
+{ PL_OPTION("max_chunk_size", OPT_TERM),
+  PL_OPTION("close_parent",   OPT_BOOL),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 pl_http_chunked_open(term_t org, term_t new, term_t options)
-{ term_t tail = PL_copy_term_ref(options);
-  term_t head = PL_new_term_ref();
-  chunked_context *ctx;
+{ chunked_context *ctx;
   IOSTREAM *s = NULL, *s2 = NULL;
   int close_parent = FALSE;
   int max_chunk_size = 0;
+  term_t mcs = 0;
 
-  while(PL_get_list(tail, head, tail))
-  { atom_t name;
-    size_t arity;
-    term_t arg = PL_new_term_ref();
-
-    if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return type_error(head, "option");
-    _PL_get_arg(1, head, arg);
-
-    if ( name == ATOM_max_chunk_size )
-    { if ( !get_int_ex(arg, &max_chunk_size) )
-	return FALSE;
-      if ( max_chunk_size <= 0 )
-	return domain_error(arg, "positive_integer");
-    } else if ( name == ATOM_close_parent )
-    { if ( !get_bool_ex(arg, &close_parent) )
-	return FALSE;
-    }
+  if ( !PL_scan_options(options, 0, "chunked_option", http_chunked_options,
+			&mcs, &close_parent) )
+    return FALSE;
+  if ( mcs )
+  { if ( !PL_get_integer_ex(mcs, &max_chunk_size) )
+      return FALSE;
+    if ( max_chunk_size <= 0 )
+      return PL_domain_error("positive_integer", mcs);
   }
-  if ( !PL_get_nil(tail) )
-    return type_error(tail, "list");
 
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
@@ -515,10 +506,7 @@ http_is_chunked(term_t Stream)
 
 static void
 install_http_chunked()
-{ ATOM_close_parent   = PL_new_atom("close_parent");
-  ATOM_max_chunk_size = PL_new_atom("max_chunk_size");
-
-  PL_register_foreign("http_chunked_open",        3, pl_http_chunked_open,     0);
+{ PL_register_foreign("http_chunked_open",        3, pl_http_chunked_open,     0);
   PL_register_foreign("http_is_chunked",          1, http_is_chunked,          0);
   PL_register_foreign("http_chunked_flush",       2, http_chunked_flush,       0);
   PL_register_foreign("http_chunked_add_trailer", 3, http_chunked_add_trailer, 0);

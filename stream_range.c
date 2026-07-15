@@ -235,14 +235,14 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
     term_t arg = PL_new_term_ref();
 
     if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return type_error(head, "option");
+      return PL_type_error("option", head);
     _PL_get_arg(1, head, arg);
 
     if ( name == ATOM_size )
-    { if ( !get_int_ex(arg, &size) )
+    { if ( !PL_get_integer_ex(arg, &size) )
 	return FALSE;
       if ( size < 0 )
-	return domain_error(arg, "nonneg");
+	return PL_domain_error("nonneg", arg);
     } else if ( name == ATOM_onclose )
     { if ( !PL_strip_module(arg, &ocm, arg) )
 	return FALSE;
@@ -250,7 +250,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
     }
   }
   if ( !PL_get_nil(tail) )
-    return type_error(tail, "list");
+    return PL_type_error("list", tail);
 
   if ( !PL_get_stream(org, &s, SIO_INPUT) )
     return FALSE;			/* Error */
@@ -277,7 +277,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
 
     return TRUE;
   } else
-  { return instantiation_error();
+  { return PL_instantiation_error(new);
   }
 }
 

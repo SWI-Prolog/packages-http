@@ -228,7 +228,7 @@ get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
     return FALSE;
   if ( s->functions != &cgi_functions )
   { silent_release_stream(s);
-    return type_error(t, "cgi_stream"), FALSE;
+    return PL_type_error("cgi_stream", t), FALSE;
   }
 
   *sp = s;
@@ -276,7 +276,7 @@ cgi_property(term_t cgi, term_t prop)
     return FALSE;
 
   if ( !PL_get_name_arity(prop, &name, &arity) || arity != 1 )
-  { rc = type_error(prop, "cgi_property");
+  { rc = PL_type_error("cgi_property", prop);
     goto out;
   }
 
@@ -323,7 +323,7 @@ cgi_property(term_t cgi, term_t prop)
 
     rc = PL_unify_atom(arg, state);
   } else
-  { rc = existence_error(prop, "cgi_property");
+  { rc = PL_existence_error("cgi_property", prop);
   }
 
 out:
@@ -348,7 +348,7 @@ set_atom(atom_t *a, term_t t)
 { atom_t new;
 
   if ( !PL_get_atom(t, &new) )
-    return type_error(t, "atom");
+    return PL_type_error("atom", t);
 
   if ( *a != new )
   { if ( *a )
@@ -374,7 +374,7 @@ cgi_set(term_t cgi, term_t prop)
     return FALSE;
 
   if ( !PL_get_name_arity(prop, &name, &arity) || arity != 1 )
-  { rc = type_error(prop, "cgi_property");
+  { rc = PL_type_error("cgi_property", prop);
     goto out;
   }
 
@@ -399,11 +399,11 @@ cgi_set(term_t cgi, term_t prop)
       { ctx->transfer_encoding = enc;
 	rc = call_hook(ctx, ATOM_send_header);
       } else
-      { rc = domain_error(arg, "transfer_encoding");
+      { rc = PL_domain_error("transfer_encoding", arg);
       }
     }
   } else
-  { rc = existence_error(prop, "cgi_property");
+  { rc = PL_existence_error("cgi_property", prop);
   }
 
 out:
@@ -729,7 +729,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   if ( !PL_strip_module(closure, &module, hook) )
     return FALSE;
   if ( !PL_is_callable(hook) )
-    return type_error(closure, "callable");
+    return PL_type_error("callable", closure);
 
   while(PL_get_list(tail, head, tail))
   { atom_t name;
@@ -737,22 +737,22 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
     term_t arg = PL_new_term_ref();
 
     if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return type_error(head, "option");
+      return PL_type_error("option", head);
     _PL_get_arg(1, head, arg);
     if ( name == ATOM_request )
     { request = PL_record(arg);
       method = request_method(arg);
     } else
-      return existence_error(head, "cgi_open_option");
+      return PL_existence_error("cgi_open_option", head);
   }
   if ( !PL_get_nil(tail) )
-    return type_error(tail, "list");
+    return PL_type_error("list", tail);
 
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
   if ( !(s->flags&SIO_OUTPUT) )		/* only allow output stream */
   { silent_release_stream(s);
-    return permission_error("stream", "write", org);
+    return PL_permission_error("stream", "write", org);
   }
 
   ctx = alloc_cgi_context(s);
@@ -783,7 +783,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
 
     return TRUE;
   } else
-  { return instantiation_error();
+  { return PL_instantiation_error(new);
   }
 }
 

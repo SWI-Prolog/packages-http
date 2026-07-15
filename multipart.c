@@ -50,8 +50,6 @@
 #include <time.h>
 #include <errno.h>
 
-static atom_t ATOM_close_parent;	/* close_parent(Bool) */
-static atom_t ATOM_boundary;		/* boundary(String) */
 
 #ifndef DEBUG
 static int multipart_debug = 0;
@@ -270,35 +268,27 @@ static IOFUNCTIONS multipart_functions =
 		    SIO_REPXML|SIO_REPPL|\
 		    SIO_RECORDPOS)
 
+static PL_option_t multipart_options[] =
+{ PL_OPTION("boundary",     OPT_TERM),
+  PL_OPTION("close_parent", OPT_BOOL),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 multipart_open(term_t org, term_t new, term_t options)
-{ term_t tail = PL_copy_term_ref(options);
-  term_t head = PL_new_term_ref();
-  multipart_context *ctx;
+{ multipart_context *ctx;
   IOSTREAM *s, *s2;
   int close_parent = FALSE;
   char *boundary = NULL;
   size_t boundary_len = 0;
+  term_t bt = 0;
 
-  while(PL_get_list(tail, head, tail))
-  { atom_t name;
-    size_t arity;
-    term_t arg = PL_new_term_ref();
-
-    if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return PL_type_error("option", head);
-    _PL_get_arg(1, head, arg);
-
-    if ( name == ATOM_boundary )
-    { if ( !PL_get_nchars(arg, &boundary_len, &boundary,
-			  CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
-	return FALSE;
-    } else if ( name == ATOM_close_parent )
-    { if ( !PL_get_bool_ex(arg, &close_parent) )
-	return FALSE;
-    }
-  }
-  if ( !PL_get_nil_ex(tail) )
+  if ( !PL_scan_options(options, 0, "multipart_option", multipart_options,
+			&bt, &close_parent) )
+    return FALSE;
+  if ( bt &&
+       !PL_get_nchars(bt, &boundary_len, &boundary,
+		      CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
     return FALSE;
 
   if ( !PL_get_stream_handle(org, &s) )
@@ -381,10 +371,7 @@ multipart_open_next(term_t stream)
 
 static void
 install_multipart(void)
-{ ATOM_close_parent   = PL_new_atom("close_parent");
-  ATOM_boundary       = PL_new_atom("boundary");
-
-  PL_register_foreign("multipart_open",      3, multipart_open,      0);
+{ PL_register_foreign("multipart_open",      3, multipart_open,      0);
   PL_register_foreign("multipart_open_next", 1, multipart_open_next, 0);
 }
 

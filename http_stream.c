@@ -95,7 +95,23 @@ typedef struct cgi_context
 
 static atom_t ATOM_chunked;		/* chunked */
 
-#include "http_error.c"
+#define O_DEBUG 1
+
+static int debuglevel = 0;
+
+#ifdef O_DEBUG
+#define DEBUG(n, g) if ( debuglevel >= n ) g
+#else
+#define DEBUG(n, g) (void)0
+#endif
+
+#ifdef O_DEBUG
+static foreign_t
+http_stream_debug(term_t level)
+{ return PL_get_integer(level, &debuglevel);
+}
+#endif
+
 #include "http_chunked.c"
 #include "cgi_stream.c"
 #include "stream_range.c"
@@ -103,7 +119,10 @@ static atom_t ATOM_chunked;		/* chunked */
 
 install_t
 install_http_stream(void)
-{ init_errors();
+{
+#ifdef O_DEBUG
+  PL_register_foreign("http_stream_debug", 1, http_stream_debug, 0);
+#endif
   install_http_chunked();
   install_cgi_stream();
   install_stream_range();

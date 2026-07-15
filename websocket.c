@@ -43,15 +43,12 @@
 		 *	       STREAM		*
 		 *******************************/
 
-static atom_t	ATOM_mode;			/* mode */
 static atom_t	ATOM_null;			/* null */
 static atom_t	ATOM_status;			/* status */
 static atom_t	ATOM_subprotocol;		/* subprotocol */
 static atom_t	ATOM_server;			/* server */
 static atom_t	ATOM_client;			/* client */
-static atom_t	ATOM_close_parent;
 static atom_t	ATOM_end_of_file;
-static atom_t	ATOM_buffer_size;
 
 typedef enum ws_mode
 { WS_CLIENT,
@@ -606,52 +603,45 @@ static IOFUNCTIONS ws_functions =
 		       SIO_REPXML|SIO_REPPL|\
 		       SIO_RECORDPOS)
 
+static PL_option_t ws_open_options[] =
+{ PL_OPTION("mode",         OPT_TERM),
+  PL_OPTION("subprotocol",  OPT_ATOM),
+  PL_OPTION("close_parent", OPT_BOOL),
+  PL_OPTION("buffer_size",  OPT_TERM),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 ws_open(term_t org, term_t new, term_t options)
-{ term_t tail = PL_copy_term_ref(options);
-  term_t head = PL_new_term_ref();
-  ws_context *ctx;
+{ ws_context *ctx;
   IOSTREAM *s = NULL, *s2 = NULL;
   ws_mode mode = WS_CLIENT;
   int close_parent = true;
   int bufsize = 0;
   atom_t subprotocol = ATOM_null;
+  term_t mode_opt = 0, bufsize_opt = 0;
 
-  while(PL_get_list(tail, head, tail))
-  { atom_t name;
-    size_t arity;
-    term_t arg = PL_new_term_ref();
+  if ( !PL_scan_options(options, 0, "ws_option", ws_open_options,
+			&mode_opt, &subprotocol, &close_parent, &bufsize_opt) )
+    return FALSE;
+  if ( mode_opt )
+  { atom_t a;
 
-    if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return PL_type_error("option", head);
-    _PL_get_arg(1, head, arg);
-
-    if ( name == ATOM_mode )
-    { atom_t a;
-
-      if ( !PL_get_atom_ex(arg, &a) )
-	return FALSE;
-      if ( a == ATOM_server )
-	mode = WS_SERVER;
-      else if ( a == ATOM_client )
-	mode = WS_CLIENT;
-      else
-	return PL_domain_error("mode", arg);
-    } else if ( name == ATOM_subprotocol )
-    { if ( !PL_get_atom_ex(arg, &subprotocol) )
-	return FALSE;
-    } else if ( name == ATOM_close_parent )
-    { if ( !PL_get_bool_ex(arg, &close_parent) )
-	return FALSE;
-    } else if ( name == ATOM_buffer_size )
-    { if ( !PL_get_integer_ex(arg, &bufsize) )
-	return FALSE;
-      if ( bufsize < 0 )
-	return PL_domain_error("buffer_size", arg);
-    }
+    if ( !PL_get_atom_ex(mode_opt, &a) )
+      return FALSE;
+    if ( a == ATOM_server )
+      mode = WS_SERVER;
+    else if ( a == ATOM_client )
+      mode = WS_CLIENT;
+    else
+      return PL_domain_error("mode", mode_opt);
   }
-  if ( !PL_get_nil(tail) )
-    return PL_type_error("list", tail);
+  if ( bufsize_opt )
+  { if ( !PL_get_integer_ex(bufsize_opt, &bufsize) )
+      return FALSE;
+    if ( bufsize < 0 )
+      return PL_domain_error("buffer_size", bufsize_opt);
+  }
 
   if ( !PL_is_variable(new) )
     return PL_uninstantiation_error(new);
@@ -910,15 +900,12 @@ out:
 
 install_t
 install_websocket(void)
-{ ATOM_mode         = PL_new_atom("mode");
-  ATOM_null	    = PL_new_atom("null");
+{ ATOM_null	    = PL_new_atom("null");
   ATOM_status       = PL_new_atom("status");
   ATOM_subprotocol  = PL_new_atom("subprotocol");
   ATOM_server       = PL_new_atom("server");
   ATOM_client       = PL_new_atom("client");
-  ATOM_close_parent = PL_new_atom("close_parent");
   ATOM_end_of_file  = PL_new_atom("end_of_file");
-  ATOM_buffer_size  = PL_new_atom("buffer_size");
 
   PL_register_foreign("is_ws_stream",	  1, is_ws_stream,     0);
   PL_register_foreign("ws_property",	  3, ws_property,      0);
