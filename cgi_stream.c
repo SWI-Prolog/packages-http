@@ -715,38 +715,33 @@ request_method(term_t request)
 			SIO_REPXML|SIO_REPPL|\
 			SIO_RECORDPOS)
 
+static PL_option_t cgi_options[] =
+{ PL_OPTION("request", OPT_TERM),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
-{ term_t tail = PL_copy_term_ref(options);
-  term_t head = PL_new_term_ref();
-  cgi_context *ctx;
+{ cgi_context *ctx;
   IOSTREAM *s, *s2;
   module_t module = NULL;
   term_t hook = PL_new_term_ref();
   record_t request = 0;
   atom_t method = ATOM_get;
+  term_t req = 0;
 
   if ( !PL_strip_module(closure, &module, hook) )
     return FALSE;
   if ( !PL_is_callable(hook) )
     return PL_type_error("callable", closure);
 
-  while(PL_get_list(tail, head, tail))
-  { atom_t name;
-    size_t arity;
-    term_t arg = PL_new_term_ref();
-
-    if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return PL_type_error("option", head);
-    _PL_get_arg(1, head, arg);
-    if ( name == ATOM_request )
-    { request = PL_record(arg);
-      method = request_method(arg);
-    } else
-      return PL_existence_error("cgi_open_option", head);
+  if ( !PL_scan_options(options, OPT_UNKNOWN_ERROR, "cgi_open_option",
+			cgi_options, &req) )
+    return FALSE;
+  if ( req )
+  { request = PL_record(req);
+    method = request_method(req);
   }
-  if ( !PL_get_nil(tail) )
-    return PL_type_error("list", tail);
 
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */

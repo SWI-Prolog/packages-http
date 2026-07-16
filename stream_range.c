@@ -43,8 +43,6 @@
 #include <time.h>
 #include <errno.h>
 
-static atom_t ATOM_size;		/* size(Int) */
-static atom_t ATOM_onclose;		/* onclose(:CallBack) */
 
 		 /*******************************
 		 *	       TYPES		*
@@ -219,38 +217,35 @@ static IOFUNCTIONS range_functions =
 		    SIO_REPXML|SIO_REPPL|\
 		    SIO_RECORDPOS)
 
+static PL_option_t range_options[] =
+{ PL_OPTION("size",    OPT_TERM),
+  PL_OPTION("onclose", OPT_TERM),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 pl_stream_range_open(term_t org, term_t new, term_t options)
-{ term_t tail = PL_copy_term_ref(options);
-  term_t head = PL_new_term_ref();
-  range_context *ctx;
+{ range_context *ctx;
   IOSTREAM *s, *s2;
   int size = 0;
   module_t ocm = NULL;
   record_t onclose = 0;
+  term_t size_opt = 0, onclose_opt = 0;
 
-  while(PL_get_list(tail, head, tail))
-  { atom_t name;
-    size_t arity;
-    term_t arg = PL_new_term_ref();
-
-    if ( !PL_get_name_arity(head, &name, &arity) || arity != 1 )
-      return PL_type_error("option", head);
-    _PL_get_arg(1, head, arg);
-
-    if ( name == ATOM_size )
-    { if ( !PL_get_integer_ex(arg, &size) )
-	return FALSE;
-      if ( size < 0 )
-	return PL_domain_error("nonneg", arg);
-    } else if ( name == ATOM_onclose )
-    { if ( !PL_strip_module(arg, &ocm, arg) )
-	return FALSE;
-      onclose = PL_record(arg);
-    }
+  if ( !PL_scan_options(options, 0, "range_option", range_options,
+			&size_opt, &onclose_opt) )
+    return FALSE;
+  if ( size_opt )
+  { if ( !PL_get_integer_ex(size_opt, &size) )
+      return FALSE;
+    if ( size < 0 )
+      return PL_domain_error("nonneg", size_opt);
   }
-  if ( !PL_get_nil(tail) )
-    return PL_type_error("list", tail);
+  if ( onclose_opt )
+  { if ( !PL_strip_module(onclose_opt, &ocm, onclose_opt) )
+      return FALSE;
+    onclose = PL_record(onclose_opt);
+  }
 
   if ( !PL_get_stream(org, &s, SIO_INPUT) )
     return FALSE;			/* Error */
@@ -288,9 +283,6 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
 
 static void
 install_stream_range()
-{ ATOM_size    = PL_new_atom("size");
-  ATOM_onclose = PL_new_atom("onclose");
-
-  PL_register_foreign("stream_range_open", 3, pl_stream_range_open,
+{ PL_register_foreign("stream_range_open", 3, pl_stream_range_open,
 		      PL_FA_META, "+-:");
 }
