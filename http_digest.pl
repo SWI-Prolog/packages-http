@@ -153,8 +153,15 @@ nonce_not_timed_out(Nonce, Now, Stale) :-
             debug(http(nonce), 'Nonce timed out: ~q', [Nonce]),
             Stale = true
         )
-    ;   our_nonce(Nonce, _Stamp)
-    ->  Stale = true
+    ;   catch(our_nonce(Nonce, Stamp), _, fail)
+    ->  setting(nonce_timeout, TimeOut),
+        number_string(StampNum, Stamp),
+        Created is StampNum // 1000,
+        (   Now - Created < TimeOut
+        ->  register_nonce(Nonce, Created),
+            Stale = false
+        ;   Stale = true
+        )
     ;   debug(http(nonce), 'Unknown nonce: ~q', [Nonce]),
         fail
     ).
@@ -256,7 +263,8 @@ our_nonce(Nonce64, Stamp) :-
     split_string(Nonce, ":", "", [Stamp,HNonceContent]),
     private_key(PrivateKey),
     atomics_to_string([Stamp,PrivateKey], ":", NonceContent),
-    hash(NonceContent, HNonceContent).
+    hash(NonceContent, Hash),
+    atom_string(Hash, HNonceContent).
 
 
                  /*******************************
@@ -384,7 +392,11 @@ hash(Text, Hash) :-
 http_digest_authenticate(Request, [User|Fields], Options) :-
     memberchk(authorization(Authorization), Request),
     debug(http(authenticate), 'Authorization: ~w', [Authorization]),
-    digest_authenticate(Authorization, User, Fields, Options).
+    (   memberchk(request_uri(RequestURI), Request)
+    ->  Options1 = [request_uri(RequestURI)|Options]
+    ;   Options1 = Options
+    ),
+    digest_authenticate(Authorization, User, Fields, Options1).
 
 digest_authenticate(Authorization, User, Fields, Options) :-
     string_codes(Authorization, AuthorizationCodes),
@@ -393,6 +405,7 @@ digest_authenticate(Authorization, User, Fields, Options) :-
     memberchk(realm(Realm), AuthValues),
     memberchk(nonce(ServerNonce), AuthValues),
     memberchk(uri(Path), AuthValues),
+    digest_uri_ok(Path, Options),
     memberchk(qop(QOP), AuthValues),
     memberchk(nc(NC), AuthValues),
     memberchk(cnonce(ClientNonce), AuthValues),
@@ -420,6 +433,31 @@ digest_authenticate(Authorization, User, Fields, Options) :-
     ->  true
     ;   Stale == false
     ).
+
+%!  digest_uri_ok(+DigestURI, +Options) is semidet.
+%
+%   True if the `uri` field of the digest response is the URI of the
+%   request.  Otherwise the response may be computed for another URI.
+
+digest_uri_ok(Path, Options) :-
+    option(request_uri(RequestURI), Options),
+    !,
+    (   atom_string(RequestURI, Path)
+    ->  true
+    ;   uri_is_global(Path),
+        uri_components(Path, Components),
+        uri_data(path, Components, ReqPath),
+        uri_data(search, Components, Search),
+        uri_data(path, ReqComponents, ReqPath),
+        uri_data(search, ReqComponents, Search),
+        uri_components(ReqURI, ReqComponents),
+        atom_string(RequestURI, ReqURI)
+    ->  true
+    ;   debug(http(authenticate), 'Digest URI ~q does not match ~q',
+              [Path, RequestURI]),
+        fail
+    ).
+digest_uri_ok(_, _).
 
 user_ha1_details(User, _Realm, HA1, Fields, Options) :-
     option(passwd_file(File), Options),
@@ -460,7 +498,7 @@ digest_value(Name, V) -->
     !,
     string_without(`"`, ValueCodes), "\"",
     { parse_value(Name, ValueCodes, Value),
-      V =.. [Name,Value]
+      digest_field(Name, Value, V)
     }.
 digest_value(stale, stale(V)) -->
     !,
@@ -468,8 +506,34 @@ digest_value(stale, stale(V)) -->
 digest_value(Name, V) -->
     string_without(`, `, ValueCodes),
     { parse_value(Name, ValueCodes, Value),
-      V =.. [Name,Value]
+      digest_field(Name, Value, V)
     }.
+
+%!  digest_field(+Name, +Value, -Field) is det.
+%
+%   Create Name(Value) for known fields.  Unknown fields are mapped to
+%   unknown(Name,Value) to avoid creating new functors from data that
+%   comes from the network.
+
+digest_field(Name, Value, Field) :-
+    digest_field_name(Name),
+    !,
+    Field =.. [Name,Value].
+digest_field(Name, Value, unknown(Name, Value)).
+
+digest_field_name(username).
+digest_field_name(realm).
+digest_field_name(nonce).
+digest_field_name(uri).
+digest_field_name(qop).
+digest_field_name(nc).
+digest_field_name(cnonce).
+digest_field_name(response).
+digest_field_name(opaque).
+digest_field_name(algorithm).
+digest_field_name(domain).
+digest_field_name(stale).
+digest_field_name(userhash).
 
 
 parse_value(domain, Codes, Domain) :-
@@ -650,18 +714,11 @@ authenticate(digest(File, Realm, Options), Request,
     ),
     (   Ok == true
     ->  true
-    ;   add_option(nonce(Nonce-Created), Options, Options1),
-        add_stale(Stale, Options1, Options2),
+    ;   add_stale(Stale, Options, Options2),
         phrase(http_digest_challenge(Realm, Options2), DigestCodes),
         string_codes(Digest, DigestCodes),
-        register_nonce(Nonce, Created),
         throw(http_reply(authorise(digest(Digest))))
     ).
-
-add_option(Option, Options0, _) :-
-    option(Option, Options0),
-    !.
-add_option(Option, Options0, [Option|Options0]).
 
 add_stale(Stale, Options0, Options) :-
     Stale == true,

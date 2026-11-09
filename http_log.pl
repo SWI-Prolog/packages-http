@@ -49,6 +49,11 @@
 :- use_module(library(error)).
 :- use_module(library(debug)).
 :- use_module(library(broadcast)).
+:- autoload(library(apply), [maplist/3]).
+:- autoload(library(uri),
+            [ uri_components/2, uri_data/3, uri_data/4,
+              uri_query_components/2
+            ]).
 
 :- setting(http:logfile, callable, 'httpd.log',
            'File in which to log HTTP requests').
@@ -310,12 +315,50 @@ log_request([search(Search0)|T0], [search(Search)|T]) :-
     !,
     mask_passwords(Search0, Search),
     log_request(T0, T).
+log_request([request_uri(URI0)|T0], [request_uri(URI)|T]) :-
+    !,
+    mask_request_uri(URI0, URI),
+    log_request(T0, T).
+log_request([H0|T0], [H|T]) :-
+    mask_field(H0, H),
+    !,
+    log_request(T0, T).
 log_request([H|T0], T) :-
     nolog(H),
     !,
     log_request(T0, T).
 log_request([H|T0], [H|T]) :-
     log_request(T0, T).
+
+%   mask_request_uri(+URI0, -URI) is det.
+%
+%   Mask password fields in the query string of the request URI.
+
+mask_request_uri(URI0, URI) :-
+    uri_components(URI0, Components0),
+    uri_data(search, Components0, Search0),
+    atom(Search0),
+    catch(uri_query_components(Search0, Query0), _, fail),
+    mask_passwords(Query0, Query),
+    Query \== Query0,
+    !,
+    uri_query_components(Search, Query),
+    uri_data(search, Components0, Search, Components),
+    uri_components(URI, Components).
+mask_request_uri(URI, URI).
+
+%   mask_field(+Field0, -Field) is semidet.
+%
+%   Mask header fields that hold credentials.
+
+mask_field(authorization(_), authorization(xxx)).
+mask_field(proxy_authorization(_), proxy_authorization(xxx)).
+mask_field(cookie(Cookies0), cookie(Cookies)) :-
+    is_list(Cookies0),
+    maplist(mask_cookie, Cookies0, Cookies).
+
+mask_cookie(Name=_, Name=xxx) :- !.
+mask_cookie(Cookie, Cookie).
 
 mask_passwords([], []).
 mask_passwords([Name=_|T0], [Name=xxx|T]) :-
@@ -331,6 +374,8 @@ mask_passwords([H|T0], [H|T]) :-
 %   the logfile.
 
 password_field(password).
+password_field(passwd).
+password_field('openid.password').
 password_field(pwd0).
 password_field(pwd1).
 password_field(pwd2).

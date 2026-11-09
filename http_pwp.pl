@@ -42,6 +42,7 @@
 :- autoload(library(sgml), [load_structure/3]).
 :- autoload(library(error), [permission_error/3]).
 :- autoload(library(lists), [member/2]).
+:- autoload(library(apply), [maplist/3]).
 :- autoload(library(option),
             [meta_options/3, option/2, option/3, merge_options/3]).
 :- autoload(library(pwp), [pwp_xml/3]).
@@ -189,7 +190,7 @@ server_file(File, _, _) :-              % index-hook did the work
     var(File),
     !.
 server_file(File, Request, Options) :-
-    file_name_extension(_, pwp, File),
+    file_extension(File, pwp),
     !,
     (   option(view(true), Options),
         memberchk(search(Query), Request),
@@ -203,14 +204,24 @@ server_file(File, Request, Options) :-
         reply_pwp_page(File, [unsafe(true)|Opts], Request)
     ).
 server_file(File, Request, Options) :-
-    option(hide_extensions(Exts), Options, [pl]),
-    file_name_extension(_, Ext, File),
+    option(hide_extensions(Exts0), Options, [pl]),
+    maplist(downcase_atom, Exts0, Exts),
+    file_extension(File, Ext),
     (   memberchk(Ext, Exts)
     ->  memberchk(path(Location), Request),
         permission_error(read, http_location, Location)
     ;   http_reply_file(File, [unsafe(true)|Options], Request)
     ).
 
+
+%   file_extension(+File, -Ext) is det.
+%
+%   Ext is the lowercase extension of File.  We use lowercase as file
+%   systems may be case insensitive.
+
+file_extension(File, Ext) :-
+    file_name_extension(_, Ext0, File),
+    downcase_atom(Ext0, Ext).
 
 ensure_slash(Path, Dir) :-
     (   sub_atom(Path, _, _, 0, /)

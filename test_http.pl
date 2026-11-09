@@ -20,6 +20,7 @@
 :- use_module(library(settings)).
 :- use_module(library(socket)).
 :- use_module(library(http/websocket)).
+:- use_module(library(http/http_digest), []).
 :- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -31,6 +32,7 @@ test_http :-
                 http_header_limits,
                 http_open_safety,
                 http_streams,
+                http_digest_checks,
                 http_shutdown
               ]).
 
@@ -584,6 +586,19 @@ test(ws_max_message_size, error(io_error(read, _))) :-
         close(In)).
 
 :- end_tests(http_streams).
+
+:- begin_tests(http_digest_checks).
+
+test(our_nonce) :-
+    phrase(http_digest:nonce([nonce(Nonce-_)]), _),
+    http_digest:our_nonce(Nonce, _).
+test(digest_unknown_field, Fields == [nc("1"), unknown(foo, "x")]) :-
+    phrase(http_digest:digest_values(Fields), `nc=1, foo="x"`).
+test(digest_uri, fail) :-
+    http_digest:digest_uri_ok("/public", [request_uri('/admin')]).
+test(digest_uri) :-
+    http_digest:digest_uri_ok("http://h.org/a?b=1", [request_uri('/a?b=1')]).
+:- end_tests(http_digest_checks).
 
 :- begin_tests(http_shutdown).
 
