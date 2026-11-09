@@ -45,14 +45,14 @@
 :- autoload(library(base64),[base64/3]).
 :- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),
-	    [ domain_error/2, must_be/2, existence_error/2, instantiation_error/1
+	    [ domain_error/2, must_be/2, existence_error/2, instantiation_error/1,
+	      resource_error/1
 	    ]).
 :- autoload(library(lists),[last/2,member/2]).
 :- autoload(library(option),
 	    [ meta_options/3, option/2, select_option/4, merge_options/3,
 	      option/3, select_option/3
 	    ]).
-:- autoload(library(readutil),[read_line_to_codes/2]).
 :- autoload(library(uri),
 	    [ uri_resolve/3, uri_components/2, uri_data/3,
               uri_authority_components/2, uri_authority_data/3,
@@ -60,7 +60,8 @@
 	    ]).
 :- autoload(library(http/http_header),
             [ http_parse_header/2, http_post_data/3 ]).
-:- autoload(library(http/http_stream),[stream_range_open/3]).
+:- use_module(library(http/http_stream),
+              [stream_range_open/3, http_read_header_line/2]).
 :- if(exists_source(library(ssl))).
 :- autoload(library(ssl), [ssl_upgrade_legacy_options/2]).
 :- endif.
@@ -1139,7 +1140,7 @@ content_encoding(Lines, Encoding) :-
 %   @error existence_error(http_reply, Uri)
 
 read_header(In, Parts, Major-Minor, Code, Comment, Lines) :-
-    read_line_to_codes(In, Line),
+    http_read_header_line(In, Line),
     (   Line == end_of_file
     ->  parts_uri(Parts, Uri),
         existence_error(http_reply,Uri)
@@ -1148,8 +1149,9 @@ read_header(In, Parts, Major-Minor, Code, Comment, Lines) :-
     Line \== end_of_file,
     phrase(first_line(Major-Minor, Code, Comment), Line),
     debug(http(open), 'HTTP/~d.~d ~w ~w', [Major, Minor, Code, Comment]),
-    read_line_to_codes(In, Line2),
-    rest_header(Line2, In, Lines),
+    http_read_header_line(In, Line2),
+    setting(http:max_header_size, MaxSize),
+    rest_header(Line2, In, MaxSize, Lines),
     !,
     (   debugging(http(open))
     ->  forall(member(HL, Lines),
@@ -1158,10 +1160,17 @@ read_header(In, Parts, Major-Minor, Code, Comment, Lines) :-
     ).
 read_header(_, _, 1-1, 500, 'Invalid reply header', []).
 
-rest_header([], _, []) :- !.            % blank line: end of header
-rest_header(L0, In, [L0|L]) :-
-    read_line_to_codes(In, L1),
-    rest_header(L1, In, L).
+rest_header([], _, _, []) :- !.         % blank line: end of header
+rest_header(end_of_file, _, _, []) :- !.
+rest_header(L0, In, Left, [L0|L]) :-
+    length(L0, Len),
+    Left1 is Left-Len-1,
+    (   Left1 < 0
+    ->  resource_error(max_header_size)
+    ;   true
+    ),
+    http_read_header_line(In, L1),
+    rest_header(L1, In, Left1, L).
 
 %!  content_length(+Header, -Length:int) is semidet.
 %

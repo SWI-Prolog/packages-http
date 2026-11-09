@@ -18,12 +18,16 @@
 :- use_module(library(lists)).
 :- use_module(library(time)).
 :- use_module(library(settings)).
+:- use_module(library(socket)).
+:- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
 test_http :-
     run_tests([ http_open,
                 http_get,
                 http_server,
+                http_read_data,
+                http_header_limits,
                 http_shutdown
               ]).
 
@@ -249,6 +253,28 @@ test(post_infinite, Content == Data) :-
                 ]),
         set_setting(http:max_request_size, Old)).
 
+test(long_header, Reply == "HTTP/1.1 431 Request Header Fields Too Large") :-
+    length(L, 70000),
+    maplist(=(0'a), L),
+    format(string(Req), "GET / HTTP/1.1\r\nX-A: ~s\r\n\r\n", [L]),
+    raw_request(Req, Reply).
+test(obs_fold, Reply == "HTTP/1.1 400 Bad Request") :-
+    raw_request("GET / HTTP/1.1\r\nX-A: a\r\n b\r\n\r\n", Reply).
+
+raw_request(Request, Reply) :-
+    with_server(URL,
+                ( uri_components(URL, uri_components(_,Auth,_,_,_)),
+                  uri_authority_components(Auth, uri_authority(_,_,Host,Port)),
+                  setup_call_cleanup(
+                      tcp_connect(Host:Port, Pair, []),
+                      ( format(Pair, "~s", [Request]),
+                        flush_output(Pair),
+                        read_line_to_string(Pair, Reply)
+                      ),
+                      close(Pair, [force(true)]))
+                ),
+                []).
+
 with_server(URL, Goal, Options) :-
     setup_call_cleanup(
         http_server(http_dispatch,
@@ -420,6 +446,22 @@ test(reply_unlimited, Data == "Hello world!") :-
         set_setting(http:max_request_size, Old)).
 
 :- end_tests(http_read_data).
+
+:- begin_tests(http_header_limits).
+
+test(read_line, L == `abc`) :-
+    setup_call_cleanup(open_string("abc\r\ndef", In),
+                       http_read_line(In, L, 3),
+                       close(In)).
+test(read_line, L == end_of_file) :-
+    setup_call_cleanup(open_string("", In),
+                       http_read_line(In, L, 3),
+                       close(In)).
+test(read_line, error(resource_error(max_line_length))) :-
+    setup_call_cleanup(open_string("abcd\r\n", In),
+                       http_read_line(In, _, 3),
+                       close(In)).
+:- end_tests(http_header_limits).
 
 :- begin_tests(http_shutdown).
 

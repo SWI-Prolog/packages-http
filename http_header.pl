@@ -73,7 +73,9 @@
 :- autoload(library(apply),[maplist/2]).
 :- autoload(library(base64),[base64/2]).
 :- use_module(library(debug),[debug/3,debugging/1]).
-:- autoload(library(error),[syntax_error/1,domain_error/2]).
+:- autoload(library(error),
+            [syntax_error/1,domain_error/2,resource_error/1]).
+:- use_module(library(http/http_stream),[http_read_header_line/2]).
 :- autoload(library(lists),[append/3,member/2,select/3,delete/3]).
 :- autoload(library(memfile),
 	    [ new_memory_file/1, open_memory_file/3,
@@ -82,8 +84,6 @@
 	    ]).
 :- autoload(library(option),[option/3,option/2]).
 :- autoload(library(pairs),[pairs_values/2]).
-:- autoload(library(readutil),
-	    [read_line_to_codes/2,read_line_to_codes/3]).
 :- autoload(library(sgml_write),[xml_write/3]).
 :- autoload(library(socket),[gethostname/1]).
 :- autoload(library(uri),
@@ -132,7 +132,7 @@ other parts of the HTTP server and client libraries.
 %   unified to =end_of_file= if FdIn is at the end of input.
 
 http_read_request(In, Request) :-
-    catch(read_line_to_codes(In, Codes), E, true),
+    catch(http_read_header_line(In, Codes), E, true),
     (   var(E)
     ->  (   Codes == end_of_file
         ->  debug(http(header), 'end-of-file', []),
@@ -161,7 +161,7 @@ http_read_request(In, Request) :-
 %   input does not contain a valid reply header.
 
 http_read_reply_header(In, [input(In)|Reply]) :-
-    read_line_to_codes(In, Codes),
+    http_read_header_line(In, Codes),
     (   Codes == end_of_file
     ->  debug(http(header), 'end-of-file', []),
         throw(error(syntax(http_reply_header, end_of_file), _))
@@ -397,6 +397,7 @@ copy_stream(Out, In, Header, From, To) :-
 %      - method_not_allowed(Method, Path)
 %      - not_modified
 %      - payload_too_large(MaxSize)
+%      - request_header_fields_too_large
 %      - resource_error(ErrorTerm)
 %      - see_other(To)
 %      - switching_protocols(Goal,Options)
@@ -510,6 +511,7 @@ status_has_content(not_found(_URL)).
 status_has_content(method_not_allowed(_Method, _URL)).
 status_has_content(not_acceptable(_Why)).
 status_has_content(payload_too_large(_MaxSize)).
+status_has_content(request_header_fields_too_large).
 status_has_content(server_error(_ErrorTerm)).
 status_has_content(service_unavailable(_Why)).
 
@@ -700,6 +702,14 @@ status_page_hook(payload_too_large(MaxSize), html_tokens(HTML), _Options) :-
                 ],
                 [ h1('Payload Too Large'),
                   p(\payload_too_large(MaxSize)),
+                  \address
+                ]),
+           HTML).
+status_page_hook(request_header_fields_too_large, html_tokens(HTML), _Options) :-
+    phrase(page([ title('431 Request Header Fields Too Large')
+                ],
+                [ h1('Request Header Fields Too Large'),
+                  p('The request header is too large'),
                   \address
                 ]),
            HTML).
@@ -1451,6 +1461,7 @@ status_reply_headers(service_unavailable(_Why, Body), Body, []).
 status_reply_headers(not_acceptable(_Why, Body), Body, []).
 status_reply_headers(bad_request(_Error, Body), Body, []).
 status_reply_headers(payload_too_large(_MaxSize, Body), Body, []).
+status_reply_headers(request_header_fields_too_large(Body), Body, []).
 
 
 %!  vstatus(+Status, -Code)// is det.
@@ -1555,6 +1566,7 @@ status_number_fact(gone,                       410).
 status_number_fact(length_required,            411).
 status_number_fact(payload_too_large,          413).
 status_number_fact(uri_too_long,               414).
+status_number_fact(request_header_fields_too_large, 431).
 status_number_fact(unsupported_media_type,     415).
 status_number_fact(expectation_failed,         417).
 status_number_fact(upgrade_required,           426).
@@ -1630,6 +1642,8 @@ status_comment(length_required) -->
     "Length Required".
 status_comment(payload_too_large) -->
     "Payload Too Large".
+status_comment(request_header_fields_too_large) -->
+    "Request Header Fields Too Large".
 status_comment(uri_too_long) -->
     "URI Too Long".
 status_comment(unsupported_media_type) -->
@@ -2728,16 +2742,33 @@ http_read_header(Fd, Header) :-
     http_parse_header(Text, Header).
 
 read_header_data(Fd, Header) :-
-    read_line_to_codes(Fd, Header, Tail),
-    read_header_data(Header, Fd, Tail),
+    setting(http:max_header_size, MaxSize),
+    read_header_lines(Fd, MaxSize, Header),
     debug(http(header), 'Header = ~n~s~n', [Header]).
 
-read_header_data([0'\r,0'\n], _, _) :- !.
-read_header_data([0'\n], _, _) :- !.
-read_header_data([], _, _) :- !.
-read_header_data(_, Fd, Tail) :-
-    read_line_to_codes(Fd, Tail, NewTail),
-    read_header_data(Tail, Fd, NewTail).
+%   Read the header lines until an empty line.  Lines are joined using
+%   a LF.  Lines that start with white space (obsolete line folding)
+%   are rejected.
+
+read_header_lines(Fd, Left, Header) :-
+    http_read_header_line(Fd, Line),
+    (   (   Line == end_of_file
+        ;   Line == []
+        )
+    ->  Header = []
+    ;   Line = [C|_],
+        code_type(C, white)
+    ->  string_codes(String, Line),
+        syntax_error(http_obs_fold(String))
+    ;   length(Line, Len),
+        Left1 is Left - Len - 1,
+        (   Left1 < 0
+        ->  resource_error(max_header_size)
+        ;   true
+        ),
+        append(Line, [0'\n|Tail], Header),
+        read_header_lines(Fd, Left1, Tail)
+    ).
 
 %!  http_parse_header(+Text:codes, -Header:list) is det.
 %

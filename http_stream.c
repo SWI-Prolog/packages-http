@@ -117,12 +117,94 @@ http_stream_debug(term_t level)
 #include "stream_range.c"
 #include "multipart.c"
 
+/** http_read_line(+Stream, -Line, +MaxLength) is det.
+ *
+ * Read a line as a code list from Stream, removing the line terminator
+ * (LF or CRLF).  Unify Line with `end_of_file` if Stream is at end of
+ * file.  Raise resource_error(max_line_length) if the line is longer
+ * than MaxLength characters.  Used to read HTTP header lines.
+ */
+
+static foreign_t
+http_read_line(term_t stream, term_t line, term_t max)
+{ IOSTREAM *s;
+  size_t maxlen, len = 0, allocated = 256;
+  int fast[256];
+  int *buf = fast;
+  int rc = FALSE;
+
+  if ( !PL_get_size_ex(max, &maxlen) ||
+       !PL_get_stream(stream, &s, SIO_INPUT) )
+    return FALSE;
+
+  for(;;)
+  { int c = Sgetcode(s);
+
+    if ( c == EOF )
+    { if ( Sferror(s) || PL_exception(0) )
+	goto out;
+      if ( len == 0 )
+      { rc = PL_unify_atom_chars(line, "end_of_file");
+	goto out;
+      }
+      break;
+    }
+    if ( c == '\n' )
+    { if ( len > 0 && buf[len-1] == '\r' )
+	len--;
+      break;
+    }
+    if ( len >= maxlen + 1 )		/* allow for CR */
+    { rc = PL_resource_error("max_line_length");
+      goto out;
+    }
+    if ( len == allocated )
+    { size_t na = allocated*2;
+      int *nb;
+
+      if ( buf == fast )
+      { if ( (nb = malloc(na*sizeof(int))) )
+	  memcpy(nb, buf, len*sizeof(int));
+      } else
+      { nb = realloc(buf, na*sizeof(int));
+      }
+      if ( !nb )
+      { rc = PL_resource_error("memory");
+	goto out;
+      }
+      buf = nb;
+      allocated = na;
+    }
+    buf[len++] = c;
+  }
+
+  if ( len > maxlen )
+  { rc = PL_resource_error("max_line_length");
+  } else
+  { term_t l = PL_new_term_ref();
+    term_t h = PL_new_term_ref();
+
+    rc = PL_put_nil(l);
+    while(rc && len > 0)
+    { rc = ( PL_put_integer(h, buf[--len]) &&
+	     PL_cons_list(l, h, l) );
+    }
+    rc = rc && PL_unify(line, l);
+  }
+
+out:
+  if ( buf != fast )
+    free(buf);
+  return PL_release_stream(s) && rc;
+}
+
 install_t
 install_http_stream(void)
 {
 #ifdef O_DEBUG
   PL_register_foreign("http_stream_debug", 1, http_stream_debug, 0);
 #endif
+  PL_register_foreign("http_read_line", 3, http_read_line, 0);
   install_http_chunked();
   install_cgi_stream();
   install_stream_range();

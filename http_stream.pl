@@ -48,9 +48,35 @@
             cgi_set/2,                  % +Stream, -Property
             cgi_discard/1,              % +Stream
             is_cgi_stream/1,            % +Stream
-            cgi_statistics/1            % ?Statistics
+            cgi_statistics/1,           % ?Statistics
+            http_read_line/3,           % +Stream, -Line, +MaxLength
+            http_read_header_line/2     % +Stream, -Line
           ]).
 :- use_foreign_library(foreign(http_stream)).
+:- use_module(library(settings), [setting/4, setting/2]).
+
+:- setting(http:max_header_line_length, positive_integer, 65_536,
+           'Max length of a single line in an HTTP header').
+:- setting(http:max_header_size, positive_integer, 262_144,
+           'Max total size of an HTTP header').
+
+%!  http_read_line(+Stream, -Line, +MaxLength) is det.
+%
+%   Read a line from Stream as a list of character codes, removing the
+%   line terminator (LF or CRLF).  Line is unified with `end_of_file` if
+%   Stream is at its end.
+%
+%   @error resource_error(max_line_length) if the line has more than
+%   MaxLength characters.
+
+%!  http_read_header_line(+Stream, -Line) is det.
+%
+%   As http_read_line/3, using the setting `http:max_header_line_length`
+%   for the maximum length.
+
+http_read_header_line(Stream, Line) :-
+    setting(http:max_header_line_length, Max),
+    http_read_line(Stream, Line, Max).
 :- public http_stream_debug/1.          % set debug level
 
 :- meta_predicate
