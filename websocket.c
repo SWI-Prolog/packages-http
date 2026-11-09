@@ -77,6 +77,7 @@ typedef enum ws_opcode
 
 #define WS_MAGIC		0x2da2f562
 #define WS_MAX_HEADER_LEN	14
+#define WS_DEFAULT_MAX_MESSAGE_SIZE (16*1024*1024)
 
 typedef struct ws_context
 { IOSTREAM	*stream;			/* original stream */
@@ -661,7 +662,7 @@ ws_open(term_t org, term_t new, term_t options)
   int bufsize = 0;
   atom_t subprotocol = ATOM_null;
   term_t mode_opt = 0, bufsize_opt = 0, maxsize_opt = 0;
-  int64_t max_message_size = 0;
+  int64_t max_message_size = WS_DEFAULT_MAX_MESSAGE_SIZE;
 
   if ( !PL_scan_options(options, 0, "ws_option", ws_open_options,
 			&mode_opt, &subprotocol, &close_parent, &bufsize_opt,
@@ -677,6 +678,7 @@ ws_open(term_t org, term_t new, term_t options)
 
     if ( !PL_get_atom(maxsize_opt, &a) || a != ATOM_infinite )
       return PL_domain_error("max_message_size", maxsize_opt);
+    max_message_size = 0;			/* unlimited */
   }
   if ( mode_opt )
   { atom_t a;

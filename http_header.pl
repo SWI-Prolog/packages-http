@@ -133,6 +133,23 @@ other parts of the HTTP server and client libraries.
 %   unified to =end_of_file= if FdIn is at the end of input.
 
 http_read_request(In, Request) :-
+    setting(http:header_timeout, MaxTime),
+    number(MaxTime),
+    stream_property(In, timeout(Old)),
+    !,
+    get_time(Now),
+    Deadline is Now+MaxTime,
+    setup_call_cleanup(
+        nb_setval('$http_header_deadline', Deadline-Old),
+        http_read_request_(In, Request),
+        ( nb_setval('$http_header_deadline', none),
+          set_stream(In, timeout(Old))
+        )).
+http_read_request(In, Request) :-
+    http_read_request_(In, Request).
+
+http_read_request_(In, Request) :-
+    header_deadline(In),
     catch(http_read_header_line(In, Codes), E, true),
     (   var(E)
     ->  (   Codes == end_of_file
@@ -421,6 +438,7 @@ copy_stream(Out, In, Header, From, To) :-
 %      - not_modified
 %      - payload_too_large(MaxSize)
 %      - request_header_fields_too_large
+%      - request_timeout
 %      - resource_error(ErrorTerm)
 %      - see_other(To)
 %      - switching_protocols(Goal,Options)
@@ -535,6 +553,7 @@ status_has_content(method_not_allowed(_Method, _URL)).
 status_has_content(not_acceptable(_Why)).
 status_has_content(payload_too_large(_MaxSize)).
 status_has_content(request_header_fields_too_large).
+status_has_content(request_timeout).
 status_has_content(server_error(_ErrorTerm)).
 status_has_content(service_unavailable(_Why)).
 
@@ -733,6 +752,14 @@ status_page_hook(request_header_fields_too_large, html_tokens(HTML), _Options) :
                 ],
                 [ h1('Request Header Fields Too Large'),
                   p('The request header is too large'),
+                  \address
+                ]),
+           HTML).
+status_page_hook(request_timeout, html_tokens(HTML), _Options) :-
+    phrase(page([ title('408 Request Timeout')
+                ],
+                [ h1('Request Timeout'),
+                  p('The request was not received in time'),
                   \address
                 ]),
            HTML).
@@ -1485,6 +1512,7 @@ status_reply_headers(not_acceptable(_Why, Body), Body, []).
 status_reply_headers(bad_request(_Error, Body), Body, []).
 status_reply_headers(payload_too_large(_MaxSize, Body), Body, []).
 status_reply_headers(request_header_fields_too_large(Body), Body, []).
+status_reply_headers(request_timeout(Body), Body, []).
 
 
 %!  vstatus(+Status, -Code)// is det.
@@ -2834,6 +2862,7 @@ read_header_data(Fd, Header) :-
 %   are rejected.
 
 read_header_lines(Fd, Left, Header) :-
+    header_deadline(Fd),
     http_read_header_line(Fd, Line),
     (   (   Line == end_of_file
         ;   Line == []
@@ -2852,6 +2881,27 @@ read_header_lines(Fd, Left, Header) :-
         append(Line, [0'\n|Tail], Header),
         read_header_lines(Fd, Left1, Tail)
     ).
+
+%   header_deadline(+Stream) is det.
+%
+%   If we are reading a request header, limit the timeout of Stream
+%   such that reading the header completes before the deadline set by
+%   http_read_request/2.  This avoids clients occupying a worker by
+%   sending the header very slowly.
+
+header_deadline(Stream) :-
+    nb_current('$http_header_deadline', Deadline-Old),
+    !,
+    get_time(Now),
+    Remaining is Deadline-Now,
+    (   Remaining =< 0
+    ->  throw(error(timeout_error(read, Stream), _))
+    ;   Old == infinite
+    ->  set_stream(Stream, timeout(Remaining))
+    ;   Timeout is min(Old, Remaining),
+        set_stream(Stream, timeout(Timeout))
+    ).
+header_deadline(_).
 
 %!  http_parse_header(+Text:codes, -Header:list) is det.
 %

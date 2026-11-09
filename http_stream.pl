@@ -59,6 +59,8 @@
            'Max length of a single line in an HTTP header').
 :- setting(http:max_header_size, positive_integer, 262_144,
            'Max total size of an HTTP header').
+:- setting(http:header_timeout, (number;oneof([infinite])), 30,
+           'Max time in seconds for receiving an HTTP request header').
 
 %!  http_read_line(+Stream, -Line, +MaxLength) is det.
 %

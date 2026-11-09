@@ -124,6 +124,12 @@ map_exception_to_http_status(error(resource_error(max_request_size), Ctx),
     ->  Ctx = context(_, payload_too_large(MaxSize))
     ;   true
     ).
+map_exception_to_http_status(error(timeout_error(read, _),
+                                   context(_, in_http_request)),
+              request_timeout,
+              [connection(close)],
+              []) :-
+    !.
 map_exception_to_http_status(error(resource_error(Limit), _),
               request_header_fields_too_large,
               [connection(close)],

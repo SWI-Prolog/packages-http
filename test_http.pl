@@ -288,6 +288,33 @@ test(header_spaces, Reply == "HTTP/1.1 200 OK") :-
     maplist(=(0' ), L),
     format(string(Req), "GET /ok/html_1 HTTP/1.1\r\nX-A: a~sb\r\n\r\n", [L]),
     call_with_time_limit(5, raw_request(Req, Reply)).
+test(header_timeout, Reply == "HTTP/1.1 408 Request Timeout") :-
+    setting(http:header_timeout, Old),
+    setup_call_cleanup(
+        set_setting(http:header_timeout, 0.5),
+        with_server(URL,
+                    ( uri_components(URL, uri_components(_,Auth,_,_,_)),
+                      uri_authority_components(Auth,
+                                               uri_authority(_,_,Host,Port)),
+                      setup_call_cleanup(
+                          tcp_connect(Host:Port, Pair, []),
+                          ( format(Pair, "GET / HTTP/1.1\r\nX-A: a\r\n", []),
+                            flush_output(Pair),
+                            % Do not write after the server closed: on
+                            % Windows the reset discards the reply
+                            set_stream(Pair, timeout(5)),
+                            catch(read_line_to_string(Pair, Reply), _,
+                                  Reply = end_of_file)
+                          ),
+                          close(Pair, [force(true)]))
+                    ),
+                    []),
+        set_setting(http:header_timeout, Old)).
+test(ws_size_option, error(domain_error(max_message_size, foo))) :-
+    setup_call_cleanup(
+        open_string("", In),
+        ws_open(In, _, [max_message_size(foo)]),
+        close(In)).
 
 raw_request(Request, Reply) :-
     with_server(URL,

@@ -60,11 +60,13 @@
 
 :- predicate_options(http_open_websocket/3, 3,
                      [ subprotocols(list(atom)),
+                       max_message_size(any),
                        pass_to(http_open:http_open/3, 3)
                      ]).
 :- predicate_options(http_upgrade_to_websocket/3, 2,
                      [ guarded(boolean),
-                       subprotocols(list(atom))
+                       subprotocols(list(atom)),
+                       max_message_size(any)
                      ]).
 
 :- use_foreign_library(foreign(websocket)).
@@ -110,6 +112,8 @@ objects.
 %     List of subprotocols that are acceptable. The selected
 %     protocol is available as ws_property(WebSocket,
 %     subprotocol(Protocol).
+%     - max_message_size(+Bytes)
+%     Passed to ws_open/3.
 %
 %   Note that clients often provide an  `Origin` header and some servers
 %   require this field. See  RFC  6455   for  details.  By  default this
@@ -152,7 +156,8 @@ http_open_websocket(URL, WebSocket, Options) :-
               ]),
     (   Status == 101,
         sec_websocket_accept(_{key:Key}, AcceptedKey)
-    ->  ws_client_options(Selected, WsOptions),
+    ->  ws_client_options(Selected, WsOptions0),
+        ws_size_options(Options, WsOptions0, WsOptions),
         stream_pair(In,  Read, Write),      % Old API: In and Out
         stream_pair(Out, Read, Write),      % New API: In == Out (= pair)
         ws_open(Read,  WsIn,  WsOptions),
@@ -166,6 +171,12 @@ http_open_websocket(URL, WebSocket, Options) :-
 ws_client_options('',          [mode(client)]) :- !.
 ws_client_options(null,        [mode(client)]) :- !.
 ws_client_options(Subprotocol, [mode(client), subprotocol(Subprotocol)]).
+
+ws_size_options(Options, WsOptions0, WsOptions) :-
+    option(max_message_size(Max), Options),
+    !,
+    WsOptions = [max_message_size(Max)|WsOptions0].
+ws_size_options(_, WsOptions, WsOptions).
 
 add_subprotocols(OptionsIn, OptionsOut) :-
     select_option(subprotocols(Subprotocols), OptionsIn, Options1),
@@ -194,6 +205,9 @@ add_subprotocols(Options, Options).
 %
 %     * subprotocols(+List)
 %     List of acceptable subprotocols.
+%
+%     * max_message_size(+Bytes)
+%     Passed to ws_open/3.
 %
 %     * timeout(+TimeOut)
 %     Timeout to apply to the input stream.  Default is =infinite=.
@@ -254,7 +268,8 @@ choose_subprotocol(_, _, null, []).
 open_websocket(Goal, SubProtocol, Options, HTTPIn, HTTPOut) :-
     option(timeout(TimeOut), Options, infinite),
     set_stream(HTTPIn, timeout(TimeOut)),
-    WsOptions = [mode(server), subprotocol(SubProtocol)],
+    ws_size_options(Options, [mode(server), subprotocol(SubProtocol)],
+                    WsOptions),
     ws_open(HTTPIn, WsIn, WsOptions),
     ws_open(HTTPOut, WsOut, WsOptions),
     stream_pair(WebSocket, WsIn, WsOut),
@@ -602,7 +617,8 @@ ws_close_(WebSocket, Code, Data) :-
 %
 %     * max_message_size(+Bytes)
 %     Raise an I/O error when reading a message whose (total) payload
-%     is larger than Bytes.  Default is `infinite`.
+%     is larger than Bytes.  Bytes is a positive integer or `infinite`.
+%     The default is 16Mb (16,777,216 bytes).
 %
 %     * subprotocol(+Protocol)
 %     Set the subprotocol property of WsStream.  This value can be
