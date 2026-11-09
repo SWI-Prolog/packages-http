@@ -144,9 +144,10 @@ map_exception_to_http_status(E,
     !,
     discard_stack_trace(E, E2).
 map_exception_to_http_status(E,
-              server_error(E),
+              server_error(E2),
               [connection(close)],
-              []).
+              []) :-
+    in_or_exclude_backtrace(E, E2).
 
 is_resource_error(error(resource_error(_), _)).
 
