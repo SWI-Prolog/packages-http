@@ -532,10 +532,42 @@ ws_continuation_header(ws_context *ctx)
 }
 
 
+/* A timeout set on the websocket stream applies to reading from the
+   parent stream.  push_timeout() sets the timeout of the parent and
+   returns the old value, to be restored with pop_timeout().
+*/
+
+static int
+push_timeout(ws_context *ctx)
+{ int old = ctx->stream->timeout;
+
+  if ( ctx->ws_stream->timeout >= 0 )
+    ctx->stream->timeout = ctx->ws_stream->timeout;
+
+  return old;
+}
+
+static void
+pop_timeout(ws_context *ctx, int old)
+{ ctx->stream->timeout = old;
+}
+
+static ssize_t
+ws_read_(ws_context *ctx, char *buf, size_t bsize);
+
 static ssize_t
 ws_read(void *handle, char *buf, size_t bsize)
 { ws_context *ctx = handle;
-  int64_t left = ctx->payload_len - ctx->payload_read;
+  int tmo = push_timeout(ctx);
+  ssize_t rc = ws_read_(ctx, buf, bsize);
+
+  pop_timeout(ctx, tmo);
+  return rc;
+}
+
+static ssize_t
+ws_read_(ws_context *ctx, char *buf, size_t bsize)
+{ int64_t left = ctx->payload_len - ctx->payload_read;
   size_t size;
   ssize_t n;
 
@@ -893,13 +925,14 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
 { ws_context *ctx;
   IOSTREAM *ws;
   int rc = TRUE;
-  int c;
+  int c, tmo;
 
   if ( !PL_is_variable(OpCode) ) return PL_uninstantiation_error(OpCode);
   if ( !PL_is_variable(RSV)    ) return PL_uninstantiation_error(RSV);
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_INPUT) )
     return FALSE;
+  tmo = push_timeout(ctx);
 
   if ( ctx->state == WS_MSG_STARTED )
   { while( Sgetc(ctx->ws_stream) != EOF )
@@ -919,7 +952,8 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
   }
 
   if ( (c = Sgetc(ctx->stream)) == EOF )	/* first byte */
-  { return ( PL_unify_atom(OpCode, ATOM_end_of_file) &&
+  { pop_timeout(ctx, tmo);
+    return ( PL_unify_atom(OpCode, ATOM_end_of_file) &&
 	     PL_release_stream(ws)
 	   );
   }
@@ -941,6 +975,7 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
   }
 
 out:
+  pop_timeout(ctx, tmo);
   if ( rc )
     rc = PL_release_stream(ws);
   else

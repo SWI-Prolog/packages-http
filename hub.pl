@@ -44,6 +44,7 @@
           ]).
 :- use_module(library(debug)).
 :- use_module(library(error)).
+:- autoload(library(option), [option/3]).
 :- use_module(library(apply)).
 :- use_module(library(gensym)).
 :- if(exists_source(library(uuid))).
@@ -108,6 +109,14 @@ demand and die if no more work needs to be done.
 %     - queues.event
 %       Message queue to which the hub thread(s) can listen.
 %
+%   Options:
+%
+%     - read_timeout(+Seconds)
+%       Maximum time to wait for the remainder of a message after
+%       the first data of the message has arrived.  If a client
+%       exceeds this time, it is disconnected.  Default is 60.
+%       Use `infinite` to wait forever.
+%
 %   After creating a hub, the application  normally creates a thread
 %   that listens to Hub.queues.event and  exposes some mechanisms to
 %   establish websockets and add them to the hub using hub_add/3.
@@ -115,13 +124,19 @@ demand and die if no more work needs to be done.
 %   @see    http_upgrade_to_websocket/3 establishes a websocket from
 %           the SWI-Prolog webserver.
 
-hub_create(HubName, Hub, _Options) :-
+hub_create(HubName, Hub, Options) :-
     must_be(atom, HubName),
+    option(read_timeout(ReadTimeout), Options, 60),
+    (   ReadTimeout == infinite
+    ->  true
+    ;   must_be(number, ReadTimeout)
+    ),
     message_queue_create(WaitQueue),
     message_queue_create(ReadyQueue),
     message_queue_create(EventQueue),
     message_queue_create(BroadcastQueue),
     Hub = hub{name:HubName,
+              read_timeout:ReadTimeout,
               queues:_{wait:WaitQueue,
                        ready:ReadyQueue,
                        event:EventQueue,
@@ -177,6 +192,11 @@ hub_add(HubName, WebSocket, Id) :-
     hub(HubName, Hub),
     (   var(Id)
     ->  uuid(Id)
+    ;   true
+    ),
+    (   Timeout = Hub.get(read_timeout),
+        Timeout \== infinite
+    ->  set_stream(WebSocket, timeout(Timeout))
     ;   true
     ),
     message_queue_create(OutputQueue),

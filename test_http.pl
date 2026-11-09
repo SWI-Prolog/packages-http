@@ -656,6 +656,29 @@ test(multipart_small_buffers, Got == "ab\r\n-Q") :-
         ( close(In),
           delete_file(File)
         )).
+test(ws_timeout, error(timeout_error(read, _), _)) :-
+    setup_call_cleanup(
+        ( tcp_socket(Socket),
+          tcp_bind(Socket, localhost:Port),
+          tcp_listen(Socket, 1),
+          tcp_connect(localhost:Port, Client, []),
+          tcp_accept(Socket, Accepted, _),
+          tcp_open_socket(Accepted, Server)
+        ),
+        ( stream_pair(Server, ServerIn, _),
+          ws_open(ServerIn, WS, [mode(server), close_parent(false)]),
+          set_stream(WS, timeout(0.2)),
+          stream_pair(Client, _, ClientOut),
+          set_stream(ClientOut, type(binary)),
+          forall(member(B, [0x81,0x85,0,0,0,0,0'a]), put_byte(ClientOut, B)),
+          flush_output(ClientOut),
+          call_cleanup(ws_receive(WS, _), close(WS, [force(true)]))
+        ),
+        ( close(Client, [force(true)]),
+          close(Server, [force(true)]),
+          tcp_close_socket(Socket)
+        )).
+
 :- end_tests(http_streams).
 
 :- begin_tests(http_digest_checks).
