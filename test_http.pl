@@ -25,6 +25,7 @@
 :- use_module(library(http/js_write)).
 :- use_module(library(http/mimepack)).
 :- use_module(library(http/http_cookie)).
+:- use_module(library(http/http_cors)).
 :- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -315,6 +316,23 @@ test(ws_size_option, error(domain_error(max_message_size, foo))) :-
         open_string("", In),
         ws_open(In, _, [max_message_size(foo)]),
         close(In)).
+test(cors, Origins == ['https://b.org'-'Origin', ''-'']) :-
+    setting(http:cors, Old),
+    setup_call_cleanup(
+        set_setting(http:cors, ['https://a.org', 'https://b.org']),
+        with_server(URL,
+                    findall(A-V,
+                            ( member(O, ['https://b.org', 'https://evil.org']),
+                              atom_concat(URL, '/cors', U),
+                              http_open(U, S,
+                                        [ request_header('Origin'=O),
+                                          header(access_control_allow_origin, A),
+                                          header(vary, V)
+                                        ]),
+                              close(S)
+                            ), Origins),
+                    []),
+        set_setting(http:cors, Old)).
 
 raw_request(Request, Reply) :-
     with_server(URL,
@@ -381,6 +399,7 @@ request(Path, Code, Type, Content, ExtraHdrs) :-
 :- http_handler('/bad-request', bad_request_handler, []).
 :- http_handler('/created', created, []).
 :- http_handler('/fail', fail, []).
+:- http_handler('/cors', cors_handler, []).
 :- http_handler('/post/echo', post_echo, [method(post)]).
 :- http_handler('/post/echo/short_read', post_echo_short_read, [method(post)]).
 :- http_handler('/spawn/post/echo/short_read', post_echo_short_read,
@@ -444,6 +463,10 @@ created(Request) :-
 
 fail(_Request) :-
     fail.
+
+cors_handler(_Request) :-
+    cors_enable,
+    format('Content-type: text/plain~n~nok~n').
 
 post_echo(Request) :-
     http_read_data(Request, Data, [to(string)]),

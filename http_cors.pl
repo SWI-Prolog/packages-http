@@ -38,6 +38,8 @@
             cors_enable/2                       % +Request, +Options
           ]).
 :- use_module(library(settings)).
+:- autoload(library(http/http_wrapper), [http_current_request/1]).
+:- autoload(library(lists), [member/2]).
 
 :- setting(http:cors, list(atom), [],
            'Enable CORS for the listed domains.  Use [*] for all domains').
@@ -52,7 +54,9 @@ in ClioPatria.
 
 Because CORS is a security risk  (see   references),  it  is disabled by
 default. It is enabled through the setting  http:cors. The value of this
-setting is a list of domains  that   are  allowed to access the service.
+setting is a list of origins (e.g., `'https://example.org'`) that are
+allowed to access the service. If the =Origin= header of the request is
+in this list, it is echoed in the =|Access-Control-Allow-Origin|= header.
 Because * is used as a wildcard match,  the value [*] allows access from
 anywhere.
 
@@ -102,19 +106,39 @@ cors_enable.                            % CORS not enabled
 cors_enable_domain :-
     setting(http:cors, List),
     List \== [],
+    allowed_origin(List, Origin),
     !,
-    format('Access-Control-Allow-Origin: ', []),
-    write_domains(List),
-    nl.
-
-write_domains([]).
-write_domains([H|T]) :-
-    write(H),
-    (   T == []
+    format('Access-Control-Allow-Origin: ~w~n', [Origin]),
+    (   Origin == (*)
     ->  true
-    ;   write(' '),
-        write_domains(T)
+    ;   format('Vary: Origin~n')
     ).
+
+%   allowed_origin(+List, -Origin) is semidet.
+%
+%   Origin is the value for the Access-Control-Allow-Origin header.  This
+%   header only allows for a single origin or `*`.  If the request has
+%   an Origin header that appears in List, we echo this origin.
+
+allowed_origin(List, Origin) :-
+    catch(http_current_request(Request), _, fail),
+    memberchk(origin(Origin0), Request),
+    member(Allowed, List),
+    Allowed \== (*),
+    same_origin(Allowed, Origin0),
+    !,
+    Origin = Origin0.
+allowed_origin(List, *) :-
+    memberchk(*, List),
+    !.
+allowed_origin([Origin], Origin) :-
+    \+ ( catch(http_current_request(Request), _, fail),
+          memberchk(origin(_), Request)
+        ).
+
+same_origin(Allowed, Origin) :-
+    downcase_atom(Allowed, L),
+    downcase_atom(Origin, L).
 
 %!  cors_enable(+Request, +Options) is det.
 %
@@ -164,7 +188,7 @@ write_methods([H|T]) :-
 cors_request_headers([]) :- !.
 cors_request_headers(ReqHeaders) :-
     phrase(field_names(ReqHeaders), String),
-    format('Access-Control-Allow-Headers: ~s', String).
+    format('Access-Control-Allow-Headers: ~s~n', [String]).
 
 
 field_names([H|T]) -->
