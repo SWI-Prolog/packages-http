@@ -641,6 +641,21 @@ test(ws_max_message_size, error(io_error(read, _))) :-
         ws_receive(In, _),
         close(In)).
 
+test(multipart_small_buffers, Got == "ab\r\n-Q") :-
+    tmp_file_stream(octet, File, Out),
+    format(Out, "--Xa-\r\nab\r\n-Q\r\n--Xa---", []),
+    close(Out),
+    setup_call_cleanup(
+        open(File, read, In, [type(binary)]),
+        ( set_stream(In, buffer_size(4)),
+          multipart_open(In, S, [boundary('Xa-')]),
+          set_stream(S, buffer_size(1)),
+          read_string(S, _, Got),
+          close(S)
+        ),
+        ( close(In),
+          delete_file(File)
+        )).
 :- end_tests(http_streams).
 
 :- begin_tests(http_digest_checks).

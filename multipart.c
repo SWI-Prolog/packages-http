@@ -182,7 +182,7 @@ multipart_read(void *handle, char *buf, size_t size)
       DEBUG(1, Sdprintf("processed %ld bytes, state=%d, left=%ld\n",
 			(long)processed, ctx->state, (long)left));
 
-      if ( processed == 0 )
+      if ( processed == 0 && ctx->unprocessed_len == 0 )
       { Sseterr(in, SIO_FERR, "Invalid multipart/form-data");
 	return -1;
       }
