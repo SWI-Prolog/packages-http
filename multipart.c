@@ -274,6 +274,8 @@ static PL_option_t multipart_options[] =
   PL_OPTIONS_END
 };
 
+static atom_t ATOM_boundary;			/* boundary */
+
 static foreign_t
 multipart_open(term_t org, term_t new, term_t options)
 { multipart_context *ctx;
@@ -286,10 +288,18 @@ multipart_open(term_t org, term_t new, term_t options)
   if ( !PL_scan_options(options, 0, "multipart_option", multipart_options,
 			&bt, &close_parent) )
     return FALSE;
-  if ( bt &&
-       !PL_get_nchars(bt, &boundary_len, &boundary,
+  if ( !bt )
+  { term_t t;
+
+    return ( (t=PL_new_term_ref()) &&
+	     PL_put_atom(t, ATOM_boundary) &&
+	     PL_existence_error("option", t) );
+  }
+  if ( !PL_get_nchars(bt, &boundary_len, &boundary,
 		      CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
     return FALSE;
+  if ( boundary_len == 0 || boundary_len > 200 )
+    return PL_domain_error("multipart_boundary", bt);
 
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
@@ -371,7 +381,9 @@ multipart_open_next(term_t stream)
 
 static void
 install_multipart(void)
-{ PL_register_foreign("multipart_open",      3, multipart_open,      0);
+{ ATOM_boundary = PL_new_atom("boundary");
+
+  PL_register_foreign("multipart_open",      3, multipart_open,      0);
   PL_register_foreign("multipart_open_next", 1, multipart_open_next, 0);
 }
 

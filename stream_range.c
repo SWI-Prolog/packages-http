@@ -105,13 +105,15 @@ range_read(void *handle, char *buf, size_t size)
   else
     max_rd = size;
 
-  if ( (rd = Sfread(buf, sizeof(char), max_rd, ctx->stream)) >= 0 )
+  if ( (rd = Sfread(buf, sizeof(char), max_rd, ctx->stream)) > 0 )
   { ctx->read += rd;
 
     return rd;
   }
-
-  return rd;
+  if ( Sferror(ctx->stream) )
+    return -1;
+  Sseterr(ctx->range_stream, SIO_FERR, "Unexpected end of file in range");
+  return -1;
 }
 
 
@@ -227,7 +229,7 @@ static foreign_t
 pl_stream_range_open(term_t org, term_t new, term_t options)
 { range_context *ctx;
   IOSTREAM *s, *s2;
-  int size = 0;
+  int64_t size = 0;
   module_t ocm = NULL;
   record_t onclose = 0;
   term_t size_opt = 0, onclose_opt = 0;
@@ -236,7 +238,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
 			&size_opt, &onclose_opt) )
     return FALSE;
   if ( size_opt )
-  { if ( !PL_get_integer_ex(size_opt, &size) )
+  { if ( !PL_get_int64_ex(size_opt, &size) )
       return FALSE;
     if ( size < 0 )
       return PL_domain_error("nonneg", size_opt);
@@ -250,7 +252,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
   if ( !PL_get_stream(org, &s, SIO_INPUT) )
     return FALSE;			/* Error */
   ctx = alloc_range_context(s);
-  ctx->size = size;
+  ctx->size = (size_t)size;
   ctx->onclose = onclose;
   ctx->context = ocm;
 

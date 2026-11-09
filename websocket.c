@@ -49,6 +49,7 @@ static atom_t	ATOM_subprotocol;		/* subprotocol */
 static atom_t	ATOM_server;			/* server */
 static atom_t	ATOM_client;			/* client */
 static atom_t	ATOM_end_of_file;
+static atom_t	ATOM_infinite;			/* infinite */
 
 typedef enum ws_mode
 { WS_CLIENT,
@@ -95,6 +96,8 @@ typedef struct ws_context
   int64_t	 payload_written;		/* amount of payload written */
   int64_t	 payload_read;			/* amount of payload read */
   int64_t	 payload_len;			/* payload length (reading) */
+  int64_t	 message_len;			/* total length of message */
+  int64_t	 max_message_size;		/* 0: unlimited */
 						/* data buffering */
   char		*data;				/* Buffered data */
   size_t	 datasize;			/* #bytes buffered */
@@ -411,6 +414,13 @@ read_int(IOSTREAM *in, int bytes)
 
 
 static int
+ws_header_error(ws_context *ctx, const char *msg)
+{ if ( !Sferror(ctx->stream) )
+    Sseterr(ctx->ws_stream, SIO_FERR, msg);
+  return FALSE;
+}
+
+static int
 ws_next_header(ws_context *ctx, int c)
 { bool fin, masked;
   int rsv, opcode, mask;
@@ -420,22 +430,46 @@ ws_next_header(ws_context *ctx, int c)
   rsv    = (c >> 4) & 0x7;
   opcode = (c & 0xf);
 
+  if ( (opcode > WS_OP_BINARY && opcode < WS_OP_CLOSE) ||
+       opcode > WS_OP_PONG )
+    return ws_header_error(ctx, "WebSocket: reserved opcode");
+
   if ( (c = Sgetc(ctx->stream)) == EOF )	/* second byte */
-    return FALSE;
+    return ws_header_error(ctx, "WebSocket: unexpected end of file");
   masked = (c & (1<<7)) != 0;
   payload_len = (c & 0x7f);
 
   if ( payload_len == 126 )
   { if ( (payload_len = read_int(ctx->stream, 2)) < 0 )
-      return FALSE;
+      return ws_header_error(ctx, "WebSocket: unexpected end of file");
   } else if ( payload_len == 127 )
-  { if ( (payload_len = read_int(ctx->stream, 8)) < 0 )
-      return FALSE;
+  { int c1 = Speekcode(ctx->stream);
+
+    if ( c1 != EOF && (c1&0x80) )
+      return ws_header_error(ctx, "WebSocket: invalid payload length");
+    if ( (payload_len = read_int(ctx->stream, 8)) < 0 )
+      return ws_header_error(ctx, "WebSocket: unexpected end of file");
+  }
+
+  if ( opcode >= WS_OP_CLOSE && (!fin || payload_len > 125) )
+    return ws_header_error(ctx, "WebSocket: invalid control frame");
+
+  if ( opcode < WS_OP_CLOSE )
+  { if ( opcode == WS_OP_CONTINUE )
+      ctx->message_len += payload_len;
+    else
+      ctx->message_len = payload_len;
+    if ( ctx->max_message_size > 0 &&
+	 ctx->message_len > ctx->max_message_size )
+      return ws_header_error(ctx, "WebSocket: message too large");
   }
 
   if ( masked )
-    mask = (int)read_int(ctx->stream, 4);
-  else
+  { int64_t m = read_int(ctx->stream, 4);
+    if ( m < 0 )
+      return ws_header_error(ctx, "WebSocket: unexpected end of file");
+    mask = (int)m;
+  } else
     mask = 0;
 
   ctx->state        = WS_MSG_STARTED;
@@ -486,6 +520,8 @@ ws_continuation_header(ws_context *ctx)
 	continue;
       case WS_OP_PING:
 					/* TBD: Reply */
+	if ( skip_payload(ctx) < 0 )
+	  return FALSE;
 	continue;
       default:
 	Sseterr(ctx->ws_stream, SIO_FERR, "WebSocket: unexpected package");
@@ -524,7 +560,11 @@ continuation:
   }
 
   n = Sread_pending(ctx->stream, buf, size, SIO_RP_BLOCK);
-  if ( n >= 0 )
+  if ( n == 0 )
+  { Sseterr(ctx->ws_stream, SIO_FERR, "WebSocket: unexpected end of file");
+    return -1;
+  }
+  if ( n > 0 )
   { if ( ctx->masked )
       apply_mask(buf, n, ctx->payload_read, ctx->mask);
     ctx->payload_read += n;
@@ -608,6 +648,7 @@ static PL_option_t ws_open_options[] =
   PL_OPTION("subprotocol",  OPT_ATOM),
   PL_OPTION("close_parent", OPT_BOOL),
   PL_OPTION("buffer_size",  OPT_TERM),
+  PL_OPTION("max_message_size", OPT_TERM),
   PL_OPTIONS_END
 };
 
@@ -619,11 +660,24 @@ ws_open(term_t org, term_t new, term_t options)
   int close_parent = true;
   int bufsize = 0;
   atom_t subprotocol = ATOM_null;
-  term_t mode_opt = 0, bufsize_opt = 0;
+  term_t mode_opt = 0, bufsize_opt = 0, maxsize_opt = 0;
+  int64_t max_message_size = 0;
 
   if ( !PL_scan_options(options, 0, "ws_option", ws_open_options,
-			&mode_opt, &subprotocol, &close_parent, &bufsize_opt) )
+			&mode_opt, &subprotocol, &close_parent, &bufsize_opt,
+			&maxsize_opt) )
     return FALSE;
+  if ( maxsize_opt && !PL_is_atom(maxsize_opt) )
+  { if ( !PL_get_int64_ex(maxsize_opt, &max_message_size) )
+      return FALSE;
+    if ( max_message_size <= 0 )
+      return PL_domain_error("max_message_size", maxsize_opt);
+  } else if ( maxsize_opt )
+  { atom_t a;
+
+    if ( !PL_get_atom(maxsize_opt, &a) || a != ATOM_infinite )
+      return PL_domain_error("max_message_size", maxsize_opt);
+  }
   if ( mode_opt )
   { atom_t a;
 
@@ -654,6 +708,7 @@ ws_open(term_t org, term_t new, term_t options)
   PL_register_atom(subprotocol);
 
   ctx->mode = mode;
+  ctx->max_message_size = max_message_size;
   ctx->close_parent = (bool) close_parent; /* safe cast */
   ctx->subprotocol = subprotocol;
   Ssetenc(s, ENC_OCTET, &ctx->parent_encoding);
@@ -701,13 +756,15 @@ ws_start_message(term_t WsStream, term_t OpCode, term_t RSV)
   if ( opcode < 0 || opcode > 15 )
     return PL_domain_error("opcode", OpCode);
   if ( rsv < 0 || rsv > 7 )
-    PL_domain_error("rsv", RSV);
+    return PL_domain_error("rsv", RSV);
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_OUTPUT) )
     return FALSE;
 
   if ( ctx->state != WS_IDLE )
-    rc = PL_permission_error("start_message", "ws_stream", WsStream);
+  { PL_release_stream(ws);
+    return PL_permission_error("start_message", "ws_stream", WsStream);
+  }
 
   if ( rc )
   { ctx->opcode          = opcode;
@@ -866,7 +923,9 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
   }
 
   if ( !ws_next_header(ctx, c) )
+  { rc = FALSE;
     goto out;
+  }
 
   switch(ctx->opcode)
   { case WS_OP_BINARY:
@@ -906,6 +965,7 @@ install_websocket(void)
   ATOM_server       = PL_new_atom("server");
   ATOM_client       = PL_new_atom("client");
   ATOM_end_of_file  = PL_new_atom("end_of_file");
+  ATOM_infinite     = PL_new_atom("infinite");
 
   PL_register_foreign("is_ws_stream",	  1, is_ws_stream,     0);
   PL_register_foreign("ws_property",	  3, ws_property,      0);

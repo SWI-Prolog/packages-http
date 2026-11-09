@@ -600,6 +600,10 @@ ws_close_(WebSocket, Code, Data) :-
 %     * close_parent(+Boolean)
 %     If =true= (default), closing WSStream also closes Stream.
 %
+%     * max_message_size(+Bytes)
+%     Raise an I/O error when reading a message whose (total) payload
+%     is larger than Bytes.  Default is `infinite`.
+%
 %     * subprotocol(+Protocol)
 %     Set the subprotocol property of WsStream.  This value can be
 %     retrieved using ws_property/2.  Protocol is an atom.  See

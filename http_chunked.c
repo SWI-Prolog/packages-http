@@ -46,6 +46,7 @@
 #include <errno.h>
 
 #define MAXHDR 1024			/* max size of chunk header line */
+#define MAXTRAILERS 100			/* max # trailer lines */
 
 
 
@@ -116,6 +117,79 @@ free_chunked_context(chunked_context *ctx)
 		 *	    CHUNKED I/O		*
 		 *******************************/
 
+/* read_chunk_line() reads a line terminated by CRLF into buf and
+   removes the CRLF.  Returns the length or -1 on error, setting an
+   error on the chunked stream.
+*/
+
+static ssize_t
+read_chunk_line(chunked_context *ctx, char *buf, size_t size)
+{ size_t len = 0;
+
+  for(;;)
+  { int c = Sgetc(ctx->stream);
+
+    if ( c == EOF )
+    { if ( !Sferror(ctx->stream) )
+	Sseterr(ctx->chunked_stream, SIO_FERR,
+		"Unexpected EOF in chunked header");
+      return -1;
+    }
+    if ( c == '\r' )
+    { if ( Sgetc(ctx->stream) != '\n' )
+      { Sseterr(ctx->chunked_stream, SIO_FERR,
+		"Chunk header not terminated by \\r\\n");
+	return -1;
+      }
+      buf[len] = '\0';
+      return len;
+    }
+    if ( c == '\n' || c == 0 || len+1 >= size )
+    { Sseterr(ctx->chunked_stream, SIO_FERR,
+	      len+1 >= size ? "Chunk header too long"
+			    : "Illegal character in chunk header");
+      return -1;
+    }
+    buf[len++] = (char)c;
+  }
+}
+
+/* parse_chunk_size() parses 1*HEXDIG [BWS ";" ...].  We limit the
+   number of digits to avoid overflow.
+*/
+
+static int
+parse_chunk_size(const char *s, size_t *len)
+{ size_t v = 0;
+  int digits = 0;
+
+  for(;;s++)
+  { int d;
+
+    if ( *s >= '0' && *s <= '9' )
+      d = *s - '0';
+    else if ( *s >= 'a' && *s <= 'f' )
+      d = *s - 'a' + 10;
+    else if ( *s >= 'A' && *s <= 'F' )
+      d = *s - 'A' + 10;
+    else
+      break;
+    if ( ++digits > 15 )
+      return FALSE;
+    v = v*16 + d;
+  }
+  if ( digits == 0 )
+    return FALSE;
+  while( *s == ' ' || *s == '\t' )
+    s++;
+  if ( *s && *s != ';' )
+    return FALSE;
+
+  *len = v;
+  return TRUE;
+}
+
+
 static ssize_t				/* decode */
 chunked_read(void *handle, char *buf, size_t size)
 { chunked_context *ctx = handle;
@@ -134,51 +208,48 @@ chunked_read(void *handle, char *buf, size_t size)
 	if ( ctx->avail == 0 )
 	{ if ( Sgetc(ctx->stream) != '\r' ||
 	       Sgetc(ctx->stream) != '\n' )
-	  { Sseterr(ctx->chunked_stream, 0, "Chunk not followed by \\r\\n");
+	  { Sseterr(ctx->chunked_stream, SIO_FERR,
+		    "Chunk not followed by \\r\\n");
 	    return -1;
 	  }
 	}
 
 	return rc;
       } else if ( rc == 0 )
-      { Sseterr(ctx->chunked_stream, 0, "Unexpected EOF in chunked data");
+      { Sseterr(ctx->chunked_stream, SIO_FERR,
+		"Unexpected EOF in chunked data");
 	return -1;
       } else
       { return -1;
       }
     } else
     { char hdr[MAXHDR];
-      char *s;
+      size_t len;
 
-
-      if ( (s = Sfgets(hdr, sizeof(hdr), ctx->stream)) )
-      { char *ehdr;
-	long len;
-
-	errno = 0;
-	len = strtol(hdr, &ehdr, 16);
-	if ( errno || len < 0 )
-	{ Sseterr(ctx->chunked_stream, 0, "Bad chunk length");
-	  return -1;
-	}
-	if ( len == 0 )
-	{ do
-	  { s = Sfgets(hdr, sizeof(hdr), ctx->stream);
-	  } while ( s && strcmp(s, "\r\n") != 0 );
-	  if ( s )
-	  { ctx->eof_seen = TRUE;
-	    return 0;
-	  }
-	  Sseterr(ctx->chunked_stream, 0, "Bad end-of-stream");
-	  return -1;
-	}
-	ctx->avail = len;
-	/*continue*/
-      } else
-      { if ( !Sferror(ctx->stream) )
-	  Sseterr(ctx->chunked_stream, 0, "Unexpected EOF in chunked header");
+      if ( read_chunk_line(ctx, hdr, sizeof(hdr)) < 0 )
+	return -1;
+      if ( !parse_chunk_size(hdr, &len) )
+      { Sseterr(ctx->chunked_stream, SIO_FERR, "Bad chunk length");
 	return -1;
       }
+      if ( len == 0 )
+      { int trailers = 0;
+	ssize_t ll;
+
+	while ( (ll=read_chunk_line(ctx, hdr, sizeof(hdr))) > 0 )
+	{ if ( ++trailers > MAXTRAILERS )
+	  { Sseterr(ctx->chunked_stream, SIO_FERR, "Too many trailers");
+	    return -1;
+	  }
+	}
+	if ( ll == 0 )
+	{ ctx->eof_seen = TRUE;
+	  return 0;
+	}
+	return -1;
+      }
+      ctx->avail = len;
+      /*continue*/
     }
   }
 }
@@ -255,6 +326,7 @@ chunked_control(void *handle, int op, void *data)
 
       if ( (s=ctx->stream) &&
 	   (sf=s->functions) &&
+	   sf->control &&
 	   s->magic == SIO_MAGIC )
 	return (*sf->control)(s->handle, op, data);
       return -1;
@@ -481,6 +553,7 @@ http_chunked_add_trailer(term_t Stream, term_t Key, term_t Value)
     PL_register_atom(value);
     if ( md->trailer_tail )
     { md->trailer_tail->next = tr;
+      md->trailer_tail = tr;
     } else
     { md->trailer = md->trailer_tail = tr;
     }

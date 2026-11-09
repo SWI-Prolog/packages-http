@@ -19,6 +19,7 @@
 :- use_module(library(time)).
 :- use_module(library(settings)).
 :- use_module(library(socket)).
+:- use_module(library(http/websocket)).
 :- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -29,6 +30,7 @@ test_http :-
                 http_read_data,
                 http_header_limits,
                 http_open_safety,
+                http_streams,
                 http_shutdown
               ]).
 
@@ -486,6 +488,70 @@ test(redirect_credentials, Options == [request_header('X-A'=b)]) :-
                                ], Options).
 
 :- end_tests(http_open_safety).
+
+:- begin_tests(http_streams).
+
+chunked_data(Data, String) :-
+    setup_call_cleanup(
+        ( open_string(Data, In0),
+          http_chunked_open(In0, In, [])
+        ),
+        read_string(In, _, String),
+        close(In)).
+
+test(chunked, S == "Hello world!") :-
+    chunked_data("5\r\nHello\r\n7;ext=1\r\n world!\r\n0\r\nX: y\r\n\r\n", S).
+test(chunked, error(io_error(read, _))) :-
+    chunked_data("0x5\r\nHello\r\n0\r\n\r\n", _).
+test(chunked, error(io_error(read, _))) :-
+    chunked_data("5\nHello\r\n0\r\n\r\n", _).
+test(chunked, error(io_error(read, _))) :-
+    length(L, 2000),
+    maplist(=(0'a), L),
+    format(string(Data), "5;~s\r\nHello\r\n0\r\n\r\n", [L]),
+    chunked_data(Data, _).
+test(range_eof, error(io_error(read, _))) :-
+    setup_call_cleanup(
+        ( open_string("abc", In0),
+          stream_range_open(In0, In, [size(10)])
+        ),
+        read_string(In, _, _),
+        close(In)).
+test(multipart_boundary, error(existence_error(option, boundary))) :-
+    setup_call_cleanup(
+        open_string("", In),
+        multipart_open(In, _, []),
+        close(In)).
+
+ws_frames(Bytes, Message) :-
+    setup_call_cleanup(
+        ( open_codes_stream(Bytes, In0),
+          ws_open(In0, In, [mode(client)])
+        ),
+        ws_receive(In, Message),
+        close(In)).
+
+test(ws_fragment_ping, Data == "abcde") :-
+    ws_frames([0x01,3,0'a,0'b,0'c, 0x89,2,0'h,0'i, 0x80,2,0'd,0'e],
+              Message),
+    Data = Message.data.
+test(ws_reserved_opcode, error(io_error(read, _))) :-
+    ws_frames([0x83,1,0'a], _).
+test(ws_long_control, error(io_error(read, _))) :-
+    length(Payload, 126),
+    maplist(=(0'a), Payload),
+    ws_frames([0x89,126,0,126|Payload], _).
+test(ws_truncated, error(io_error(read, _))) :-
+    ws_frames([0x81,10,0'a,0'b,0'c], _).
+test(ws_max_message_size, error(io_error(read, _))) :-
+    setup_call_cleanup(
+        ( open_codes_stream([0x81,5,0'a,0'b,0'c,0'd,0'e], In0),
+          ws_open(In0, In, [mode(client), max_message_size(4)])
+        ),
+        ws_receive(In, _),
+        close(In)).
+
+:- end_tests(http_streams).
 
 :- begin_tests(http_shutdown).
 
