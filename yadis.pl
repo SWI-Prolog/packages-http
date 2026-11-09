@@ -114,8 +114,7 @@ xrds_location_direct(URL, XRDSLocation) :-
         http_open(URL, In,
                   [ method(head),
                     request_header(accept='application/xrds+xml'),
-                    header(x_xrds_location, Reply),
-                    cert_verify_hook(ssl_verify)
+                    header(x_xrds_location, Reply)
                   ]),
         true,
         close(In)),
@@ -125,9 +124,7 @@ xrds_location_direct(URL, XRDSLocation) :-
 
 xrds_location_html(URL, XRDSLocation) :-
     setup_call_cleanup(
-        http_open(URL, In,
-                  [ cert_verify_hook(ssl_verify)
-                  ]),
+        http_open(URL, In, []),
         html_head_dom(In, DOM),
         close(In)),
     xpath(DOM, meta(@'http-equiv'=Equiv, @content), Content),
@@ -142,25 +139,13 @@ xrds_location_html(URL, XRDSLocation) :-
 xrds_load(XRDSLocation, XRDS_DOM) :-
     setup_call_cleanup(
         http_open(XRDSLocation, In,
-                  [ request_header(accept='application/xrds+xml'),
-                    cert_verify_hook(ssl_verify)
+                  [ request_header(accept='application/xrds+xml')
                   ]),
         load_structure(In, XRDS_DOM,
                        [ dialect(xmlns),
                          space(remove)
                        ]),
         close(In)).
-
-:- public ssl_verify/5.
-
-%!  ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
-%
-%   Accept all certificates.
-
-ssl_verify(_SSL,
-           _ProblemCertificate, _AllCertificates, _FirstCertificate,
-           _Error).
-
 
 %!  html_head_dom(+Stream, -HeadDOM) is semidet.
 %

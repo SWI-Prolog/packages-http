@@ -101,6 +101,10 @@
 
 /** <module> OpenID consumer and server library
 
+__Deprecated__: OpenID 2.0 is obsolete and no longer supported by major
+identity providers.  New applications should use OpenID Connect (OAuth
+2.0) instead.
+
 This library implements the OpenID protocol (http://openid.net/). OpenID
 is a protocol to share identities on   the  network. The protocol itself
 uses simple basic  HTTP,  adding   reliability  using  digitally  signed
@@ -699,8 +703,7 @@ openid_resolve(URL, OpenID0, OpenID, Server, []) :-
     dtd(html, DTD),
     setup_call_cleanup(
         http_open(URL, Stream,
-                  [ final_url(OpenID0),
-                    cert_verify_hook(ssl_verify)
+                  [ final_url(OpenID0)
                   ]),
         load_structure(Stream, Term,
                        [ dtd(DTD),
@@ -724,19 +727,6 @@ openid_resolve(URL, OpenID0, OpenID, Server, []) :-
 
 openid_identifier_select_url(
     'http://specs.openid.net/auth/2.0/identifier_select').
-
-:- public ssl_verify/5.
-
-%!  ssl_verify(+SSL, +ProblemCert, +AllCerts, +FirstCert, +Error)
-%
-%   Accept all certificates. We do not care  too much. Only the user
-%   cares s/he is not entering her  credentials with a spoofed side.
-%   As we redirect, the browser will take care of this.
-
-ssl_verify(_SSL,
-           _ProblemCertificate, _AllCertificates, _FirstCertificate,
-           _Error).
-
 
 link(DOM, Type, Target) :-
     sub_term(element(link, Attrs, []), DOM),
@@ -789,6 +779,8 @@ openid_authenticate(Request) :-
 %           if request was cancelled by the OpenId server
 %   @throws openid(signature_mismatch)
 %           if the HMAC signature check failed
+%   @throws openid(server_mismatch(Identity, Server))
+%           if Server is not the OpenID provider for Identity
 
 openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
     memberchk(method(get), Request),
@@ -823,6 +815,10 @@ openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
                      ],
                      Form,
                      SignedPairs),
+        (   openid_server(_, _, SessionServer)
+        ->  OpenIdServer = SessionServer
+        ;   true
+        ),
         (   openid_associate(OpenIdServer, Handle, Assoc)
         ->  signature(SignedPairs, Assoc, Sig),
             atom_codes(Base64Signature, Base64SigCodes),
@@ -831,10 +827,42 @@ openid_authenticate(Request, OpenIdServer, Identity, ReturnTo) :-
             ->  true
             ;   throw(openid(signature_mismatch))
             )
-        ;   check_authentication(Request, Form)
+        ;   check_authentication(Request, Form),
+            openid_server(_, _, OpenIdServer)
         ),
-        ax_store(Form)
+        verify_identity_server(Identity, OpenIdServer),
+        signed_form(SignedFields, Form, SignedForm),
+        ax_store(SignedForm)
     ).
+
+%!  verify_identity_server(+Identity, +Server) is det.
+%
+%   Verify that Server is the OpenID provider for Identity by running
+%   discovery on Identity.  Otherwise any provider could assert any
+%   identity.
+%
+%   @throws openid(server_mismatch(Identity, Server))
+
+verify_identity_server(Identity, Server) :-
+    catch(openid_resolve(Identity, _, _, DiscServer, _), E,
+          ( print_message(warning, E), fail )),
+    DiscServer == Server,
+    !.
+verify_identity_server(Identity, Server) :-
+    throw(openid(server_mismatch(Identity, Server))).
+
+%!  signed_form(+SignedFields, +Form, -SignedForm) is det.
+%
+%   SignedForm only contains the `openid.` fields of Form that are
+%   signed.
+
+signed_form(SignedFields, Form, SignedForm) :-
+    findall(Name=Value,
+            ( member(Name=Value, Form),
+              atom_concat('openid.', Field, Name),
+              memberchk(Field, SignedFields)
+            ),
+            SignedForm).
 
 %!  signed_pairs(+FieldNames, +Pairs:list(Field-Value),
 %!               +Form, -SignedPairs) is det.
@@ -894,8 +922,7 @@ check_authentication(_Request, Form) :-
         http_open(Server, In,
                   [ post(form([ 'openid.mode' = check_authentication
                               | Form1
-                              ])),
-                    cert_verify_hook(ssl_verify)
+                              ]))
                   ]),
         read_stream_to_codes(In, Reply),
         close(In)),
@@ -1277,8 +1304,7 @@ openid_associate(URL, Handle, Assoc, Options) :-
     debug(openid(associate), 'OpenID: Associating with ~q', [URL]),
     setup_call_cleanup(
         http_open(URL, In,
-                  [ post(form(Data)),
-                    cert_verify_hook(ssl_verify)
+                  [ post(form(Data))
                   ]),
         read_stream_to_codes(In, Reply),
         close(In)),
