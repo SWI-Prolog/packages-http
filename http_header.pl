@@ -70,13 +70,13 @@
 :- endif.
 :- autoload(mimepack,[mime_pack/3]).
 :- autoload(mimetype,[file_mime_type/2]).
-:- autoload(library(apply),[maplist/2]).
+:- autoload(library(apply),[maplist/2,exclude/3]).
 :- autoload(library(base64),[base64/2]).
 :- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),
             [syntax_error/1,domain_error/2,resource_error/1]).
 :- use_module(library(http/http_stream),[http_read_header_line/2]).
-:- autoload(library(lists),[append/3,member/2,select/3,delete/3]).
+:- autoload(library(lists),[append/3,member/2,select/3,delete/3,reverse/2]).
 :- autoload(library(memfile),
 	    [ new_memory_file/1, open_memory_file/3,
 	      free_memory_file/1, open_memory_file/4,
@@ -92,7 +92,8 @@
 :- autoload(library(url),[parse_url_search/2]).
 :- autoload(library(dcg/basics),
 	    [ integer/3, atom/3, whites/2, blanks_to_nl/2, string/3,
-	      number/3, blanks/2, float/3, nonblanks/3, eos/2
+	      number/3, blanks/2, float/3, nonblanks/3, eos/2,
+	      string_without/4, digits/3
 	    ]).
 :- autoload(library(date), [parse_time/3]).
 :- use_module(library(settings),[setting/4,setting/2]).
@@ -292,10 +293,13 @@ http_reply_data_(gzip_file(Type, File), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(gzip_file(Type, File), HdrExtra, Code), Header),
     reply_file(Out, File, Header, Method).
-http_reply_data_(file(Type, File, Range), Out, HdrExtra, Method, Code) :-
+http_reply_data_(file(Type, File, Range0), Out, HdrExtra, Method, Code) :-
     !,
-    phrase(reply_header(file(Type, File, Range), HdrExtra, Code), Header),
-    reply_file_range(Out, File, Header, Range, Method).
+    (   valid_range(File, Range0, Range)
+    ->  phrase(reply_header(file(Type, File, Range), HdrExtra, Code), Header),
+        reply_file_range(Out, File, Header, Range, Method)
+    ;   http_reply_data_(file(Type, File), Out, HdrExtra, Method, Code)
+    ).
 http_reply_data_(tmp_file(Type, File), Out, HdrExtra, Method, Code) :-
     !,
     phrase(reply_header(tmp_file(Type, File), HdrExtra, Code), Header),
@@ -342,6 +346,25 @@ reply_file(Out, File, Header, _) :-
         copy_stream(Out, In, Header, 0, end),
         close(In)).
 
+%!  valid_range(+File, +Range0, -Range) is semidet.
+%
+%   True when Range0 is a satisfiable range for File.  Range is Range0
+%   with the end clipped to the file size.  If the range is invalid or
+%   not satisfiable we ignore it and send the entire file, which is
+%   allowed by RFC 9110.
+
+valid_range(File, bytes(From, To0), bytes(From, To)) :-
+    integer(From),
+    From >= 0,
+    size_file(File, Size),
+    From < Size,
+    (   To0 == end
+    ->  To = end
+    ;   integer(To0),
+        To0 >= From
+    ->  To is min(To0, Size-1)
+    ).
+
 reply_file_range(Out, _File, Header, _Range, head) :-
     !,
     send_reply_header(Out, Header).
@@ -366,7 +389,7 @@ copy_stream(Out, In, Header, From, To) :-
     send_reply_header(Out, Header),
     (   To == end
     ->  copy_stream_data(In, Out)
-    ;   Len is To - From,
+    ;   Len is To + 1 - From,           % To is index of last byte
         copy_stream_data(In, Out, Len)
     ).
 
@@ -1813,23 +1836,40 @@ header_field(Name, Value) -->
 header_field(Name, Value) -->
     field_name(Name),
     ": ",
-    field_value(Name, Value),
+    { phrase(field_value(Name, Value), Codes),
+      (   member(C, Codes),
+          illegal_header_value_code(C)
+      ->  domain_error(http_header_value, Value)
+      ;   true
+      )
+    },
+    string(Codes),
     "\r\n".
+
+illegal_header_value_code(0'\r).
+illegal_header_value_code(0'\n).
+illegal_header_value_code(0).
 
 %!  read_field_value(-Codes)//
 %
 %   Read a field eagerly up to the next whitespace
 
-read_field_value([H|T]) -->
-    [H],
-    { \+ code_type(H, space) },
+read_field_value(Codes) -->
+    string_without(`\n`, Codes0),
+    { strip_trailing_white(Codes0, Codes) }.
+
+%!  strip_trailing_white(+Codes0, -Codes) is det.
+
+strip_trailing_white(Codes0, Codes) :-
+    reverse(Codes0, Rev0),
+    skip_white(Rev0, Rev),
+    reverse(Rev, Codes).
+
+skip_white([H|T0], T) :-
+    code_type(H, space),
     !,
-    read_field_value(T).
-read_field_value([]) -->
-    "".
-read_field_value([H|T]) -->
-    [H],
-    read_field_value(T).
+    skip_white(T0, T).
+skip_white(L, L).
 
 %!  send_reply_header(+Out, +String) is det.
 %!  send_request_header(+Out, +String) is det.
@@ -1947,7 +1987,8 @@ field_to_prolog(_, Codes, Atom) :-
 
 parse_header_value_atom(content_length, Atom, ContentLength) :-
     atomic(Atom),
-    atom_number(Atom, ContentLength).
+    atom_codes(Atom, Codes),
+    parse_header_value(content_length, Codes, ContentLength).
 parse_header_value_atom(expires, Atom, Stamp) :-
     http_timestamp(Stamp, Atom).
 
@@ -1957,6 +1998,8 @@ parse_header_value_atom(expires, Atom, Stamp) :-
 %   representation.
 
 parse_header_value(content_length, ValueChars, ContentLength) :-
+    ValueChars \== [],
+    forall(member(C, ValueChars), between(0'0, 0'9, C)),
     number_codes(ContentLength, ValueChars).
 parse_header_value(expires, ValueCodes, Stamp) :-
     http_timestamp(Stamp, ValueCodes).
@@ -2547,9 +2590,41 @@ request_header(Fd, [http_version(Version)|Header]) -->
     eos,
     !,
     {   Version = 1-_
-    ->  http_read_header(Fd, Header)
+    ->  http_read_header(Fd, Header0),
+        request_framing(Header0, Header)
     ;   Header = []
     }.
+
+%!  request_framing(+Header0, -Header) is det.
+%
+%   Validate the headers that determine the length of the request body.
+%   We only accept `chunked` as transfer encoding, do not accept
+%   requests that have both a Transfer-Encoding and Content-Length and
+%   do not accept multiple different Content-Length headers.  These
+%   constructs may be interpreted differently by a proxy, causing
+%   request smuggling.
+
+request_framing(Header0, Header) :-
+    (   select(transfer_encoding(TE), Header0, Header1)
+    ->  (   downcase_atom(TE, chunked),
+            \+ memberchk(transfer_encoding(_), Header1)
+        ->  true
+        ;   syntax_error(http_transfer_encoding(TE))
+        ),
+        (   memberchk(content_length(_), Header1)
+        ->  syntax_error(http_content_length_and_transfer_encoding)
+        ;   true
+        ),
+        Header = [transfer_encoding(chunked)|Header1]
+    ;   select(content_length(Len), Header0, Header1),
+        memberchk(content_length(Len2), Header1)
+    ->  (   Len == Len2
+        ->  exclude(==(content_length(Len)), Header1, Header2),
+            Header = [content_length(Len)|Header2]
+        ;   syntax_error(http_content_length(multiple))
+        )
+    ;   Header = Header0
+    ).
 
 http_version(Version) -->
     blanks,
@@ -2603,24 +2678,10 @@ cookie_value(Value) -->
     quoted_string(Value),
     !.
 cookie_value(Value) -->
-    chars_to_semicolon_or_blank(Chars),
-    { atom_codes(Value, Chars)
+    string_without(`;`, Chars0),
+    { strip_trailing_white(Chars0, Chars),
+      atom_codes(Value, Chars)
     }.
-
-chars_to_semicolon_or_blank([]), ";" -->
-    ";",
-    !.
-chars_to_semicolon_or_blank([]) -->
-    " ",
-    blanks,
-    eos,
-    !.
-chars_to_semicolon_or_blank([H|T]) -->
-    [H],
-    !,
-    chars_to_semicolon_or_blank(T).
-chars_to_semicolon_or_blank([]) -->
-    [].
 
 set_cookie(set_cookie(Name, Value, Options)) -->
     ws,
@@ -2684,10 +2745,15 @@ chars_to_semicolon([]) -->
 %       the atom =end=.
 
 range(bytes(From, To)) -->
-    "bytes", whites, "=", whites, integer(From), "-",
-    (   integer(To)
-    ->  ""
-    ;   { To = end }
+    "bytes", whites, "=", whites, digits(FromD), "-",
+    { FromD \== [],
+      number_codes(From, FromD)
+    },
+    (   digits(ToD), { ToD \== [] }
+    ->  { number_codes(To, ToD) },
+        blanks, eos
+    ;   blanks, eos,
+        { To = end }
     ).
 
 

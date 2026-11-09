@@ -263,6 +263,23 @@ test(long_header, Reply == "HTTP/1.1 431 Request Header Fields Too Large") :-
     raw_request(Req, Reply).
 test(obs_fold, Reply == "HTTP/1.1 400 Bad Request") :-
     raw_request("GET / HTTP/1.1\r\nX-A: a\r\n b\r\n\r\n", Reply).
+test(cl_and_te, Reply == "HTTP/1.1 400 Bad Request") :-
+    raw_request("POST /post/echo HTTP/1.1\r\nContent-Length: 5\r\n\c
+                 Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n", Reply).
+test(cl_hex, Reply == "HTTP/1.1 400 Bad Request") :-
+    raw_request("POST /post/echo HTTP/1.1\r\nContent-Length: 0x1\r\n\r\na",
+                Reply).
+test(cl_dup, Reply == "HTTP/1.1 400 Bad Request") :-
+    raw_request("POST /post/echo HTTP/1.1\r\nContent-Length: 1\r\n\c
+                 Content-Length: 2\r\n\r\nab", Reply).
+test(te_unknown, Reply == "HTTP/1.1 400 Bad Request") :-
+    raw_request("POST /post/echo HTTP/1.1\r\n\c
+                 Transfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n", Reply).
+test(header_spaces, Reply == "HTTP/1.1 200 OK") :-
+    length(L, 20000),
+    maplist(=(0' ), L),
+    format(string(Req), "GET /ok/html_1 HTTP/1.1\r\nX-A: a~sb\r\n\r\n", [L]),
+    call_with_time_limit(5, raw_request(Req, Reply)).
 
 raw_request(Request, Reply) :-
     with_server(URL,
@@ -464,6 +481,21 @@ test(read_line, error(resource_error(max_line_length))) :-
     setup_call_cleanup(open_string("abcd\r\n", In),
                        http_read_line(In, _, 3),
                        close(In)).
+test(range, R == bytes(2, 4)) :-
+    http_parse_header_value(range, 'bytes=2-4', R).
+test(range, fail) :-
+    http_parse_header_value(range, 'bytes=-3-5', bytes(_,_)).
+test(valid_range, Ranges == [bytes(2,4), bytes(0,End), bytes(3,end)]) :-
+    module_property(test_http, file(File)),
+    size_file(File, Size),
+    End is Size-1,
+    findall(R, ( member(R0, [ bytes(2,4), bytes(0,Size), bytes(3,end),
+                               bytes(5,2), bytes(Size,end) ]),
+                 http_header:valid_range(File, R0, R)
+               ), Ranges).
+test(header_crlf, error(domain_error(http_header_value, _))) :-
+    http_header:header_field(location, '/a\r\nSet-Cookie: x=1', _, []).
+
 :- end_tests(http_header_limits).
 
 :- begin_tests(http_open_safety).
