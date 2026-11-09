@@ -69,6 +69,7 @@
 :- use_module(library(broadcast)).
 :- use_module(library(lists)).
 :- use_module(library(option)).
+:- autoload(library(apply), [maplist/2]).
 
 :- predicate_options(http_open_session/2, 2, [renew(boolean)]).
 
@@ -129,7 +130,7 @@ session_setting(create(auto)).
 session_setting(proxy_enabled(false)).
 session_setting(gc(passive)).
 session_setting(samesite(lax)).
-session_setting(http_only(false)).
+session_setting(http_only(true)).
 session_setting(secure(false)).
 
 session_option(timeout, integer).
@@ -201,7 +202,7 @@ session_option(secure, boolean).
 %           entire site to CSRF attacks__.
 %
 %           * http_only(+Boolean)
-%           If `true` (default `false`), add the ``HttpOnly`` property
+%           If `true` (default), add the ``HttpOnly`` property
 %           to the session cookie. This causes the browser to deny
 %           access from JavaScript.
 %
@@ -938,17 +939,32 @@ session_gc_loop_ :-
 %   information.
 
 http_session_cookie(Cookie) :-
-    route(Route),
+    random_id(Id),
+    (   route(Route)
+    ->  atomic_list_concat([Id, '.', Route], Cookie)
+    ;   Cookie = Id
+    ).
+
+%   random_id(-Id) is det.
+%
+%   Id is an atom holding 128 random bits as 8 groups of 4 hexadecimal
+%   digits, separated by `-`.
+
+random_id(Id) :-
+    random_bytes(16, Bytes),
+    phrase(hex_groups(Bytes), Codes),
+    atom_codes(Id, Codes).
+
+hex_groups([B1,B2]) -->
     !,
-    random_4(R1,R2,R3,R4),
-    format(atom(Cookie),
-            '~`0t~16r~4|-~`0t~16r~9|-~`0t~16r~14|-~`0t~16r~19|.~w',
-            [R1,R2,R3,R4,Route]).
-http_session_cookie(Cookie) :-
-    random_4(R1,R2,R3,R4),
-    format(atom(Cookie),
-            '~`0t~16r~4|-~`0t~16r~9|-~`0t~16r~14|-~`0t~16r~19|',
-            [R1,R2,R3,R4]).
+    hex_byte(B1), hex_byte(B2).
+hex_groups([B1,B2|T]) -->
+    hex_byte(B1), hex_byte(B2), "-",
+    hex_groups(T).
+
+hex_byte(B) -->
+    { format(codes(Codes), '~|~`0t~16r~2+', [B]) },
+    Codes.
 
 :- thread_local
     route_cache/1.
@@ -1005,31 +1021,33 @@ urandom(_) :-
     assert(urandom_handle([])),
     fail.
 
-get_pair(In, Value) :-
-    get_byte(In, B1),
-    get_byte(In, B2),
-    Value is B1<<8+B2.
 :- endif.
 
-%!  random_4(-R1,-R2,-R3,-R4) is det.
+%!  random_bytes(+Count, -Bytes) is det.
 %
-%   Generate 4 2-byte random  numbers.   Uses  ``/dev/urandom`` when
-%   available to make prediction of the session IDs hard.
+%   Generate a list of Count random  bytes.   Uses  library(crypto) or
+%   ``/dev/urandom`` when available to make prediction of the session
+%   IDs hard.
 
+:- if(exists_source(library(crypto))).
+:- autoload(library(crypto), [crypto_n_random_bytes/2]).
+random_bytes(Count, Bytes) :-
+    catch(crypto_n_random_bytes(Count, Bytes), _, fail),
+    !.
+:- endif.
 :- if(current_predicate(urandom/1)).
-random_4(R1,R2,R3,R4) :-
+random_bytes(Count, Bytes) :-
     urandom(In),
     !,
-    get_pair(In, R1),
-    get_pair(In, R2),
-    get_pair(In, R3),
-    get_pair(In, R4).
+    length(Bytes, Count),
+    maplist(get_byte(In), Bytes).
 :- endif.
-random_4(R1,R2,R3,R4) :-
-    R1 is random(65536),
-    R2 is random(65536),
-    R3 is random(65536),
-    R4 is random(65536).
+random_bytes(Count, Bytes) :-
+    length(Bytes, Count),
+    maplist(random_byte, Bytes).
+
+random_byte(B) :-
+    B is random(256).
 
 %!  hooked is semidet.
 %!  hook(+Goal).

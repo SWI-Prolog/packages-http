@@ -754,8 +754,20 @@ openid_authenticate(Request) :-
 openid_authenticate(Request) :-
     openid_authenticate(Request, _OpenIdServer, OpenID, _ReturnTo),
     openid_server(User, OpenID, _, Target),
+    renew_session,
     openid_login(User),
     redirect_browser(Target, []).
+
+%!  renew_session is det.
+%
+%   Give the session a new id while keeping its data to avoid session
+%   fixation attacks.
+
+renew_session :-
+    findall(Data, http_session_data(Data), DataList),
+    http_open_session(_, [renew(true)]),
+    forall(member(Data, DataList),
+           http_session_assert(Data)).
 
 
 %!  openid_authenticate(+Request, -Server:url, -OpenID:url,
