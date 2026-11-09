@@ -40,6 +40,8 @@
 :- use_module(library(debug),[debug/3]).
 :- autoload(library(option),[option/3]).
 :- autoload(library(http/http_header),[http_parse_header_value/3]).
+:- autoload(library(lists),[selectchk/3]).
+:- autoload(library(date),[parse_time/3]).
 
 /** <module> HTTP client cookie handling
 
@@ -84,7 +86,8 @@ http:write_cookies(Out, Parts, Options) :-
 cookie(ClientId, Parts, Cookie) :-
     request_host(Parts, Host),
     request_path(Parts, Path),
-    findall(N=V, current_cookie(ClientId, Host, Path, N, V), Cookies),
+    request_secure(Parts, Secure),
+    findall(N=V, current_cookie(ClientId, Host, Path, Secure, N, V), Cookies),
     Cookies \== [],
     !,
     debug(http(cookie), 'Cookies for ~w at ~w~w: ~p',
@@ -93,6 +96,16 @@ cookie(ClientId, Parts, Cookie) :-
 
 request_host(Parts, Host) :-
     memberchk(host(Host), Parts).
+
+request_secure(Parts, Secure) :-
+    (   memberchk(scheme(Scheme), Parts),
+        secure_scheme(Scheme)
+    ->  Secure = true
+    ;   Secure = false
+    ).
+
+secure_scheme(https).
+secure_scheme(wss).
 
 request_path(Parts, Path) :-
     (   memberchk(path(Path), Parts)
@@ -131,11 +144,71 @@ http:update_cookies(CookieData, Parts, Options) :-
     with_mutex(http_cookie,
                update_cookie(ClientId, Host, Path, Name, Value, COptions)).
 
-update_cookie(ClientId, Host, Path, Name, Value, Options) :-
+update_cookie(ClientId, Host, Path, Name, Value, Options0) :-
+    cookie_domain(Host, Options0, Options1),
+    !,
+    cookie_expire(Options1, Options),
     downcase_atom(Name, CName),
     remove_cookies(ClientId, Host, Path, CName, Options),
-    debug(http(cookie), 'New for ~w: ~w=~p', [ClientId, Name, Value]),
-    assert(client_cookie(ClientId, CName, Name, Value, [host=Host|Options])).
+    (   memberchk(expire=Expire, Options),
+        get_time(Now),
+        Expire =< Now
+    ->  debug(http(cookie), 'Expired for ~w: ~w', [ClientId, Name])
+    ;   debug(http(cookie), 'New for ~w: ~w=~p', [ClientId, Name, Value]),
+        assert(client_cookie(ClientId, CName, Name, Value, [host=Host|Options]))
+    ).
+update_cookie(ClientId, Host, _Path, Name, _Value, _Options) :-
+    debug(http(cookie), 'Ignored cookie ~w for ~w from ~w: invalid domain',
+          [Name, ClientId, Host]).
+
+%!  cookie_domain(+Host, +Options0, -Options) is semidet.
+%
+%   Validate and normalise the `Domain` attribute.  The domain must
+%   match the host and contain at least one dot to avoid setting
+%   cookies for a top level domain.  Fails if the domain is invalid.
+
+cookie_domain(Host, Options0, Options) :-
+    selectchk(domain=Domain0, Options0, Options1),
+    !,
+    downcase_atom(Domain0, Domain1),
+    (   atom_concat('.', Domain, Domain1)
+    ->  true
+    ;   Domain = Domain1
+    ),
+    sub_atom(Domain, _, _, _, '.'),
+    domain_match(Host, Domain),
+    Options = [domain=Domain|Options1].
+cookie_domain(_, Options, Options).
+
+%!  domain_match(+Host, +Domain) is semidet.
+%
+%   True if Host is Domain or a subdomain of Domain.
+
+domain_match(Host, Domain) :-
+    downcase_atom(Host, LHost),
+    (   LHost == Domain
+    ->  true
+    ;   atom_concat('.', Domain, DotDomain),
+        sub_atom(LHost, _, _, 0, DotDomain)
+    ).
+
+%!  cookie_expire(+Options0, -Options) is det.
+%
+%   Translate the `Max-Age` or `Expires` attribute into expire=Stamp.
+%   Max-Age has precedence.
+
+cookie_expire(Options0, [expire=Stamp|Options0]) :-
+    memberchk(max_age=MaxAge, Options0),
+    catch(atom_number(MaxAge, Secs), _, fail),
+    number(Secs),
+    !,
+    get_time(Now),
+    Stamp is Now+Secs.
+cookie_expire(Options0, [expire=Stamp|Options0]) :-
+    memberchk(expires=Expires, Options0),
+    catch(parse_time(Expires, _, Stamp), _, fail),
+    !.
+cookie_expire(Options, Options).
 
 %!  remove_cookies(+ClientId, +Host, +Path, +Name, +SetOptions) is det.
 %
@@ -168,17 +241,17 @@ cookie_match_path(Path, SetOptions, OldOptions) :-
 %
 %   Find cookies that match the given request.
 
-current_cookie(ClientId, Host, Path, Name, Value) :-
+current_cookie(ClientId, Host, Path, Secure, Name, Value) :-
     client_cookie(ClientId, _CName, Name, Value, Options),
     cookie_match_host(Host, Options),
     cookie_match_path(Path, Options),
+    cookie_match_secure(Secure, Options),
     cookie_match_expire(Options).
 
 cookie_match_host(Host, Options) :-
     (   memberchk(domain=Domain, Options)
-    ->  downcase_atom(Host, LHost),
-        downcase_atom(Domain, LDomain),
-        sub_atom(LHost, _, _, 0, LDomain)   % TBD: check '.'?
+    ->  downcase_atom(Domain, LDomain),
+        domain_match(Host, LDomain)
     ;   memberchk(host=CHost, Options),
         downcase_atom(Host, LHost),
         downcase_atom(CHost, LHost)
@@ -186,7 +259,19 @@ cookie_match_host(Host, Options) :-
 
 cookie_match_path(Path, Options) :-
     (   memberchk(path=Root, Options)
-    ->  sub_atom(Path, 0, _, _, Root)       % TBD: check '/'?
+    ->  sub_atom(Path, 0, Len, After, Root),
+        (   After == 0
+        ->  true
+        ;   sub_atom(Root, _, 1, 0, /)
+        ->  true
+        ;   sub_atom(Path, Len, 1, _, /)
+        )
+    ;   true
+    ).
+
+cookie_match_secure(Secure, Options) :-
+    (   memberchk(secure=true, Options)
+    ->  Secure == true
     ;   true
     ).
 

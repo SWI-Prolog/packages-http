@@ -24,6 +24,7 @@
 :- use_module(library(http/sse)).
 :- use_module(library(http/js_write)).
 :- use_module(library(http/mimepack)).
+:- use_module(library(http/http_cookie)).
 :- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -37,6 +38,7 @@ test_http :-
                 http_streams,
                 http_digest_checks,
                 http_escaping,
+                http_cookie_jar,
                 http_shutdown
               ]).
 
@@ -637,6 +639,43 @@ print_html_string(Spec) :-
     with_output_to(string(_), print_html(Tokens)).
 
 :- end_tests(http_escaping).
+
+:- begin_tests(http_cookie_jar, [cleanup(cookie_remove_client(test))]).
+
+set_cookie(Header, Host, Path) :-
+    http:update_cookies(Header, [host(Host), path(Path)], [client(test)]).
+sent_cookie(Scheme, Host, Path, Cookie) :-
+    (   with_output_to(string(S),
+                       http:write_cookies(current_output,
+                                          [scheme(Scheme), host(Host), path(Path)],
+                                          [client(test)]))
+    ->  Cookie = S
+    ;   Cookie = ""
+    ).
+
+test(cookie_jar, Sent == [ "Cookie: sub=1\r\n",
+                           "Cookie: tok=1; sub=1\r\n",
+                           "",
+                           "Cookie: tok=1; sub=1\r\n",
+                           "Cookie: tok=1; sub=1; p=1\r\n"
+                         ]) :-
+    set_cookie('evil=1; Domain=bank.com', 'evil.example', /),
+    set_cookie('tok=1; Secure', 'bank.com', /),
+    set_cookie('old=1; Expires=Thu, 01 Jan 1970 00:00:00 GMT', 'bank.com', /),
+    set_cookie('sub=1; Domain=.bank.com', 'www.bank.com', /),
+    set_cookie('p=1; Path=/api', 'bank.com', '/api'),
+    set_cookie('tld=1; Domain=com', 'bank.com', /),
+    findall(C, ( member(Scheme-Host-Path,
+                        [ http-'bank.com'-(/),
+                          https-'bank.com'-(/),
+                          https-'notbank.com'-(/),
+                          https-'bank.com'-'/apix',
+                          https-'bank.com'-'/api/x'
+                        ]),
+                 sent_cookie(Scheme, Host, Path, C)
+               ), Sent).
+
+:- end_tests(http_cookie_jar).
 
 :- begin_tests(http_shutdown).
 
