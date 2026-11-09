@@ -129,6 +129,11 @@ predicates:
 %       DTD to parse the input file with. If unbound, the generated
 %       DTD is returned
 %
+%   __Security__: PWP files contain Prolog goals that are executed when
+%   the page is served.  The directory  tree served by pwp_handler/2 may
+%   therefore only contain trusted files.  In particular, do not serve
+%   a directory to which users can upload files.  See library(pwp).
+%
 %   @see reply_pwp_page/3
 %   @error permission_error(index, http_location, Location) is
 %   raised if the handler resolves to a directory that has no
