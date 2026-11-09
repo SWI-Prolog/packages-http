@@ -28,6 +28,7 @@ test_http :-
                 http_server,
                 http_read_data,
                 http_header_limits,
+                http_open_safety,
                 http_shutdown
               ]).
 
@@ -462,6 +463,29 @@ test(read_line, error(resource_error(max_line_length))) :-
                        http_read_line(In, _, 3),
                        close(In)).
 :- end_tests(http_header_limits).
+
+:- begin_tests(http_open_safety).
+
+test(request_uri, URI == '/a%0D%0AX:%20b') :-
+    http_open:request_uri_encoded('/a\r\nX: b', URI).
+test(header_value, error(domain_error(http_header_value, _))) :-
+    http_open:header_value('a\r\nX-Injected: b').
+test(url_prefix) :-
+    http_open:url_prefix('http://example.com', 'http://example.com/a').
+test(url_prefix, fail) :-
+    http_open:url_prefix('http://example.com', 'http://example.com.evil.org/a').
+test(url_prefix, fail) :-
+    http_open:url_prefix('http://example.com/api', 'http://example.com/apix').
+test(redirect_credentials, Options == [request_header('X-A'=b)]) :-
+    http_open:parse_url_ex('http://a.org/x', P1),
+    http_open:parse_url_ex('http://b.org/y', P2),
+    http_open:redirect_options(P1, P2,
+                               [ authorization(basic(u,p)),
+                                 request_header('Cookie'=a),
+                                 request_header('X-A'=b)
+                               ], Options).
+
+:- end_tests(http_open_safety).
 
 :- begin_tests(http_shutdown).
 

@@ -41,7 +41,7 @@
             http_close_keep_alive/1     % +Address
           ]).
 :- autoload(library(aggregate),[aggregate_all/3]).
-:- autoload(library(apply),[foldl/4,include/3]).
+:- autoload(library(apply),[foldl/4,include/3,exclude/3,maplist/2]).
 :- autoload(library(base64),[base64/3]).
 :- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),
@@ -483,15 +483,21 @@ try_a_proxy(Parts, Result, Options) :-
 try_http_proxy(Method, Parts, Stream, Options0) :-
     option(host(Host), Parts),
     proxy_request_uri(Method, Parts, RequestURI),
-    select_option(visited(Visited0), Options0, OptionsV, []),
-    Options = [visited([Parts|Visited0])|OptionsV],
+    select_option(visited(Visited0), Options0, OptionsV0, []),
     parts_scheme(Parts, Scheme),
+    select_option(pool_context(_), OptionsV0, OptionsV1, _),
+    proxy_options(Method, OptionsV1, OptionsV),
+    Options = [ visited([Parts|Visited0]),
+                pool_context(Method-Scheme)
+              | OptionsV
+              ],
     default_port(Scheme, DefPort),
     url_part(port(Port), Parts, DefPort),
     host_and_port(Host, DefPort, Port, HostPort),
+    Context = Method-Scheme,
     (   option(connection(Connection), Options0),
         keep_alive(Connection),
-        get_from_pool(Host:Port, StreamPair),
+        get_from_pool(Host:Port, Context, StreamPair),
         debug(http(keep_alive), 'Trying Keep-alive to ~p using ~p',
               [ Host:Port, StreamPair ]),
         catch(send_rec_header(StreamPair, Stream, HostPort,
@@ -514,6 +520,18 @@ try_http_proxy(Method, Parts, Stream, Options0) :-
                         RequestURI, Parts, Options1)
     ),
     return_final_url(Options).
+
+%!  proxy_options(+Method, +Options0, -Options) is det.
+%
+%   Only send a proxy_authorization(Auth) option if we talk to an HTTP
+%   proxy.
+
+proxy_options(proxy(_,_), Options, Options) :-
+    !.
+proxy_options(_, Options0, Options) :-
+    select_option(proxy_authorization(_), Options0, Options),
+    !.
+proxy_options(_, Options, Options).
 
 proxy_request_uri(direct, Parts, RequestURI) :-
     !,
@@ -630,11 +648,13 @@ send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
         fail
     ).
 
-guarded_send_rec_header(StreamPair, Stream, Host, RequestURI, Parts, Options) :-
+guarded_send_rec_header(StreamPair, Stream, Host, RequestURI0, Parts, Options) :-
     user_agent(Agent, Options),
     method(Options, MNAME),
     http_version(Version),
     option(connection(Connection), Options, close),
+    request_uri_encoded(RequestURI0, RequestURI),
+    maplist(header_value, [Host, Agent, Connection]),
     debug(http(send_request), "> ~w ~w HTTP/~w", [MNAME, RequestURI, Version]),
     debug(http(send_request), "> Host: ~w", [Host]),
     debug(http(send_request), "> User-Agent: ~w", [Agent]),
@@ -724,6 +744,8 @@ x_headers_([H|T], Options, Out) :-
 
 x_header(request_header(Name=Value), _, Out) :-
     !,
+    header_value(Name),
+    header_value(Value),
     debug(http(send_request), "> ~w: ~w", [Name, Value]),
     format(Out, '~w: ~w\r\n', [Name, Value]).
 x_header(proxy_authorization(ProxyAuthorization), Options, Out) :-
@@ -735,6 +757,9 @@ x_header(authorization(Authorization), Options, Out) :-
 x_header(range(Spec), _, Out) :-
     !,
     Spec =.. [Unit, From, To],
+    must_be(atom, Unit),
+    header_value(Unit),
+    must_be(integer, From),
     (   To == end
     ->  ToT = ''
     ;   must_be(integer, To),
@@ -743,6 +768,49 @@ x_header(range(Spec), _, Out) :-
     debug(http(send_request), "> Range: ~w=~d-~w", [Unit, From, ToT]),
     format(Out, 'Range: ~w=~d-~w\r\n', [Unit, From, ToT]).
 x_header(_, _, _).
+
+%!  header_value(+Value) is det.
+%
+%   Raise a domain error if Value, when written, contains a CR or LF
+%   character and thus would break the HTTP header.
+
+header_value(Value) :-
+    (   atomic(Value)
+    ->  Text = Value
+    ;   format(string(Text), '~w', [Value])
+    ),
+    (   sub_atom(Text, _, _, _, '\r')
+    ;   sub_atom(Text, _, _, _, '\n')
+    ),
+    !,
+    domain_error(http_header_value, Value).
+header_value(_).
+
+%!  request_uri_encoded(+RequestURI0, -RequestURI) is det.
+%
+%   Make sure the request URI contains no spaces or control characters
+%   by %-encoding them.
+
+request_uri_encoded(RequestURI0, RequestURI) :-
+    atom_codes(RequestURI0, Codes0),
+    (   member(C, Codes0),
+        uri_unsafe_code(C)
+    ->  phrase(encode_unsafe(Codes0), Codes),
+        atom_codes(RequestURI, Codes)
+    ;   RequestURI = RequestURI0
+    ).
+
+uri_unsafe_code(C) :- C =< 0' .
+uri_unsafe_code(0x7f).
+
+encode_unsafe([]) --> [].
+encode_unsafe([H|T]) -->
+    (   { uri_unsafe_code(H) }
+    ->  { format(codes(Enc), '%~|~`0t~16R~2+', [H]) },
+        Enc
+    ;   [H]
+    ),
+    encode_unsafe(T).
 
 %!  auth_header(+AuthOption, +Options, +HeaderName, +Out)
 
@@ -754,6 +822,7 @@ auth_header(basic(User, Password), _, Header, Out) :-
     format(Out, '~w: Basic ~s\r\n', [Header, Base64Codes]).
 auth_header(bearer(Token), _, Header, Out) :-
     !,
+    header_value(Token),
     debug(http(send_request), "> ~w: Bearer ~w", [Header,Token]),
     format(Out, '~w: Bearer ~w\r\n', [Header, Token]).
 auth_header(Auth, Options, _, Out) :-
@@ -895,6 +964,15 @@ redirect_loop(Parts, Options) :-
 %   if the redirect host does not match the initial host.
 
 redirect_options(Parts, RedirectedParts, Options0, Options) :-
+    (   same_origin(Parts, RedirectedParts)
+    ->  Options1 = Options0
+    ;   debug(http(redirect), 'http_open: redirect to other origin; \c
+                               removing credentials', []),
+        exclude(credential_option, Options0, Options1)
+    ),
+    redirect_options_(Parts, RedirectedParts, Options1, Options).
+
+redirect_options_(Parts, RedirectedParts, Options0, Options) :-
     select_option(unix_socket(_), Options0, Options1),
     memberchk(host(Host), Parts),
     memberchk(host(RHost), RedirectedParts),
@@ -903,8 +981,36 @@ redirect_options(Parts, RedirectedParts, Options0, Options) :-
     Host \== RHost,
     !,
     redirect_options(Options1, Options).
-redirect_options(_, _, Options0, Options) :-
+redirect_options_(_, _, Options0, Options) :-
     redirect_options(Options0, Options).
+
+%!  same_origin(+Parts1, +Parts2) is semidet.
+%
+%   True if both URLs have the same scheme, host and port.
+
+same_origin(Parts1, Parts2) :-
+    origin(Parts1, Origin1),
+    origin(Parts2, Origin2),
+    Origin1 == Origin2.
+
+origin(Parts, origin(Scheme, Host, Port)) :-
+    parts_scheme(Parts, Scheme),
+    url_part(host(Host0), Parts, ''),
+    downcase_atom(Host0, Host),
+    parts_port(Parts, Port).
+
+%!  credential_option(@Option) is semidet.
+%
+%   True if Option provides credentials for the origin server.  These
+%   are not passed when redirected to another origin.
+
+credential_option(authorization(_)).
+credential_option(request_header(Name = _)) :-
+    downcase_atom(Name, LName),
+    credential_header(LName).
+
+credential_header(authorization).
+credential_header(cookie).
 
 redirect_options(Options0, Options) :-
     (   select_option(post(_), Options0, Options1)
@@ -1340,10 +1446,36 @@ authorization(URL, Authorization) :-
     Authorization \== (-).
 authorization(URL, Authorization) :-
     (   stored_authorization(Prefix, Authorization),
-        sub_atom(URL, 0, _, _, Prefix)
+        url_prefix(Prefix, URL)
     ->  assert(cached_authorization(URL, Authorization))
     ;   assert(cached_authorization(URL, -)),
         fail
+    ).
+
+%!  url_prefix(+Prefix, +URL) is semidet.
+%
+%   True if URL is equal to Prefix or is below Prefix, i.e., URL has the
+%   same scheme, host and port and its path starts with the path of
+%   Prefix, splitting at a `/`.
+
+url_prefix(Prefix, URL) :-
+    sub_atom(URL, 0, _, After, Prefix),
+    (   After == 0
+    ->  true
+    ;   catch(( parse_url_ex(Prefix, PParts),
+                parse_url_ex(URL, UParts)
+              ), _, fail),
+        same_origin(PParts, UParts),
+        url_part(path(PPath), PParts, /),
+        url_part(path(UPath), UParts, /),
+        (   sub_atom(PPath, _, 1, 0, /)
+        ->  true
+        ;   sub_atom(UPath, 0, _, _, PPath),
+            atom_length(PPath, PLen),
+            sub_atom(UPath, PLen, 1, _, C),
+            memberchk(C, [/, ?, #])
+        ;   PPath == UPath
+        )
     ).
 
 add_authorization(_, Options, Options) :-
@@ -1588,11 +1720,12 @@ consider_keep_alive(Lines, Parts, Host, StreamPair, In, Options) :-
     !,
     stream_pair(StreamPair, In0, _),
     connection_address(Host, Parts, HostPort),
+    option(pool_context(Context), Options, -),
     debug(http(keep_alive),
           'Keep-alive to ~w (~D bytes)', [HostPort, Bytes]),
     stream_range_open(In0, In,
                       [ size(Bytes),
-                        onclose(keep_alive(StreamPair, HostPort))
+                        onclose(keep_alive(StreamPair, HostPort-Context))
                       ]).
 consider_keep_alive(Lines, Parts, _Host, StreamPair, In, _Options) :-
     memberchk(scheme(https), Parts),
@@ -1641,12 +1774,26 @@ keep_alive(StreamPair, Host, In, Left) :-
     ).
 
 add_to_pool_or_close(Host, StreamPair) :-
+    \+ pending_input(StreamPair),
     add_to_pool(Host, StreamPair),
     !,
     debug(http(connection), 'Added connection to ~p to pool', [Host]).
 add_to_pool_or_close(Host, StreamPair) :-
     close_keep_alive(StreamPair),
     debug(http(connection), 'Closed connection to ~p [pool full]', [Host]).
+
+%!  pending_input(+StreamPair) is semidet.
+%
+%   True if there is input available on StreamPair.  As the reply is
+%   complete, this implies the server sent more data than announced
+%   or closed the connection.  In both cases we must not reuse the
+%   connection.
+
+pending_input(StreamPair) :-
+    stream_pair(StreamPair, In, _),
+    catch(wait_for_input([In], Ready, 0), error(_,_), fail),
+    Ready \== [],
+    debug(http(connection), 'Pending input on keep-alive connection', []).
 
 close_keep_alive(StreamPair) :-
     (   debugging(http(connection))
@@ -1673,7 +1820,7 @@ read_incomplete(In, Left) :-
           fail).
 
 :- dynamic
-    connection_pool/4,              % Hash, Address, Stream, Time
+    connection_pool/5,              % Hash, Address, Context, Stream, Time
     connection_gc_time/1.
 
 %!  add_to_pool(+Address, +StreamPair) is semidet.
@@ -1682,15 +1829,18 @@ read_incomplete(In, Left) :-
 %   interaction. Fails if there are already  too many connections in the
 %   pool.
 
-add_to_pool(Address, StreamPair) :-
+add_to_pool(Address-Context, StreamPair) :-
     keep_connection(Address),
     get_time(Now),
     term_hash(Address, Hash),
-    assertz(connection_pool(Hash, Address, StreamPair, Now)).
+    assertz(connection_pool(Hash, Address, Context, StreamPair, Now)).
 
-%!  get_from_pool(+Address, -StreamPair) is nondet.
+%!  get_from_pool(+Address, ?Context, -StreamPair) is nondet.
 %
-%   Get an existing Keep-Alive connection to  Address as StreamPair. The
+%   Get an existing Keep-Alive connection to  Address as StreamPair.
+%   Context is a term Method-Scheme, where Method is `direct` or the
+%   proxy used.  This ensures we do not reuse e.g., a plain HTTP
+%   connection for an HTTPS request to the same address.  The
 %   caller relies on non-determinism of this   predicate  to try another
 %   connection if the returned one is  already   closed  by the peer. We
 %   cannot rely on the non-determinism of retract/1 as that respects the
@@ -1698,10 +1848,10 @@ add_to_pool(Address, StreamPair) :-
 %   as retract/1 guarantees that  the  first   retracted  clause  is not
 %   already retracted.
 
-get_from_pool(Address, StreamPair) :-
+get_from_pool(Address, Context, StreamPair) :-
     term_hash(Address, Hash),
     repeat,
-    (   retract(connection_pool(Hash, Address, StreamPair, _))
+    (   retract(connection_pool(Hash, Address, Context, StreamPair, _))
     ->  true
     ;   !,
         fail
@@ -1718,11 +1868,11 @@ get_from_pool(Address, StreamPair) :-
 keep_connection(Address) :-
     setting(http:max_keep_alive_idle, Time),
     close_old_connections(Time),
-    predicate_property(connection_pool(_,_,_,_), number_of_clauses(C)),
+    predicate_property(connection_pool(_,_,_,_,_), number_of_clauses(C)),
     setting(http:max_keep_alive_connections, MaxConnections),
     C =< MaxConnections,
     term_hash(Address, Hash),
-    aggregate_all(count, connection_pool(Hash, Address, _, _), Count),
+    aggregate_all(count, connection_pool(Hash, Address, _, _, _), Count),
     setting(http:max_keep_alive_host_connections, MaxHostConnections),
     Count =< MaxHostConnections.
 
@@ -1734,9 +1884,9 @@ close_old_connections(Timeout) :-
     ->  true
     ;   (   retractall(connection_gc_time(_)),
             asserta(connection_gc_time(Now)),
-            connection_pool(Hash, Address, StreamPair, Added),
+            connection_pool(Hash, Address, Context, StreamPair, Added),
             Added < Before,
-            retract(connection_pool(Hash, Address, StreamPair, Added)),
+            retract(connection_pool(Hash, Address, Context, StreamPair, Added)),
             debug(http(connection),
                   'Closing inactive keep-alive to ~p', [Address]),
             close(StreamPair, [force(true)]),
@@ -1753,7 +1903,7 @@ close_old_connections(Timeout) :-
 %   closes all currently known keep-alive connections.
 
 http_close_keep_alive(Address) :-
-    forall(get_from_pool(Address, StreamPair),
+    forall(get_from_pool(Address, _, StreamPair),
            close(StreamPair, [force(true)])).
 
 %!  keep_alive_error(+Error, +StreamPair)
