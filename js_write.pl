@@ -217,7 +217,8 @@ js_call(Term) -->
 
 js_new(Id, Term) -->
     { Term =.. [Function|Args] },
-    html(['var ', Id, ' = new ', Function]), js_arg_list(Args), [';\n'].
+    html('var '), js_identifier(Id),
+    html([' = new ', Function]), js_arg_list(Args), [';\n'].
 
 %!  js_arg_list(+Expressions:list)// is det.
 %
@@ -392,6 +393,10 @@ js_quote_codes([0'<,0'/|T]) -->        % Avoid XSS scripting hacks
     !,
     "<\\/",
     js_quote_codes(T).
+js_quote_codes([0'<,0'!|T]) -->        % Avoid <!-- in a script
+    !,
+    "\\x3C!",
+    js_quote_codes(T).
 js_quote_codes([H|T]) -->
     js_quote_code(H),
     js_quote_codes(T).
@@ -414,6 +419,12 @@ js_quote_code(0'\r) -->
 js_quote_code(0'\t) -->
     !,
     "\\t".
+js_quote_code(0x2028) -->
+    !,
+    "\\u2028".
+js_quote_code(0x2029) -->
+    !,
+    "\\u2029".
 js_quote_code(C) -->
     [C].
 

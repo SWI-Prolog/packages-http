@@ -38,7 +38,7 @@
           ]).
 :- autoload(html_write,[print_html/2]).
 :- autoload(mimetype,[file_mime_type/2]).
-:- autoload(library(error),[instantiation_error/1]).
+:- autoload(library(error),[instantiation_error/1,domain_error/2]).
 :- autoload(library(lists),[select/3]).
 
 /** <module> Create a MIME message
@@ -128,16 +128,35 @@ pack_list([H|T], Out, Boundary) :-
     format(Out, '\r\n', []),
     pack_list(T, Out, Boundary).
 
+%   quoted_value(+Value, -Quoted) is det.
+%
+%   Quote Value for use inside a quoted string in a MIME header.
+%   Raise a domain error if Value contains a CR, LF or NUL.
+
+quoted_value(Value, Quoted) :-
+    format(string(String), '~w', [Value]),
+    (   split_string(String, "\r\n\u0000", "", [_])
+    ->  true
+    ;   domain_error(mime_header_value, Value)
+    ),
+    split_string(String, "\\", "", Parts1),
+    atomic_list_concat(Parts1, "\\\\", String1),
+    split_string(String1, "\"", "", Parts2),
+    atomic_list_concat(Parts2, "\\\"", Quoted).
+
 pack(X, _Out) :-
     var(X),
     !,
     instantiation_error(X).
 pack(Name=Value, Out) :-
     !,
+    quoted_value(Name, QName),
     (   Value = file(FileName)
-    ->  format(Out, 'Content-Disposition: form-data; name="~w"; filename="~w"\r\n',
-               [Name, FileName])
-    ;   format(Out, 'Content-Disposition: form-data; name="~w"\r\n', [Name])
+    ->  file_base_name(FileName, BaseName),
+        quoted_value(BaseName, QFileName),
+        format(Out, 'Content-Disposition: form-data; name="~w"; filename="~w"\r\n',
+               [QName, QFileName])
+    ;   format(Out, 'Content-Disposition: form-data; name="~w"\r\n', [QName])
     ),
     pack(Value, Out).
 pack(html(HTML), Out) :-
@@ -179,7 +198,7 @@ pack(mime(Atts, Data, []), Out) :-             % mime_parse compatibility
     pack(Data, Out).
 pack(mime(_Atts, '', Parts), Out) :-
     make_boundary(Parts, Boundary),
-    format('Content-type: multipart/mixed; boundary=~w\r\n\r\n',
+    format(Out, 'Content-type: multipart/mixed; boundary=~w\r\n\r\n',
            [Boundary]),
     mime_pack(Parts, Out, Boundary).
 pack(Atom, Out) :-

@@ -21,6 +21,9 @@
 :- use_module(library(socket)).
 :- use_module(library(http/websocket)).
 :- use_module(library(http/http_digest), []).
+:- use_module(library(http/sse)).
+:- use_module(library(http/js_write)).
+:- use_module(library(http/mimepack)).
 :- use_module(library(uri)).
 :- use_module(library(zlib), []).               % plugin
 
@@ -33,6 +36,7 @@ test_http :-
                 http_open_safety,
                 http_streams,
                 http_digest_checks,
+                http_escaping,
                 http_shutdown
               ]).
 
@@ -599,6 +603,40 @@ test(digest_uri, fail) :-
 test(digest_uri) :-
     http_digest:digest_uri_ok("http://h.org/a?b=1", [request_uri('/a?b=1')]).
 :- end_tests(http_digest_checks).
+
+:- begin_tests(http_escaping).
+
+test(sse_data, S == "data: a\ndata: b\ndata: c\n\n") :-
+    with_output_to(string(S), sse_send(current_output, _{data:"a\rb\r\nc"})).
+test(sse_event, error(domain_error(sse_single_line(event), _))) :-
+    with_output_to(string(_),
+                   sse_send(current_output, _{event:"a\ndata: x", data:"y"})).
+test(cdata, error(domain_error(cdata, _))) :-
+    print_html_string(script([], ['x="</script >"'])).
+test(cdata, error(domain_error(cdata, _))) :-
+    print_html_string(script([], ['x="</SCRIPT/>"'])).
+test(cdata) :-
+    print_html_string(script([], ['x="</scripts>"'])).
+test(js_quote, Q == 'a\\x3C!--<\\/b') :-
+    javascript:js_quoted_string('a<!--</b', Q).
+test(js_new, error(domain_error(js(identifier), _))) :-
+    phrase(js_new('x=1;y', f(1)), _).
+test(search_name, S == "<a href=\"x?a%22%3e=v\">y</a>") :-
+    phrase(html(a(href(x+['a">'=v]), y)), Tokens),
+    with_output_to(string(S), print_html(Tokens)).
+test(mime_name, error(domain_error(mime_header_value, _))) :-
+    with_output_to(string(_),
+                   mime_pack(['a\r\nX: y'=v], current_output, _)).
+test(post_content_type, error(domain_error(http_header_value, _))) :-
+    with_output_to(string(_),
+                   http_post_data(atom('text/plain\r\nX: y', a),
+                                  current_output, [])).
+
+print_html_string(Spec) :-
+    phrase(html(Spec), Tokens),
+    with_output_to(string(_), print_html(Tokens)).
+
+:- end_tests(http_escaping).
 
 :- begin_tests(http_shutdown).
 

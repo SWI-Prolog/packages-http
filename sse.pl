@@ -43,6 +43,7 @@
 :- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
+:- autoload(library(apply), [maplist/3]).
 :- use_module(library(http/http_cors)).
 
 :- predicate_options(sse_open/1, 1,
@@ -242,10 +243,12 @@ emit_field(Stream, comment, V) :-
     emit_comment(Stream, V).
 emit_field(Stream, event, V) :-
     !,
-    format(Stream, 'event: ~w~n', [V]).
+    single_line(event, V, Line),
+    format(Stream, 'event: ~w~n', [Line]).
 emit_field(Stream, id, V) :-
     !,
-    format(Stream, 'id: ~w~n', [V]).
+    single_line(id, V, Line),
+    format(Stream, 'id: ~w~n', [Line]).
 emit_field(Stream, retry, V) :-
     !,
     (   V < 0
@@ -280,20 +283,47 @@ emit_field_line(Stream, Name, "") :-
 emit_field_line(Stream, Name, Line) :-
     format(Stream, '~w: ~w~n', [Name, Line]).
 
+%   single_line(+Field, +Value, -Line) is det.
+%
+%   Line is the text of Value. Raise a domain error if Value contains a
+%   line terminator or NUL character, which would allow injecting fields
+%   or events.
+
+single_line(Field, V, Line) :-
+    format(string(Line), '~w', [V]),
+    (   split_string(Line, "\r\n\u0000", "", [_])
+    ->  true
+    ;   domain_error(sse_single_line(Field), V)
+    ).
+
 %!  to_lines(+Input, -Lines) is det.
 %
-%   Normalise Input to a list of lines. Lists are taken as-is. Atoms and
-%   strings are split on `\n`; a trailing   `\r`  on a piece is stripped
-%   (so `\r\n` line endings work). A trailing empty line, as produced by
-%   a final `\n`, is stripped.
+%   Normalise Input to a list of lines. Atoms and strings are split on
+%   `\n`, `\r\n` and `\r`, which are all line terminators in SSE.  The
+%   elements of a list are split the same way.  A trailing empty line, as
+%   produced by a final line terminator, is stripped.
 
-to_lines(L, L) :-
+to_lines(L, Lines) :-
     is_list(L),
-    !.
+    !,
+    maplist(text_lines, L, LinesList),
+    append(LinesList, Lines).
 to_lines(Text, Lines) :-
-    format(string(S), '~w', [Text]),
-    split_string(S, "\n", "\r", All),
-    strip_trailing_empty(All, Lines).
+    text_lines(Text, Lines0),
+    strip_trailing_empty(Lines0, Lines).
+
+text_lines(Text, Lines) :-
+    format(string(S0), '~w', [Text]),
+    split_string(S0, "\n", "", Parts0),
+    maplist(cr_lines, Parts0, PartsList),
+    append(PartsList, Lines).
+
+cr_lines(Part, Lines) :-
+    (   sub_string(Part, _, 1, 0, "\r")
+    ->  sub_string(Part, 0, _, 1, Part1)
+    ;   Part1 = Part
+    ),
+    split_string(Part1, "\r", "", Lines).
 
 strip_trailing_empty(Lines0, Lines) :-
     append(Lines, [""], Lines0),

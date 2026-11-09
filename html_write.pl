@@ -773,14 +773,17 @@ search_parameter(Var) -->
       instantiation_error(Var)
     }.
 search_parameter(Name=Value) -->
-    { www_form_encode(Value, Encoded) },
-    [Name, =, Encoded].
+    { www_form_encode(Name, EncName),
+      www_form_encode(Value, Encoded)
+    },
+    [EncName, =, Encoded].
 search_parameter(Term) -->
     { Term =.. [Name, Value],
       !,
+      www_form_encode(Name, EncName),
       www_form_encode(Value, Encoded)
     },
-    [Name, =, Encoded].
+    [EncName, =, Encoded].
 search_parameter(Term) -->
     { domain_error(search_parameter, Term)
     }.
@@ -1289,11 +1292,27 @@ write_nl(N, Out) :-
 %   @error domain_error(cdata, String)
 
 valid_cdata(Env, String) :-
-    atomics_to_string(['</', Env, '>'], End),
+    atomics_to_string(['</', Env], End),
     sub_atom_icasechk(String, _, End),
+    string_lower(String, Lower),
+    sub_string(Lower, _, _, After, End),
+    (   After == 0
+    ->  true
+    ;   sub_string(Lower, _, After, 0, Rest),
+        sub_string(Rest, 0, 1, _, C),
+        end_tag_delimiter(C)
+    ),
     !,
     domain_error(cdata, String).
 valid_cdata(_, _).
+
+end_tag_delimiter(">").
+end_tag_delimiter("/").
+end_tag_delimiter(" ").
+end_tag_delimiter("\t").
+end_tag_delimiter("\n").
+end_tag_delimiter("\r").
+end_tag_delimiter("\f").
 
 %!  html_print_length(+List, -Len) is det.
 %

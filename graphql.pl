@@ -1073,8 +1073,33 @@ graphql_write_definition(operation(Type,
 
 
 graphql_write_name(Name, _Options) -->
-    {   string_codes(Name, Codes)   },
+    {   string_codes(Name, Codes),
+        (   graphql_name_codes(Codes)
+        ->  true
+        ;   domain_error(graphql_name, Name)
+        )
+    },
     Codes.
+
+%   graphql_name_codes(+Codes) is semidet.
+%
+%   True if Codes is a valid GraphQL name: /[_A-Za-z][_0-9A-Za-z]*/
+
+graphql_name_codes([H|T]) :-
+    graphql_name_start(H),
+    graphql_name_continue(T).
+
+graphql_name_start(C) :- between(0'a, 0'z, C), !.
+graphql_name_start(C) :- between(0'A, 0'Z, C), !.
+graphql_name_start(0'_).
+
+graphql_name_continue([]).
+graphql_name_continue([H|T]) :-
+    (   graphql_name_start(H)
+    ->  true
+    ;   between(0'0, 0'9, H)
+    ),
+    graphql_name_continue(T).
 
 
 graphql_write_name_maybe(null, _Options) --> [], !.
@@ -1124,11 +1149,17 @@ graphql_write_value(enum(N), _Options) -->
 graphql_write_value(variable(V), _Options) -->
     !,
     format('$~s', [V]).
-graphql_write_value(Atom, _Options) -->
+graphql_write_value(Atom, Options) -->
     {   atom(Atom)
     },
     !,
-    format('~a', [Atom]).
+    (   {   atom_codes(Atom, Codes),
+            graphql_name_codes(Codes)
+        }
+    ->  format('~a', [Atom])            % true, false, null or enum value
+    ;   {   atom_string(Atom, String)   },
+        graphql_write_value(String, Options)
+    ).
 graphql_write_value(String, Options) -->
     {   string(String),
         !,
@@ -1198,6 +1229,11 @@ graphql_write_string([0'\n|T], Options) -->
 graphql_write_string([0'\r|T], Options) -->
     !,
     "\\r",
+    graphql_write_string(T, Options).
+graphql_write_string([H|T], Options) -->
+    {   H < 0x20   },
+    !,
+    format('\\u~|~`0t~16r~4+', [H]),
     graphql_write_string(T, Options).
 graphql_write_string([H|T], Options) -->
     [H],

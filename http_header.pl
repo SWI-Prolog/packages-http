@@ -1794,14 +1794,31 @@ content_type(Type, Charset) -->
 
 ctype(Main/Sub) -->
     !,
+    { valid_header_value(Main),
+      valid_header_value(Sub)
+    },
     "Content-Type: ",
     atom(Main),
     "/",
     atom(Sub).
 ctype(Type) -->
     !,
+    { valid_header_value(Type) },
     "Content-Type: ",
     atom(Type).
+
+%   valid_header_value(+Value) is det.
+%
+%   Raise a domain error if Value, when written, contains characters
+%   that are not allowed in an HTTP header value.
+
+valid_header_value(Value) :-
+    format(codes(Codes), '~w', [Value]),
+    (   member(C, Codes),
+        illegal_header_value_code(C)
+    ->  domain_error(http_header_value, Value)
+    ;   true
+    ).
 
 charset(Var) -->
     { var(Var) },
