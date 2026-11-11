@@ -238,6 +238,22 @@ test(post_echo_keep_alive_short_read_spawned,
         [ keep_alive_timeout(0.1)
         ]).
 
+% If a handler leaves a large part of the request body unread, the
+% server closes the connection rather than reading it.
+
+test(keep_alive_drain, Reused == true) :-
+    with_server(ServerURL, keep_alive_reused(ServerURL, Reused),
+                [ keep_alive_timeout(5)
+                ]).
+test(keep_alive_drain_limit, Reused == false) :-
+    setting(http:max_keep_alive_drain, Old),
+    setup_call_cleanup(
+        set_setting(http:max_keep_alive_drain, 5),
+        with_server(ServerURL, keep_alive_reused(ServerURL, Reused),
+                    [ keep_alive_timeout(5)
+                    ]),
+        set_setting(http:max_keep_alive_drain, Old)).
+
 test(post_too_large, Code == 413) :-
     setting(http:max_request_size, Old),
     setup_call_cleanup(
@@ -359,6 +375,67 @@ with_server(URL, Goal, Options) :-
             Goal
         ),
         http_stop_server(Port, [])).
+
+%   keep_alive_reused(+ServerURL, -Reused)
+%
+%   Send a keep-alive request to a handler that reads only 10 of the 23
+%   bytes of the body, followed by a second request on the same
+%   connection.  Reused is true if the second request is answered.
+
+keep_alive_reused(ServerURL, Reused) :-
+    atomic_list_concat([_, PortAtom], 'localhost:', ServerURL),
+    atom_number(PortAtom, Port),
+    setup_call_cleanup(
+        tcp_connect(localhost:Port, Stream, []),
+        keep_alive_reused_(Stream, Reused),
+        close(Stream, [force(true)])).
+
+keep_alive_reused_(Stream, Reused) :-
+    set_stream(Stream, timeout(5)),
+    Body = "0123456789 Hello world!",
+    raw_post(Stream, '/post/echo/short_read', Body),
+    raw_reply(Stream, Code1),
+    assertion(Code1 == 200),
+    raw_post(Stream, '/post/echo', Body),
+    (   catch(raw_reply(Stream, Code2), _, fail)
+    ->  assertion(Code2 == 200),
+        Reused = true
+    ;   Reused = false
+    ).
+
+raw_post(Stream, Path, Body) :-
+    string_length(Body, Len),
+    catch(( format(Stream,
+                   "POST ~w HTTP/1.1\r\n\c
+                    Host: localhost\r\n\c
+                    Connection: Keep-Alive\r\n\c
+                    Content-Type: text/plain\r\n\c
+                    Content-Length: ~d\r\n\r\n~s",
+                   [Path, Len, Body]),
+            flush_output(Stream)
+          ), _, true).
+
+%   Read the status line, headers and body of a reply.  Fails at end of
+%   file.
+
+raw_reply(Stream, Code) :-
+    read_line_to_string(Stream, Status),
+    Status \== end_of_file,
+    split_string(Status, " ", "", [_, CodeS|_]),
+    number_string(Code, CodeS),
+    raw_headers(Stream, 0, Len),
+    read_string(Stream, Len, _).
+
+raw_headers(Stream, Len0, Len) :-
+    read_line_to_string(Stream, Line),
+    (   (Line == "" ; Line == end_of_file)
+    ->  Len = Len0
+    ;   split_string(Line, ":", " ", [Name, Value]),
+        string_lower(Name, "content-length")
+    ->  number_string(Len1, Value),
+        raw_headers(Stream, Len1, Len)
+    ;   raw_headers(Stream, Len0, Len)
+    ).
 
 client(ServerURL, Path, Code, Type, Content, ExtraHdrs) :-
     format(atom(URL), '~w~w', [ServerURL, Path]),

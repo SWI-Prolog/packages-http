@@ -58,8 +58,13 @@
 :- use_module(http_wrapper).
 :- use_module(http_path).
 :- use_module(http_stream).
+:- use_module(library(settings)).
 
 :- autoload(library(uri), [uri_resolve/3]).
+
+:- setting(http:max_keep_alive_drain, nonneg, 65_536,
+           'Max bytes of an unread request body that are skipped to \c
+            keep the connection alive.  Else the connection is closed.').
 :- autoload(library(aggregate), [aggregate_all/3]).
 
 :- predicate_options(http_server/2, 2,
@@ -170,7 +175,9 @@ self-signed SSL certificate.
 %
 %     * keep_alive_timeout(+Seconds)
 %     Time to keep `Keep alive' connections alive.  Default is
-%     2 seconds.
+%     2 seconds.  If a handler did not read the request body, the
+%     connection is only kept alive if at most the setting
+%     `http:max_keep_alive_drain` (64Kb) bytes of the body are left.
 %
 %     * stack_limit(+Bytes)
 %     Stack limit to use for the workers.  The default is inherited
@@ -881,7 +888,11 @@ current_message_level(Term, Level) :-
 %!  read_remaining_request(+StartBody, +Request) is semidet.
 %
 %   If our handler did not read the   complete  request we must read the
-%   remainder if we are dealing with a Keep-alive connection.
+%   remainder if we are dealing with a Keep-alive connection.  We only
+%   do so if the remainder is at most the setting
+%   `http:max_keep_alive_drain`.  Otherwise we fail, which closes the
+%   connection: reading a large body that nobody needs would occupy
+%   this worker for as long as the client keeps sending.
 
 read_remaining_request(StartBody, Request) :-
     memberchk(content_length(Len), Request),
@@ -895,7 +906,8 @@ read_remaining_request(_, _Request).
 read_incomplete(_, 0) :-
     !.
 read_incomplete(In, Left) :-
-    % Left < 1 000 000,			% Optionally close anyway.
+    setting(http:max_keep_alive_drain, Max),
+    Left =< Max,
     catch(setup_call_cleanup(
               open_null_stream(Null),
               copy_stream_data(In, Null, Left),
