@@ -232,6 +232,22 @@ test(chunked,
     assert_header(Header, status(_, ok, _)),
     assert_header(Header, transfer_encoding(chunked)).
 
+test(chunked_content_length,
+     [ Len == 11,
+       setup(open_dest(TmpF, Out)),
+       cleanup(free_dest(TmpF))
+     ]) :-
+    cgi_open(Out, CGI, cgi_hook,
+             [ request([http_version(1-1)])
+             ]),
+    format(CGI, 'Transfer-encoding: chunked\n', []),
+    format(CGI, 'Content-type: text/plain\n\n', []),
+    format(CGI, 'hello world', []),
+    flush_output(CGI),
+    cgi_property(CGI, content_length(Len)),
+    close(CGI),
+    close(Out).
+
 :- end_tests(cgi_chunked).
 
 

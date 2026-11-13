@@ -491,14 +491,26 @@ call_hook(cgi_context *ctx, atom_t event)
 }
 
 
+/* Write a chunk, keeping count for <-content_length and the statistics */
+
+static ssize_t
+cgi_write_chunk(cgi_context *ctx, char *buf, size_t size)
+{ ssize_t rc = chunked_write_chunk(ctx->stream, ctx->metadata, buf, size);
+
+  if ( rc > 0 )
+    ctx->chunked_written += rc;
+
+  return rc;
+}
+
+
 static int
 start_chunked_encoding(cgi_context *ctx)
 { if ( call_hook(ctx, ATOM_send_header) )
   { if ( ctx->datasize > ctx->data_offset )
-    { ssize_t rc = chunked_write_chunk(ctx->stream,
-				       ctx->metadata,
-				       &ctx->data[ctx->data_offset],
-				       ctx->datasize - ctx->data_offset);
+    { ssize_t rc = cgi_write_chunk(ctx,
+				   &ctx->data[ctx->data_offset],
+				   ctx->datasize - ctx->data_offset);
       if ( rc == -1 )
 	return false;
     }
@@ -545,7 +557,7 @@ cgi_write(void *handle, char *buf, size_t size)
   }
 
   if ( ctx->transfer_encoding == ATOM_chunked )
-  { return chunked_write_chunk(ctx->stream, ctx->metadata, buf, size);
+  { return cgi_write_chunk(ctx, buf, size);
   } else if ( ctx->transfer_encoding == ATOM_event_stream )
   { ssize_t written = Sfwrite(buf, sizeof(char), size, ctx->stream);
     if ( Sflush(ctx->stream) < 0 )
