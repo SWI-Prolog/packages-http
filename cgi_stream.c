@@ -225,16 +225,16 @@ get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
 { IOSTREAM *s;
 
   if ( !PL_get_stream_handle(t, &s) )
-    return FALSE;
+    return false;
   if ( s->functions != &cgi_functions )
   { silent_release_stream(s);
-    return PL_type_error("cgi_stream", t), FALSE;
+    return PL_type_error("cgi_stream", t), false;
   }
 
   *sp = s;
   *ctx = s->handle;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -245,7 +245,7 @@ unify_record(term_t t, record_t r)
     PL_recorded(r, t2);
     return PL_unify(t, t2);
   }
-  return FALSE;
+  return false;
 }
 
 
@@ -255,7 +255,7 @@ is_cgi_stream(term_t cgi)
   int rc;
 
   if ( !PL_get_stream_handle(cgi, &s) )
-    return FALSE;
+    return false;
   rc = (s->functions == &cgi_functions);
   silent_release_stream(s);
 
@@ -270,10 +270,10 @@ cgi_property(term_t cgi, term_t prop)
   term_t arg = PL_new_term_ref();
   atom_t name;
   size_t arity;
-  int rc = TRUE;
+  int rc = true;
 
   if ( !get_cgi_stream(cgi, &s, &ctx) )
-    return FALSE;
+    return false;
 
   if ( !PL_get_name_arity(prop, &name, &arity) || arity != 1 )
   { rc = PL_type_error("cgi_property", prop);
@@ -339,7 +339,7 @@ set_term(record_t *r, term_t t)
     PL_erase(*r);
   *r = PL_record(t);
 
-  return TRUE;
+  return true;
 }
 
 
@@ -357,7 +357,7 @@ set_atom(atom_t *a, term_t t)
     PL_register_atom(new);
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -368,10 +368,10 @@ cgi_set(term_t cgi, term_t prop)
   term_t arg = PL_new_term_ref();
   atom_t name;
   size_t arity;
-  int rc = TRUE;
+  int rc = true;
 
   if ( !get_cgi_stream(cgi, &s, &ctx) )
-    return FALSE;
+    return false;
 
   if ( !PL_get_name_arity(prop, &name, &arity) || arity != 1 )
   { rc = PL_type_error("cgi_property", prop);
@@ -389,7 +389,7 @@ cgi_set(term_t cgi, term_t prop)
   { atom_t enc;
 
     if ( !PL_get_atom_ex(arg, &enc) )
-      return FALSE;
+      return false;
 
     if ( ctx->transfer_encoding != enc )
     { if ( enc == ATOM_chunked )
@@ -418,14 +418,14 @@ cgi_discard(term_t cgi)
   cgi_context *ctx;
 
   if ( !get_cgi_stream(cgi, &s, &ctx) )
-    return FALSE;
+    return false;
 
   ctx->state = CGI_DISCARDED;
 					/* empty buffer to avoid write */
   ctx->cgi_stream->bufp = ctx->cgi_stream->buffer;
   silent_release_stream(s);
 
-  return TRUE;
+  return true;
 }
 
 
@@ -476,16 +476,16 @@ call_hook(cgi_context *ctx, atom_t event)
       PL_cut_query(qid);
       PL_close_foreign_frame(fid);
 
-      return FALSE;
+      return false;
     }
     PL_close_query(qid);
     PL_discard_foreign_frame(fid);
   } else
   { set_stream_error(ctx, event, 0);
-    return FALSE;
+    return false;
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -498,13 +498,13 @@ start_chunked_encoding(cgi_context *ctx)
 				       &ctx->data[ctx->data_offset],
 				       ctx->datasize - ctx->data_offset);
       if ( rc == -1 )
-	return FALSE;
+	return false;
     }
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -731,13 +731,13 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   term_t req = 0;
 
   if ( !PL_strip_module(closure, &module, hook) )
-    return FALSE;
+    return false;
   if ( !PL_is_callable(hook) )
     return PL_type_error("callable", closure);
 
   if ( !PL_scan_options(options, OPT_UNKNOWN_ERROR, "cgi_open_option",
 			cgi_options, &req) )
-    return FALSE;
+    return false;
   if ( req )
   { request = PL_record(req);
     method = request_method(req);
@@ -746,7 +746,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   if ( !PL_get_stream_handle(org, &s) )
   { if ( request )
       PL_erase(request);
-    return FALSE;			/* Error */
+    return false;			/* Error */
   }
   if ( !(s->flags&SIO_OUTPUT) )		/* only allow output stream */
   { silent_release_stream(s);
@@ -766,7 +766,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
 		   &cgi_functions)) )
   { free_cgi_context(ctx);			/* no memory */
 
-    return FALSE;
+    return false;
   }
 
   s2->encoding = ENC_ASCII;		/* Header is ASCII only */
@@ -781,7 +781,7 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
     ctx->id = ++current_id;
     UNLOCK();
 
-    return TRUE;
+    return true;
   }
 
   ctx->state = CGI_DISCARDED;		/* close without output or hooks; */

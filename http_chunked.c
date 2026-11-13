@@ -96,7 +96,7 @@ alloc_chunked_context(IOSTREAM *s)
   if ( ctx )
   { memset(ctx, 0, sizeof(*ctx));
     ctx->stream       = s;
-    ctx->close_parent = FALSE;
+    ctx->close_parent = false;
   }
 
   return ctx;
@@ -175,18 +175,18 @@ parse_chunk_size(const char *s, size_t *len)
     else
       break;
     if ( ++digits > 15 )
-      return FALSE;
+      return false;
     v = v*16 + d;
   }
   if ( digits == 0 )
-    return FALSE;
+    return false;
   while( *s == ' ' || *s == '\t' )
     s++;
   if ( *s && *s != ';' )
-    return FALSE;
+    return false;
 
   *len = v;
-  return TRUE;
+  return true;
 }
 
 
@@ -243,7 +243,7 @@ chunked_read(void *handle, char *buf, size_t size)
 	  }
 	}
 	if ( ll == 0 )
-	{ ctx->eof_seen = TRUE;
+	{ ctx->eof_seen = true;
 	  return 0;
 	}
 	return -1;
@@ -426,22 +426,22 @@ static foreign_t
 pl_http_chunked_open(term_t org, term_t new, term_t options)
 { chunked_context *ctx;
   IOSTREAM *s = NULL, *s2 = NULL;
-  int close_parent = FALSE;
+  int close_parent = false;
   int max_chunk_size = 0;
   term_t mcs = 0;
 
   if ( !PL_scan_options(options, 0, "chunked_option", http_chunked_options,
 			&mcs, &close_parent) )
-    return FALSE;
+    return false;
   if ( mcs )
   { if ( !PL_get_integer_ex(mcs, &max_chunk_size) )
-      return FALSE;
+      return false;
     if ( max_chunk_size <= 0 )
       return PL_domain_error("positive_integer", mcs);
   }
 
   if ( !PL_get_stream_handle(org, &s) )
-    return FALSE;			/* Error */
+    return false;			/* Error */
   if ( !(ctx = alloc_chunked_context(s)) )
     goto error;
   ctx->close_parent = close_parent;
@@ -464,19 +464,19 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
   { Sset_filter(s, s2);
     PL_release_stream(s);
 
-    return TRUE;
+    return true;
   }
 
 error:
   if ( s )
     PL_release_stream(s);
   if ( s2 )
-  { ctx->close_parent = FALSE;
+  { ctx->close_parent = false;
     Sclose(s2);
   } else if ( ctx )
     free_chunked_context(ctx);
 
-  return FALSE;
+  return false;
 }
 
 
@@ -520,7 +520,7 @@ http_chunked_flush(term_t Stream, term_t Ext)
 { chunked_metadata *md;
   int rc;
 
-  if ( (rc=get_chunked_metadata(Stream, &md, FALSE)) )
+  if ( (rc=get_chunked_metadata(Stream, &md, false)) )
   { IOSTREAM *s;
 
     md->chunk_ext = Ext;
@@ -528,7 +528,7 @@ http_chunked_flush(term_t Stream, term_t Ext)
     { Sflush(s);
       rc = PL_release_stream(s);
     } else
-      rc = FALSE;
+      rc = false;
     md->chunk_ext = 0;
   }
 
@@ -542,7 +542,7 @@ http_chunked_add_trailer(term_t Stream, term_t Key, term_t Value)
   atom_t key, value;
   chunked_trailer *tr;
 
-  if ( get_chunked_metadata(Stream, &md, FALSE) &&
+  if ( get_chunked_metadata(Stream, &md, false) &&
        PL_get_atom(Key, &key) &&
        PL_get_atom(Value, &value) &&
        (tr=PL_malloc(sizeof(*tr))) )
@@ -558,10 +558,10 @@ http_chunked_add_trailer(term_t Stream, term_t Key, term_t Value)
     { md->trailer = md->trailer_tail = tr;
     }
 
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
@@ -569,7 +569,7 @@ static foreign_t
 http_is_chunked(term_t Stream)
 { chunked_metadata *md;
 
-  return get_chunked_metadata(Stream, &md, TRUE);
+  return get_chunked_metadata(Stream, &md, true);
 }
 
 

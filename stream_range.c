@@ -236,23 +236,23 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
 
   if ( !PL_scan_options(options, 0, "range_option", range_options,
 			&size_opt, &onclose_opt) )
-    return FALSE;
+    return false;
   if ( size_opt )
   { if ( !PL_get_int64_ex(size_opt, &size) )
-      return FALSE;
+      return false;
     if ( size < 0 )
       return PL_domain_error("nonneg", size_opt);
   }
   if ( onclose_opt )
   { if ( !PL_strip_module(onclose_opt, &ocm, onclose_opt) )
-      return FALSE;
+      return false;
     onclose = PL_record(onclose_opt);
   }
 
   if ( !PL_get_stream(org, &s, SIO_INPUT) )
   { if ( onclose )
       PL_erase(onclose);
-    return FALSE;			/* Error */
+    return false;			/* Error */
   }
   ctx = alloc_range_context(s);
   ctx->size = (size_t)size;
@@ -264,7 +264,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
 		   &range_functions))	)
   { free_range_context(ctx);			/* no memory */
 
-    return FALSE;
+    return false;
   }
 
   s2->encoding = s->encoding;
@@ -275,7 +275,7 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
   { Sset_filter(s, s2);
     PL_release_stream(s);
 
-    return TRUE;
+    return true;
   }
 
   if ( ctx->onclose )			/* close without calling it; */

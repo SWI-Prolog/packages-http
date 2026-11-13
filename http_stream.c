@@ -131,11 +131,11 @@ http_read_line(term_t stream, term_t line, term_t max)
   size_t maxlen, len = 0, allocated = 256;
   int fast[256];
   int *buf = fast;
-  int rc = FALSE;
+  int rc = false;
 
   if ( !PL_get_size_ex(max, &maxlen) ||
        !PL_get_stream(stream, &s, SIO_INPUT) )
-    return FALSE;
+    return false;
 
   for(;;)
   { int c = Sgetcode(s);

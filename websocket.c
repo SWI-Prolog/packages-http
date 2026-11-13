@@ -196,16 +196,16 @@ get_ws_stream(term_t t, IOSTREAM **sp, ws_context **ctx, int flags)
 { IOSTREAM *s;
 
   if ( !PL_get_stream(t, &s, flags) )
-    return FALSE;
+    return false;
   if ( s->functions != &ws_functions )
   { PL_release_stream(s);
-    return PL_type_error("ws_stream", t),FALSE;
+    return PL_type_error("ws_stream", t),false;
   }
 
   *sp = s;
   *ctx = s->handle;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -215,7 +215,7 @@ is_ws_stream(term_t ws)
   int rc;
 
   if ( !PL_get_stream(ws, &s, 0) )
-    return FALSE;
+    return false;
   rc = (s->functions == &ws_functions);
   PL_release_stream(s);
 
@@ -240,7 +240,7 @@ ws_property(term_t WsStream, term_t property, term_t value)
 
   if ( !PL_get_atom_ex(property, &prop) ||
        !get_ws_stream(WsStream, &ws, &ctx, 0) )
-    return FALSE;
+    return false;
 
   if ( prop == ATOM_status )
   { init_state_names();
@@ -265,7 +265,7 @@ ws_set(term_t WsStream, term_t property, term_t value)
 
   if ( !PL_get_atom_ex(property, &prop) ||
        !get_ws_stream(WsStream, &ws, &ctx, 0) )
-    return FALSE;
+    return false;
 
   if ( prop == ATOM_subprotocol )
   { atom_t a;
@@ -418,7 +418,7 @@ static int
 ws_header_error(ws_context *ctx, const char *msg)
 { if ( !Sferror(ctx->stream) )
     Sseterr(ctx->ws_stream, SIO_FERR, msg);
-  return FALSE;
+  return false;
 }
 
 static int
@@ -482,7 +482,7 @@ ws_next_header(ws_context *ctx, int c)
   ctx->payload_len  = payload_len;
   ctx->payload_read = 0;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -506,27 +506,27 @@ ws_continuation_header(ws_context *ctx)
 
     if ( (c=Sgetc(ctx->stream)) == EOF )
     { Sseterr(ctx->ws_stream, SIO_WARN, "Unterminated websocket message");
-      return FALSE;
+      return false;
     }
 
     if ( !ws_next_header(ctx, c) )
-      return FALSE;
+      return false;
 
     switch( ctx->opcode )
     { case WS_OP_CONTINUE:
-	return TRUE;
+	return true;
       case WS_OP_PONG:
 	if ( skip_payload(ctx) < 0 )
-	  return FALSE;
+	  return false;
 	continue;
       case WS_OP_PING:
 					/* TBD: Reply */
 	if ( skip_payload(ctx) < 0 )
-	  return FALSE;
+	  return false;
 	continue;
       default:
 	Sseterr(ctx->ws_stream, SIO_FERR, "WebSocket: unexpected package");
-        return FALSE;
+        return false;
     }
   }
 }
@@ -699,10 +699,10 @@ ws_open(term_t org, term_t new, term_t options)
   if ( !PL_scan_options(options, 0, "ws_option", ws_open_options,
 			&mode_opt, &subprotocol, &close_parent, &bufsize_opt,
 			&maxsize_opt) )
-    return FALSE;
+    return false;
   if ( maxsize_opt && !PL_is_atom(maxsize_opt) )
   { if ( !PL_get_int64_ex(maxsize_opt, &max_message_size) )
-      return FALSE;
+      return false;
     if ( max_message_size <= 0 )
       return PL_domain_error("max_message_size", maxsize_opt);
   } else if ( maxsize_opt )
@@ -716,7 +716,7 @@ ws_open(term_t org, term_t new, term_t options)
   { atom_t a;
 
     if ( !PL_get_atom_ex(mode_opt, &a) )
-      return FALSE;
+      return false;
     if ( a == ATOM_server )
       mode = WS_SERVER;
     else if ( a == ATOM_client )
@@ -726,7 +726,7 @@ ws_open(term_t org, term_t new, term_t options)
   }
   if ( bufsize_opt )
   { if ( !PL_get_integer_ex(bufsize_opt, &bufsize) )
-      return FALSE;
+      return false;
     if ( bufsize < 0 )
       return PL_domain_error("buffer_size", bufsize_opt);
   }
@@ -734,7 +734,7 @@ ws_open(term_t org, term_t new, term_t options)
   if ( !PL_is_variable(new) )
     return PL_uninstantiation_error(new);
   if ( !PL_get_stream_handle(org, &s) )
-    return FALSE;			/* Error */
+    return false;			/* Error */
 
   if ( !(ctx = alloc_ws_context(s)) )
     goto error;
@@ -756,26 +756,26 @@ ws_open(term_t org, term_t new, term_t options)
 					/* fails the connection */
   if ( bufsize > 0 )
   { Ssetbuffer(s2, NULL, bufsize);
-    ctx->fragmented = TRUE;
+    ctx->fragmented = true;
   }
 
   if ( PL_unify_stream(new, s2) )
   { Sset_filter(s, s2);
     PL_release_stream(s);
 
-    return TRUE;
+    return true;
   }
 
 error:
   if ( s )
     PL_release_stream(s);
   if ( s2 )
-  { ctx->close_parent = FALSE;
+  { ctx->close_parent = false;
     Sclose(s2);
   } else if ( ctx )
     free_ws_context(ctx);
 
-  return FALSE;
+  return false;
 }
 
 
@@ -784,18 +784,18 @@ ws_start_message(term_t WsStream, term_t OpCode, term_t RSV)
 { ws_context *ctx;
   IOSTREAM *ws;
   int opcode, rsv;
-  int rc = TRUE;
+  int rc = true;
 
   if ( !PL_get_integer_ex(OpCode, &opcode) ||
        !PL_get_integer_ex(RSV, &rsv) )
-    return FALSE;
+    return false;
   if ( opcode < 0 || opcode > 15 )
     return PL_domain_error("opcode", OpCode);
   if ( rsv < 0 || rsv > 7 )
     return PL_domain_error("rsv", RSV);
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_OUTPUT) )
-    return FALSE;
+    return false;
 
   if ( ctx->state != WS_IDLE )
   { PL_release_stream(ws);
@@ -864,10 +864,10 @@ static foreign_t
 ws_send(term_t WsStream)
 { ws_context *ctx;
   IOSTREAM *ws;
-  int rc = TRUE;
+  int rc = true;
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_OUTPUT) )
-    return FALSE;
+    return false;
   if ( !PL_release_stream(ws) )		/* release from ws_start_message/3 */
     return PL_release_stream(ws);
 
@@ -878,7 +878,7 @@ ws_send(term_t WsStream)
 
   ctx->state = WS_MSG_END;
   if ( Sflush(ctx->ws_stream) < 0 )
-  { rc = FALSE;
+  { rc = false;
     goto out;
   }
 
@@ -891,7 +891,7 @@ ws_send(term_t WsStream)
     if ( ctx->mode == WS_CLIENT )
     { mask = ws_random();
       if ( PL_exception(0) )
-      { rc = FALSE;
+      { rc = false;
 	goto out;
       }
     } else
@@ -905,7 +905,7 @@ ws_send(term_t WsStream)
     if ( Sfwrite(hdr,       1, hdr_len,       ctx->stream) != hdr_len ||
 	 Sfwrite(ctx->data, 1, ctx->datasize, ctx->stream) != ctx->datasize ||
 	 Sflush(ctx->stream) < 0 )
-      rc = FALSE;
+      rc = false;
 
     discard_data_buffer(ctx);
   }
@@ -926,21 +926,21 @@ static foreign_t
 ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
 { ws_context *ctx;
   IOSTREAM *ws;
-  int rc = TRUE;
+  int rc = true;
   int c, tmo;
 
   if ( !PL_is_variable(OpCode) ) return PL_uninstantiation_error(OpCode);
   if ( !PL_is_variable(RSV)    ) return PL_uninstantiation_error(RSV);
 
   if ( !get_ws_stream(WsStream, &ws, &ctx, SIO_INPUT) )
-    return FALSE;
+    return false;
   tmo = push_timeout(ctx);
 
   if ( ctx->state == WS_MSG_STARTED )
   { while( Sgetc(ctx->ws_stream) != EOF )
       ;					/* read remainder of data */
     if ( ctx->state != WS_MSG_END )
-    { rc = FALSE;			/* I/O error */
+    { rc = false;			/* I/O error */
       goto out;
     }
   }
@@ -961,7 +961,7 @@ ws_read_header(term_t WsStream, term_t OpCode, term_t RSV)
   }
 
   if ( !ws_next_header(ctx, c) )
-  { rc = FALSE;
+  { rc = false;
     goto out;
   }
 

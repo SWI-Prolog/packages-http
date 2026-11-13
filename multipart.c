@@ -280,14 +280,14 @@ static foreign_t
 multipart_open(term_t org, term_t new, term_t options)
 { multipart_context *ctx;
   IOSTREAM *s, *s2;
-  int close_parent = FALSE;
+  int close_parent = false;
   char *boundary = NULL;
   size_t boundary_len = 0;
   term_t bt = 0;
 
   if ( !PL_scan_options(options, 0, "multipart_option", multipart_options,
 			&bt, &close_parent) )
-    return FALSE;
+    return false;
   if ( !bt )
   { term_t t;
 
@@ -297,12 +297,12 @@ multipart_open(term_t org, term_t new, term_t options)
   }
   if ( !PL_get_nchars(bt, &boundary_len, &boundary,
 		      CVT_ATOM|CVT_STRING|CVT_LIST|CVT_EXCEPTION) )
-    return FALSE;
+    return false;
   if ( boundary_len == 0 || boundary_len > 200 )
     return PL_domain_error("multipart_boundary", bt);
 
   if ( !PL_get_stream_handle(org, &s) )
-    return FALSE;			/* Error */
+    return false;			/* Error */
   if ( !(ctx = alloc_multipart_context(s)) )
   { PL_release_stream(s);
     return PL_resource_error("memory");
@@ -327,7 +327,7 @@ multipart_open(term_t org, term_t new, term_t options)
 		   &multipart_functions))	)
   { free_multipart_context(ctx);	/* no memory */
 
-    return FALSE;
+    return false;
   }
 
   s2->encoding = s->encoding;
@@ -339,13 +339,13 @@ multipart_open(term_t org, term_t new, term_t options)
   { Sset_filter(s, s2);
     PL_release_stream(s);
 
-    return TRUE;
+    return true;
   }
 
   ctx->close_parent = false;		/* restores and releases s */
   Sclose(s2);
   if ( PL_exception(0) )
-    return FALSE;
+    return false;
   return PL_uninstantiation_error(new);
 }
 
@@ -356,7 +356,7 @@ multipart_open_next(term_t stream)
   multipart_context *ctx;
 
   if ( !PL_get_stream_handle(stream, &s) )
-    return FALSE;
+    return false;
   if ( s->functions != &multipart_functions )
   { PL_release_stream(s);
     return PL_type_error("multipart_stream", stream);
@@ -369,10 +369,10 @@ multipart_open_next(term_t stream)
       Sclearerr(ctx->multipart_stream);
       ctx->multipart_stream->encoding = ENC_OCTET;
       ctx->multipart_stream->flags &= ~SIO_TEXT;
-      return TRUE;
+      return true;
     }
     case s_end:
-      return FALSE;
+      return false;
     default:
       return PL_permission_error("open_next", "multi_part_stream", stream);
   }
