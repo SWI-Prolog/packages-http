@@ -451,10 +451,8 @@ pl_http_chunked_open(term_t org, term_t new, term_t options)
 		   &chunked_functions))	)
     goto error;
 
-  if ( max_chunk_size > 0 )
-  { char *buf = PL_malloc(max_chunk_size);
-    Ssetbuffer(s2, buf, max_chunk_size);
-  }
+  if ( max_chunk_size > 0 )		/* the stream allocates and frees it */
+    Ssetbuffer(s2, NULL, max_chunk_size);
 
   s2->encoding = s->encoding;
   ctx->parent_encoding = s->encoding;

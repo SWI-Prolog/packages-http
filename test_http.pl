@@ -12,6 +12,7 @@
 :- use_module(library(http/http_client)).
 :- use_module(library(http/http_stream)).
 :- use_module(library(plunit)).
+:- use_module(library(memfile)).
 :- use_module(library(readutil)).
 :- use_module(library(debug)).
 :- use_module(library(option)).
@@ -677,6 +678,17 @@ test(chunked, error(io_error(read, _))) :-
     maplist(=(0'a), L),
     format(string(Data), "5;~s\r\nHello\r\n0\r\n\r\n", [L]),
     chunked_data(Data, _).
+test(chunked_max_chunk_size, Raw == "a\r\n0123456789\r\na\r\nabcdefghij\r\n5\r\nABCDE\r\n0\r\n\r\n") :-
+    new_memory_file(MF),
+    setup_call_cleanup(
+        open_memory_file(MF, write, Out0, [encoding(octet)]),
+        ( http_chunked_open(Out0, Out, [max_chunk_size(10)]),
+          format(Out, '0123456789abcdefghijABCDE', []),
+          close(Out)
+        ),
+        close(Out0)),
+    memory_file_to_string(MF, Raw),
+    free_memory_file(MF).
 test(range_eof, error(io_error(read, _))) :-
     setup_call_cleanup(
         ( open_string("abc", In0),
