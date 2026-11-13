@@ -304,7 +304,9 @@ multipart_open(term_t org, term_t new, term_t options)
   if ( !PL_get_stream_handle(org, &s) )
     return FALSE;			/* Error */
   if ( !(ctx = alloc_multipart_context(s)) )
+  { PL_release_stream(s);
     return PL_resource_error("memory");
+  }
   ctx->close_parent = close_parent;
 
   if ( boundary )
@@ -338,11 +340,13 @@ multipart_open(term_t org, term_t new, term_t options)
     PL_release_stream(s);
 
     return TRUE;
-  } else if ( PL_exception(0) )
-  { return FALSE;
-  } else
-  { return PL_uninstantiation_error(new);
   }
+
+  ctx->close_parent = false;		/* restores and releases s */
+  Sclose(s2);
+  if ( PL_exception(0) )
+    return FALSE;
+  return PL_uninstantiation_error(new);
 }
 
 

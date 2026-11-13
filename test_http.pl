@@ -697,6 +697,17 @@ test(range_bound_output, [E, Enc, N, Closed] == [uninstantiation_error(x), Enc0,
           nb_getval(range_closed, Closed)
         ),
         close(In0)).
+test(multipart_bound_output, [E, Enc, N] == [uninstantiation_error(x), Enc0, N0]) :-
+    setup_call_cleanup(
+        open_string("--X\r\nabc\r\n--X--", In),
+        ( stream_property(In, encoding(Enc0)),
+          stream_count(N0),
+          catch(multipart_open(In, x, [boundary('X'), close_parent(true)]),
+                error(E, _), true),
+          stream_property(In, encoding(Enc)),
+          stream_count(N)
+        ),
+        close(In)).
 test(multipart_boundary, error(existence_error(option, boundary))) :-
     setup_call_cleanup(
         open_string("", In),
