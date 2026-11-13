@@ -250,7 +250,10 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
   }
 
   if ( !PL_get_stream(org, &s, SIO_INPUT) )
+  { if ( onclose )
+      PL_erase(onclose);
     return FALSE;			/* Error */
+  }
   ctx = alloc_range_context(s);
   ctx->size = (size_t)size;
   ctx->onclose = onclose;
@@ -273,9 +276,14 @@ pl_stream_range_open(term_t org, term_t new, term_t options)
     PL_release_stream(s);
 
     return TRUE;
-  } else
-  { return PL_instantiation_error(new);
   }
+
+  if ( ctx->onclose )			/* close without calling it; */
+  { PL_erase(ctx->onclose);		/* this restores and releases s */
+    ctx->onclose = 0;
+  }
+  Sclose(s2);
+  return PL_uninstantiation_error(new);
 }
 
 

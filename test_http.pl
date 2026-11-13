@@ -684,6 +684,19 @@ test(range_eof, error(io_error(read, _))) :-
         ),
         read_string(In, _, _),
         close(In)).
+test(range_bound_output, [E, Enc, N, Closed] == [uninstantiation_error(x), Enc0, N0, false]) :-
+    nb_setval(range_closed, false),
+    setup_call_cleanup(
+        open_string("abc", In0),
+        ( stream_property(In0, encoding(Enc0)),
+          stream_count(N0),
+          catch(stream_range_open(In0, x, [size(2), onclose(range_closed)]),
+                error(E, _), true),
+          stream_property(In0, encoding(Enc)),
+          stream_count(N),
+          nb_getval(range_closed, Closed)
+        ),
+        close(In0)).
 test(multipart_boundary, error(existence_error(option, boundary))) :-
     setup_call_cleanup(
         open_string("", In),
@@ -757,6 +770,12 @@ test(ws_timeout, error(timeout_error(read, _), _)) :-
         )).
 
 :- end_tests(http_streams).
+
+stream_count(N) :-
+    aggregate_all(count, stream_property(_, mode(_)), N).
+
+range_closed(_Stream, _Left) :-
+    nb_setval(range_closed, true).
 
 :- begin_tests(http_digest_checks).
 
