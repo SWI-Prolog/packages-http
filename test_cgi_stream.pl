@@ -261,6 +261,19 @@ test(hook_error,
     cgi_open(Out, CGI, cgi_error_hook, []),
     close(CGI).
 
+%   A bound output argument must leave the parent stream as it was: no
+%   new stream, the encoding restored and no hook called.
+
+test(bound_output, [E, Enc, N] == [uninstantiation_error(x), utf8, N0]) :-
+    tmp_file_stream(utf8, TmpF, Out),
+    call_cleanup(
+        ( aggregate_all(count, stream_property(_, mode(_)), N0),
+          catch(cgi_open(Out, x, cgi_error_hook, []), error(E, _), true),
+          stream_property(Out, encoding(Enc)),
+          aggregate_all(count, stream_property(_, mode(_)), N)
+        ),
+        free_dest(TmpF, Out)).
+
 :- end_tests(cgi_errors).
 
 

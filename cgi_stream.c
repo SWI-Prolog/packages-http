@@ -744,9 +744,14 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
   }
 
   if ( !PL_get_stream_handle(org, &s) )
+  { if ( request )
+      PL_erase(request);
     return FALSE;			/* Error */
+  }
   if ( !(s->flags&SIO_OUTPUT) )		/* only allow output stream */
   { silent_release_stream(s);
+    if ( request )
+      PL_erase(request);
     return PL_permission_error("stream", "write", org);
   }
 
@@ -777,9 +782,11 @@ pl_cgi_open(term_t org, term_t new, term_t closure, term_t options)
     UNLOCK();
 
     return TRUE;
-  } else
-  { return PL_instantiation_error(new);
   }
+
+  ctx->state = CGI_DISCARDED;		/* close without output or hooks; */
+  Sclose(s2);				/* this restores and releases s */
+  return PL_uninstantiation_error(new);
 }
 
 
