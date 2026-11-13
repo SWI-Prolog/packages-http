@@ -48,7 +48,9 @@
 
 :- autoload(library(base64),[base64//1]).
 :- autoload(library(error),
-	    [permission_error/3,must_be/2,type_error/2,domain_error/2]).
+	    [ permission_error/3, must_be/2, type_error/2, domain_error/2,
+	      syntax_error/1
+	    ]).
 :- autoload(library(lists),[member/2]).
 :- autoload(library(option),[select_option/3,option/2,option/3]).
 :- autoload(library(sha),[sha_hash/3]).
@@ -295,9 +297,12 @@ guard_websocket_server(Goal, WebSocket, Options) :-
 
 
 %   RFC 6455, 7.4.1: 1007 is for a message whose data does not match
-%   its type, e.g., a text message that is not valid UTF-8.
+%   its type, e.g., a text message that is not valid UTF-8, and 1002
+%   for a protocol error.
 
 close_code(error(syntax_error(encoding(_)), _), 1007) :-
+    !.
+close_code(error(syntax_error(websocket(_)), _), 1002) :-
     !.
 close_code(_, 1011).
 
@@ -527,6 +532,10 @@ read_data(close, WsStream,
     ->  Code = 1000,
         Data = ""
     ;   get_byte(WsStream, Low),
+        (   Low == -1                   % RFC 6455, 5.5.1: a close payload
+        ->  syntax_error(websocket(close_payload)) % starts with a 2-byte code
+        ;   true
+        ),
         Code is High<<8 \/ Low,
         stream_pair(WsStream, In, _),
         set_stream(In, encoding(utf8)),

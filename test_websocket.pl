@@ -52,6 +52,12 @@ test(surrogate, error(syntax_error(encoding(_)))) :-
     ws_read_frame([0x81, 4, 0'a, 0xED, 0xA0, 0x80], _).
 test(truncated_utf8, error(syntax_error(encoding(_)))) :-
     ws_read_frame([0x81, 2, 0'a, 0xC3], _).
+test(close_code, [Code, Data] == [1000, "ok"]) :-
+    ws_read_frame([0x88, 4, 0x03, 0xE8, 0'o, 0'k], Message),
+    Code = Message.code,
+    Data = Message.data.
+test(close_one_byte, error(syntax_error(websocket(close_payload)))) :-
+    ws_read_frame([0x88, 1, 0x03], _).  % a close code takes 2 bytes
 test(binary_is_bytes, Data == [0'a, 0xC0, 0xAF]) :-
     ws_read_frame([0x82, 3, 0'a, 0xC0, 0xAF], Message),
     string_codes(Message.data, Data).
@@ -74,6 +80,12 @@ test(echo, Reply == [ websocket{opcode:text,  format:string, data:"Hello world"}
                  close(1005, "Ciao")
                ],
                Reply),
+        http_stop_server(Port, [])).
+test(bad_close_closes_1002, Code == 1002) :-
+    Address = localhost:Port,
+    setup_call_cleanup(
+        server(Address),
+        send_raw(Port, 8, [0x03], Code),
         http_stop_server(Port, [])).
 test(invalid_utf8_closes_1007, Code == 1007) :-
     Address = localhost:Port,
@@ -203,16 +215,22 @@ echo(WebSocket) :-
     ).
 
 %   Send a text message that is not UTF-8.  The server must close the
-%   connection with code 1007.  The low-level message API is not
-%   exported, hence the qualified calls.
+%   connection with code 1007.  The low-level message API used by
+%   send_raw/4 is not exported, hence the qualified calls.
 
 send_invalid_utf8(Port, Code) :-
+    send_raw(Port, 1, [0'a, 0xC0, 0xAF], Code).     % 1: text
+
+%   Send a message with OpCode and the bytes Payload; Code is the close
+%   code the server replies with.
+
+send_raw(Port, OpCode, Payload, Code) :-
     format(string(URL), 'ws://localhost:~d/echo', [Port]),
     http_open_websocket(URL, WebSocket, []),
     stream_pair(WebSocket, _, Out),
-    websocket:ws_start_message(Out, 1, 0),  % 1: text
+    websocket:ws_start_message(Out, OpCode, 0),
     set_stream(Out, encoding(octet)),
-    maplist(put_byte(Out), [0'a, 0xC0, 0xAF]),
+    maplist(put_byte(Out), Payload),
     websocket:ws_send(Out),
     ws_receive(WebSocket, Reply),
     Code = Reply.code,
