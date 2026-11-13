@@ -752,6 +752,8 @@ ws_open(term_t org, term_t new, term_t options)
     goto error;
 
   ctx->ws_stream = s2;
+  s2->encoding_errors = true;		/* RFC 6455: invalid UTF-8 in text */
+					/* fails the connection */
   if ( bufsize > 0 )
   { Ssetbuffer(s2, NULL, bufsize);
     ctx->fragmented = TRUE;

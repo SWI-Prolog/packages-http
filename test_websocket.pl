@@ -40,6 +40,21 @@ test(split, Reply == [ websocket{opcode:text,  format:string, data:"0123456789"}
     ws_loop_close([text("0123456789"), close], Reply,
                   [ buffer_size(5)
                   ]).
+test(split_unicode, Reply == [ websocket{opcode:text, format:string, data:Data}
+                             ]) :-
+    unicode_data(Data),                 % fragments split UTF-8 sequences
+    ws_loop_close([text(Data), close], Reply,
+                  [ buffer_size(5)
+                  ]).
+test(invalid_utf8, error(syntax_error(encoding(_)))) :-
+    ws_read_frame([0x81, 3, 0'a, 0xC0, 0xAF], _).    % overlong "/"
+test(surrogate, error(syntax_error(encoding(_)))) :-
+    ws_read_frame([0x81, 4, 0'a, 0xED, 0xA0, 0x80], _).
+test(truncated_utf8, error(syntax_error(encoding(_)))) :-
+    ws_read_frame([0x81, 2, 0'a, 0xC3], _).
+test(binary_is_bytes, Data == [0'a, 0xC0, 0xAF]) :-
+    ws_read_frame([0x82, 3, 0'a, 0xC0, 0xAF], Message),
+    string_codes(Message.data, Data).
 
 :- end_tests(serialization).
 
@@ -59,6 +74,12 @@ test(echo, Reply == [ websocket{opcode:text,  format:string, data:"Hello world"}
                  close(1005, "Ciao")
                ],
                Reply),
+        http_stop_server(Port, [])).
+test(invalid_utf8_closes_1007, Code == 1007) :-
+    Address = localhost:Port,
+    setup_call_cleanup(
+        server(Address),
+        send_invalid_utf8(Port, Code),
         http_stop_server(Port, [])).
 
 :- end_tests(http).
@@ -127,6 +148,27 @@ ws_read_stream(Stream, Messages, Options) :-
         ws_receive_all(WsStream, Messages, Options),
         close(WsStream)).
 
+%!  ws_read_frame(+Bytes, -Message) is det.
+%
+%   Read Message from the raw frame Bytes.
+
+ws_read_frame(Bytes, Message) :-
+    setup_call_cleanup(
+        tmp_file(ws, File),
+        ( setup_call_cleanup(
+              open(File, write, Out, [type(binary)]),
+              maplist(put_byte(Out), Bytes),
+              close(Out)),
+          setup_call_cleanup(
+              open(File, read, In, [type(binary)]),
+              setup_call_cleanup(
+                  ws_open(In, WsStream, [close_parent(false)]),
+                  ws_receive(WsStream, Message),
+                  close(WsStream)),
+              close(In))
+        ),
+        delete_file(File)).
+
 ws_receive_all(WsStream, Messages, Options) :-
     ws_receive(WsStream, H, Options),
     (   H == end_of_file
@@ -159,6 +201,22 @@ echo(WebSocket) :-
     ->  true
     ;   echo(WebSocket)
     ).
+
+%   Send a text message that is not UTF-8.  The server must close the
+%   connection with code 1007.  The low-level message API is not
+%   exported, hence the qualified calls.
+
+send_invalid_utf8(Port, Code) :-
+    format(string(URL), 'ws://localhost:~d/echo', [Port]),
+    http_open_websocket(URL, WebSocket, []),
+    stream_pair(WebSocket, _, Out),
+    websocket:ws_start_message(Out, 1, 0),  % 1: text
+    set_stream(Out, encoding(octet)),
+    maplist(put_byte(Out), [0'a, 0xC0, 0xAF]),
+    websocket:ws_send(Out),
+    ws_receive(WebSocket, Reply),
+    Code = Reply.code,
+    close(WebSocket).
 
 client(Port, Messages, Reply) :-
     format(string(URL), 'ws://localhost:~d/echo', [Port]),

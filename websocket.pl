@@ -283,7 +283,7 @@ guard_websocket_server(Goal, WebSocket, Options) :-
             ;   Msg = bye, Code = 1000
             )
         ;   message_to_string(E, Msg),
-            Code = 1011
+            close_code(E, Code)
         )
     ;   Msg = "goal failed", Code = 1011
     ),
@@ -293,6 +293,13 @@ guard_websocket_server(Goal, WebSocket, Options) :-
               print_message(error, Error))
     ).
 
+
+%   RFC 6455, 7.4.1: 1007 is for a message whose data does not match
+%   its type, e.g., a text message that is not valid UTF-8.
+
+close_code(error(syntax_error(encoding(_)), _), 1007) :-
+    !.
+close_code(_, 1011).
 
 request_websocket_info(Request, Info) :-
     option(upgrade(Websocket), Request),
@@ -481,6 +488,10 @@ write_text_message(_, Stream, Data) :-
 %       Data is parsed using read_term/3, which also receives
 %       Options.
 %
+%   @error  syntax_error(encoding(Message)) if a text message is not
+%           valid UTF-8.  RFC 6455 requires failing the connection.
+%           A server started by http_upgrade_to_websocket/3 closes it
+%           with code 1007.
 %   @tbd    Add a hook to allow for more data formats?
 
 ws_receive(WsStream, Message) :-
