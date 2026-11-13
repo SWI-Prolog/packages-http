@@ -274,6 +274,28 @@ test(bound_output, [E, Enc, N] == [uninstantiation_error(x), utf8, N0]) :-
         ),
         free_dest(TmpF, Out)).
 
+%   A type error must release the CGI stream: another thread must be
+%   able to use it.
+
+test(bad_transfer_encoding, [Got, Reply] == [type_error, done]) :-
+    tmp_file_stream(utf8, TmpF, Out),
+    call_cleanup(
+        ( cgi_open(Out, CGI, cgi_hook, []),
+          catch(cgi_set(CGI, transfer_encoding(1)), error(E, _), true),
+          functor(E, Got, _),
+          message_queue_create(Q),
+          thread_create(( cgi_property(CGI, transfer_encoding(_)),
+                          thread_send_message(Q, done)
+                        ), _, [detached(true)]),
+          (   thread_get_message(Q, Reply, [timeout(5)])
+          ->  true
+          ;   Reply = blocked
+          ),
+          cgi_discard(CGI),
+          close(CGI)
+        ),
+        free_dest(TmpF, Out)).
+
 :- end_tests(cgi_errors).
 
 

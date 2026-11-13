@@ -389,7 +389,9 @@ cgi_set(term_t cgi, term_t prop)
   { atom_t enc;
 
     if ( !PL_get_atom_ex(arg, &enc) )
-      return false;
+    { rc = false;
+      goto out;
+    }
 
     if ( ctx->transfer_encoding != enc )
     { if ( enc == ATOM_chunked )
