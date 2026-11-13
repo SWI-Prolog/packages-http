@@ -158,7 +158,7 @@ read_chunk_line(chunked_context *ctx, char *buf, size_t size)
    number of digits to avoid overflow.
 */
 
-static int
+static bool
 parse_chunk_size(const char *s, size_t *len)
 { size_t v = 0;
   int digits = 0;

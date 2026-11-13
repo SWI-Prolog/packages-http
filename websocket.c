@@ -191,7 +191,7 @@ discard_data_buffer(ws_context *ctx)
 
 static IOFUNCTIONS ws_functions;
 
-static int
+static bool
 get_ws_stream(term_t t, IOSTREAM **sp, ws_context **ctx, int flags)
 { IOSTREAM *s;
 
@@ -414,14 +414,14 @@ read_int(IOSTREAM *in, int bytes)
 }
 
 
-static int
+static bool
 ws_header_error(ws_context *ctx, const char *msg)
 { if ( !Sferror(ctx->stream) )
     Sseterr(ctx->ws_stream, SIO_FERR, msg);
   return false;
 }
 
-static int
+static bool
 ws_next_header(ws_context *ctx, int c)
 { bool fin, masked;
   int rsv, opcode, mask;
@@ -499,7 +499,7 @@ skip_payload(ws_context *ctx)
 }
 
 
-static int
+static bool
 ws_continuation_header(ws_context *ctx)
 { for(;;)
   { int c;

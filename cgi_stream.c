@@ -133,8 +133,8 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define CGI_MAGIC 0xa85ce042
 
-static int call_hook(cgi_context *ctx, atom_t event);
-static int start_chunked_encoding(cgi_context *ctx);
+static bool call_hook(cgi_context *ctx, atom_t event);
+static bool start_chunked_encoding(cgi_context *ctx);
 
 static int64_t current_id = 0;
 static int64_t bytes_sent = 0;
@@ -220,7 +220,7 @@ silent_release_stream(IOSTREAM *s)
 		 *	     PROPERTIES		*
 		 *******************************/
 
-static int
+static bool
 get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
 { IOSTREAM *s;
 
@@ -238,7 +238,7 @@ get_cgi_stream(term_t t, IOSTREAM **sp, cgi_context **ctx)
 }
 
 
-static int
+static bool
 unify_record(term_t t, record_t r)
 { if ( r )
   { term_t t2 = PL_new_term_ref();
@@ -333,7 +333,7 @@ out:
 }
 
 
-static int
+static bool
 set_term(record_t *r, term_t t)
 { if ( *r )
     PL_erase(*r);
@@ -343,7 +343,7 @@ set_term(record_t *r, term_t t)
 }
 
 
-static int
+static bool
 set_atom(atom_t *a, term_t t)
 { atom_t new;
 
@@ -458,7 +458,7 @@ set_stream_error(cgi_context *ctx, atom_t event, qid_t qid)
   }
 }
 
-static int
+static bool
 call_hook(cgi_context *ctx, atom_t event)
 { fid_t fid;
 
@@ -504,7 +504,7 @@ cgi_write_chunk(cgi_context *ctx, char *buf, size_t size)
 }
 
 
-static int
+static bool
 start_chunked_encoding(cgi_context *ctx)
 { if ( call_hook(ctx, ATOM_send_header) )
   { if ( ctx->datasize > ctx->data_offset )
