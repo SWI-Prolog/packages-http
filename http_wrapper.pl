@@ -192,7 +192,8 @@ cgi_close(CGI, _, State0, ok, Close) :-
     catch(cgi_finish(CGI, Status, Close, Bytes), E, true),
     (   var(E)
     ->  http_done(Status, ok, Bytes, State0)
-    ;   http_done(500, E, 0, State0),       % TBD: amount written?
+    ;   close(CGI, [force(true)]),          % cgi_finish/4 did not close
+        http_done(500, E, 0, State0),       % TBD: amount written?
         throw(E)
     ).
 cgi_close(CGI, Request, Id, http_reply(Status), Close) :-
