@@ -2128,22 +2128,39 @@ value_options([H|T], Field) -->
 value_option(secure=true, cookie) -->
     !,
     "secure".
+value_option(httponly=true, cookie) -->
+    !,
+    "HttpOnly".
+value_option(Name=Value, cookie) -->
+    !,
+    { cookie_attribute_name(Name, AttrName) },
+    atom(AttrName), "=", atom(Value).
 value_option(Name=Value, Type) -->
     { string_option(Name, Type) },
     !,
     atom(Name), "=",
     qstring(Value).
-value_option(Name=Value, Type) -->
-    { token_option(Name, Type) },
-    !,
-    atom(Name), "=", atom(Value).
 value_option(Name=Value, _Type) -->
     atom(Name), "=",
     option_value(Value).
 
 string_option(filename, disposition).
 
-token_option(path, cookie).
+%!  cookie_attribute_name(+Name, -AttrName) is det.
+%
+%   Map the name of a parsed cookie attribute (see cookie_option//1)
+%   back to its canonical name.  The parser folds `Max-Age` into
+%   `max_age`, which browsers do not recognise.  Cookie attribute
+%   values are not quoted (RFC 6265), so we emit them verbatim.
+
+cookie_attribute_name(max_age,  'Max-Age') :- !.
+cookie_attribute_name(expires,  'Expires') :- !.
+cookie_attribute_name(domain,   'Domain') :- !.
+cookie_attribute_name(path,     'Path') :- !.
+cookie_attribute_name(samesite, 'SameSite') :- !.
+cookie_attribute_name(Name, AttrName) :-
+    atomic_list_concat(Parts, '_', Name),
+    atomic_list_concat(Parts, '-', AttrName).
 
 option_value(Value) -->
     { number(Value) },

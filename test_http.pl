@@ -882,6 +882,16 @@ test(cookie_jar, Sent == [ "Cookie: sub=1\r\n",
                  sent_cookie(Scheme, Host, Path, C)
                ), Sent).
 
+test(set_cookie_roundtrip,
+     S == "Set-Cookie: s=1; Path=/a; Max-Age=600; \c
+           Expires=Thu, 01 Jan 2099 00:00:00 GMT; HttpOnly; SameSite=Lax\r\n") :-
+    atom_codes('Set-Cookie: s=1; Path=/a; Max-Age=600; \c
+                Expires=Thu, 01 Jan 2099 00:00:00 GMT; HttpOnly; \c
+                SameSite=Lax\r\n\r\n', Codes),
+    http_parse_header(Codes, [SetCookie]),
+    phrase(http_header:header_fields([SetCookie], _), Out),
+    string_codes(S, Out).
+
 :- end_tests(http_cookie_jar).
 
 :- begin_tests(http_shutdown).
