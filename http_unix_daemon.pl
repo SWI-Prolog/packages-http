@@ -321,8 +321,8 @@ opt_type(group,              group,              atom).
 opt_type(pidfile,            pidfile,            file(write)).
 opt_type(output,             output,             file(write)).
 opt_type(fork,               fork,               boolean).
-opt_type(http,               http,               nonneg|boolean).
-opt_type(https,              https,              nonneg|boolean).
+opt_type(http,               http,               nonneg|boolean|atom).
+opt_type(https,              https,              nonneg|boolean|atom).
 opt_type(certfile,           certfile,           file(read)).
 opt_type(keyfile,            keyfile,            file(read)).
 opt_type(pwfile,             pwfile,             file(read)).
@@ -535,9 +535,9 @@ make_address(Port, _, Address, Options0, Options) :-
     !,
     (   option(ip(Bind), Options0)
     ->  Address = (Bind:Port)
-    ;   Address = Port,
-        merge_options([port(Port)], Options0, Options)
-    ).
+    ;   Address = Port
+    ),
+    merge_options([port(Port)], Options0, Options).
 make_address(Spec, _, Address, Options0, Options) :-
     atomic(Spec),
     split_string(Spec, ":", "", [BindString, PortString]),
